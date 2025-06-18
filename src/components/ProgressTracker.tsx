@@ -12,7 +12,7 @@ interface ProgressTrackerProps {
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => {
   const t = useTranslation();
   const [weekProgress, setWeekProgress] = useState<boolean[]>([false, false, false, false, false, false, false]);
-  const [monthProgress] = useState(60); // Porcentaje del mes
+  const [monthlyCompletedDays, setMonthlyCompletedDays] = useState(18); // Días completados en el mes
   
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString(t.locale || 'es-ES', { month: 'long' });
@@ -46,7 +46,11 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
       if (todayIndex !== -1) {
         setWeekProgress(prev => {
           const newProgress = [...prev];
-          newProgress[todayIndex] = true;
+          if (!newProgress[todayIndex]) {
+            newProgress[todayIndex] = true;
+            // Solo incrementar si no estaba completado antes
+            setMonthlyCompletedDays(prevMonthly => prevMonthly + 1);
+          }
           return newProgress;
         });
       }
@@ -55,6 +59,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
 
   const completedDays = weekProgress.filter(Boolean).length;
   const dayNames = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const monthProgress = Math.round((monthlyCompletedDays / 30) * 100);
 
   return (
     <Card className="w-full">
@@ -111,7 +116,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
           <h4 className="text-sm font-medium mb-3">{t.monthlyProgress}</h4>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>18/30 días</span>
+              <span>{monthlyCompletedDays}/30 días</span>
               <span className="text-primary font-medium">{monthProgress}%</span>
             </div>
             <div className="w-full bg-muted rounded-full h-3">

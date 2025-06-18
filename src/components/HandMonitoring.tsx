@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/contexts/AppContext';
@@ -8,8 +8,74 @@ interface HandMonitoringProps {
   isTherapyActive?: boolean;
 }
 
+interface HandAngles {
+  thumb1: number;
+  thumb2: number;
+  thumb3: number;
+  finger1: number;
+  finger2: number;
+  finger3: number;
+}
+
 const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false }) => {
   const t = useTranslation();
+  
+  // Ángulos simulados para cada mano
+  const [nonPareticAngles] = useState<HandAngles>({
+    thumb1: 45,
+    thumb2: 30,
+    thumb3: 25,
+    finger1: 60,
+    finger2: 55,
+    finger3: 50
+  });
+
+  const [pareticAngles] = useState<HandAngles>({
+    thumb1: 35,
+    thumb2: 25,
+    thumb3: 20,
+    finger1: 40,
+    finger2: 35,
+    finger3: 30
+  });
+
+  const AngleDisplay = ({ angles, title }: { angles: HandAngles; title: string }) => (
+    <div className="mt-4 space-y-2">
+      <h5 className="text-xs font-medium text-center">{title}</h5>
+      <div className="grid grid-cols-2 gap-1 text-xs">
+        <div className="space-y-1">
+          <div className="text-center font-medium">Pulgar</div>
+          <div className="flex justify-between">
+            <span>A1:</span>
+            <span>{angles.thumb1}°</span>
+          </div>
+          <div className="flex justify-between">
+            <span>A2:</span>
+            <span>{angles.thumb2}°</span>
+          </div>
+          <div className="flex justify-between">
+            <span>A3:</span>
+            <span>{angles.thumb3}°</span>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-center font-medium">Dedos</div>
+          <div className="flex justify-between">
+            <span>A4:</span>
+            <span>{angles.finger1}°</span>
+          </div>
+          <div className="flex justify-between">
+            <span>A5:</span>
+            <span>{angles.finger2}°</span>
+          </div>
+          <div className="flex justify-between">
+            <span>A6:</span>
+            <span>{angles.finger3}°</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -19,7 +85,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
           ? 'border-medical-green/60 bg-medical-green/5 hover:border-medical-green/80' 
           : 'border-medical-green/20 hover:border-medical-green/40'
       }`}>
-        <CardHeader className="text-center pb-4">
+        <CardHeader className="text-center pb-2">
           <CardTitle className="text-lg font-semibold text-medical-green">
             {t.nonPareticHand}
           </CardTitle>
@@ -27,7 +93,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             {t.withSensors}
           </Badge>
         </CardHeader>
-        <CardContent className="flex justify-center">
+        <CardContent className="flex flex-col items-center">
           <div className={`hand-non-paretic w-32 h-40 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${
             isTherapyActive 
               ? 'animate-pulse bg-medical-green/10' 
@@ -35,16 +101,19 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
           }`}>
             <div className="text-4xl">✋</div>
           </div>
+          
+          <AngleDisplay angles={nonPareticAngles} title="Ángulos de Articulación" />
+          
+          <div className="mt-3">
+            <Badge variant="outline" className={`${
+              isTherapyActive 
+                ? 'text-medical-green border-medical-green bg-medical-green/10' 
+                : 'text-muted-foreground border-muted-foreground'
+            }`}>
+              {isTherapyActive ? t.active : t.inactive}
+            </Badge>
+          </div>
         </CardContent>
-        <div className="text-center pb-4">
-          <Badge variant="outline" className={`${
-            isTherapyActive 
-              ? 'text-medical-green border-medical-green bg-medical-green/10' 
-              : 'text-muted-foreground border-muted-foreground'
-          }`}>
-            {isTherapyActive ? t.active : t.inactive}
-          </Badge>
-        </div>
       </Card>
 
       {/* Mano Parética */}
@@ -53,7 +122,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
           ? 'border-medical-orange/60 bg-medical-orange/5 hover:border-medical-orange/80' 
           : 'border-medical-orange/20 hover:border-medical-orange/40'
       }`}>
-        <CardHeader className="text-center pb-4">
+        <CardHeader className="text-center pb-2">
           <CardTitle className="text-lg font-semibold text-medical-orange">
             {t.pareticHand}
           </CardTitle>
@@ -61,7 +130,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             {t.withExoskeleton}
           </Badge>
         </CardHeader>
-        <CardContent className="flex justify-center">
+        <CardContent className="flex flex-col items-center">
           <div className={`hand-paretic w-32 h-40 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${
             isTherapyActive 
               ? 'animate-pulse bg-medical-orange/10' 
@@ -69,16 +138,19 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
           }`}>
             <div className="text-4xl">✋</div>
           </div>
+          
+          <AngleDisplay angles={pareticAngles} title="Ángulos de Articulación" />
+          
+          <div className="mt-3">
+            <Badge variant="outline" className={`${
+              isTherapyActive 
+                ? 'text-medical-orange border-medical-orange bg-medical-orange/10' 
+                : 'text-muted-foreground border-muted-foreground'
+            }`}>
+              {isTherapyActive ? t.active : t.inactive}
+            </Badge>
+          </div>
         </CardContent>
-        <div className="text-center pb-4">
-          <Badge variant="outline" className={`${
-            isTherapyActive 
-              ? 'text-medical-orange border-medical-orange bg-medical-orange/10' 
-              : 'text-muted-foreground border-muted-foreground'
-          }`}>
-            {isTherapyActive ? t.active : t.inactive}
-          </Badge>
-        </div>
       </Card>
     </div>
   );

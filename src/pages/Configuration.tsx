@@ -5,15 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { useApp, useTranslation } from '@/contexts/AppContext';
-import { Settings, User, Bell, Palette, Volume2 } from 'lucide-react';
+import { useTranslation } from '@/contexts/AppContext';
+import { Settings, User, Database, Volume2 } from 'lucide-react';
 
 const Configuration = () => {
-  const { darkMode, setDarkMode } = useApp();
   const t = useTranslation();
-  const [notifications, setNotifications] = React.useState(true);
   const [volume, setVolume] = React.useState([70]);
   const [autoSave, setAutoSave] = React.useState(true);
+  const [dataBackup, setDataBackup] = React.useState(false);
 
   return (
     <div className="space-y-6">
@@ -25,67 +24,17 @@ const Configuration = () => {
       </div>
 
       <div className="grid gap-6">
-        {/* Configuración de Apariencia */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5" />
-              Apariencia
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="dark-mode">Modo Oscuro</Label>
-                <p className="text-sm text-muted-foreground">
-                  Activa el tema oscuro para una mejor experiencia visual
-                </p>
-              </div>
-              <Switch
-                id="dark-mode"
-                checked={darkMode}
-                onCheckedChange={setDarkMode}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Configuración de Notificaciones */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Notificaciones
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notifications">Notificaciones del Sistema</Label>
-                <p className="text-sm text-muted-foreground">
-                  Recibe notificaciones sobre sesiones completadas y logros
-                </p>
-              </div>
-              <Switch
-                id="notifications"
-                checked={notifications}
-                onCheckedChange={setNotifications}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Configuración de Audio */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Volume2 className="w-5 h-5" />
-              Audio
+              Audio del Sistema
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <Label>Volumen del Sistema</Label>
+              <Label>Volumen de Notificaciones</Label>
               <Slider
                 value={volume}
                 onValueChange={setVolume}
@@ -107,8 +56,8 @@ const Configuration = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Datos y Almacenamiento
+              <Database className="w-5 h-5" />
+              Gestión de Datos
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -125,15 +74,59 @@ const Configuration = () => {
                 onCheckedChange={setAutoSave}
               />
             </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="data-backup">Respaldo de Datos</Label>
+                <p className="text-sm text-muted-foreground">
+                  Crear respaldos automáticos de los datos de terapia
+                </p>
+              </div>
+              <Switch
+                id="data-backup"
+                checked={dataBackup}
+                onCheckedChange={setDataBackup}
+              />
+            </div>
             
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t space-y-3">
+              <Button variant="outline" className="w-full">
+                Exportar Datos de Sesiones
+              </Button>
               <Button variant="destructive" className="w-full">
                 Limpiar Datos de Sesiones
               </Button>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground">
                 Esta acción eliminará todos los datos históricos de las sesiones. 
                 Esta acción no se puede deshacer.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Configuración del Sistema */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Sistema de Terapia
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <Label>Duración Predeterminada de Sesión</Label>
+              <Slider
+                defaultValue={[15]}
+                max={60}
+                min={5}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>5min</span>
+                <span>15min</span>
+                <span>60min</span>
+              </div>
             </div>
           </CardContent>
         </Card>

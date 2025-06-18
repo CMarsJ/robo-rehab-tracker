@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,37 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const { addNotification } = useApp();
   const t = useTranslation();
 
+  // Función para reproducir sonido de victoria
+  const playVictorySound = () => {
+    // Crear sonido de victoria usando Web Audio API
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    const playNote = (frequency: number, startTime: number, duration: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.1);
+      gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+    };
+
+    // Melodía de victoria (Do-Mi-Sol-Do octava alta)
+    const now = audioContext.currentTime;
+    playNote(261.63, now, 0.3); // Do
+    playNote(329.63, now + 0.3, 0.3); // Mi
+    playNote(392.00, now + 0.6, 0.3); // Sol
+    playNote(523.25, now + 0.9, 0.5); // Do octava alta
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -28,6 +58,10 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
             // Sesión completada
             setIsActive(false);
             setIsPaused(false);
+            
+            // Reproducir sonido de victoria
+            playVictorySound();
+            
             addNotification({
               title: t.congratulationsTraining,
               message: t.sessionCompleted,
