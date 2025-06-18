@@ -11,51 +11,71 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { HelpCircle, Settings } from 'lucide-react';
+import { useSimulation } from '@/contexts/SimulationContext';
 
 const DataSimulator = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [leftHandActive, setLeftHandActive] = useState(false);
-  const [rightHandActive, setRightHandActive] = useState(false);
+  const { leftHand, rightHand, updateSimulationData } = useSimulation();
   
-  // Ángulos para mano izquierda (no parética)
+  const [leftHandActive, setLeftHandActive] = useState(leftHand.active);
+  const [rightHandActive, setRightHandActive] = useState(rightHand.active);
+  
+  // Estados locales para los ángulos
   const [leftAngles, setLeftAngles] = useState({
-    thumb1: [45],
-    thumb2: [30],
-    thumb3: [25],
-    finger1: [60],
-    finger2: [55],
-    finger3: [50]
+    thumb1: [leftHand.angles.thumb1],
+    thumb2: [leftHand.angles.thumb2],
+    thumb3: [leftHand.angles.thumb3],
+    finger1: [leftHand.angles.finger1],
+    finger2: [leftHand.angles.finger2],
+    finger3: [leftHand.angles.finger3]
   });
 
-  // Ángulos para mano derecha (parética)
   const [rightAngles, setRightAngles] = useState({
-    thumb1: [35],
-    thumb2: [25],
-    thumb3: [20],
-    finger1: [40],
-    finger2: [35],
-    finger3: [30]
+    thumb1: [rightHand.angles.thumb1],
+    thumb2: [rightHand.angles.thumb2],
+    thumb3: [rightHand.angles.thumb3],
+    finger1: [rightHand.angles.finger1],
+    finger2: [rightHand.angles.finger2],
+    finger3: [rightHand.angles.finger3]
   });
 
-  const [leftEffort, setLeftEffort] = useState([75]);
-  const [rightEffort, setRightEffort] = useState([45]);
+  const [leftEffort, setLeftEffort] = useState([leftHand.effort]);
+  const [rightEffort, setRightEffort] = useState([rightHand.effort]);
 
   const simulateData = () => {
-    // Aquí se simularía el envío de datos
-    console.log('Datos simulados enviados:', {
-      leftHand: {
-        active: leftHandActive,
-        angles: leftAngles,
-        effort: leftEffort[0]
+    const newLeftHand = {
+      active: leftHandActive,
+      angles: {
+        thumb1: leftAngles.thumb1[0],
+        thumb2: leftAngles.thumb2[0],
+        thumb3: leftAngles.thumb3[0],
+        finger1: leftAngles.finger1[0],
+        finger2: leftAngles.finger2[0],
+        finger3: leftAngles.finger3[0]
       },
-      rightHand: {
-        active: rightHandActive,
-        angles: rightAngles,
-        effort: rightEffort[0]
-      }
+      effort: leftEffort[0]
+    };
+
+    const newRightHand = {
+      active: rightHandActive,
+      angles: {
+        thumb1: rightAngles.thumb1[0],
+        thumb2: rightAngles.thumb2[0],
+        thumb3: rightAngles.thumb3[0],
+        finger1: rightAngles.finger1[0],
+        finger2: rightAngles.finger2[0],
+        finger3: rightAngles.finger3[0]
+      },
+      effort: rightEffort[0]
+    };
+
+    updateSimulationData(newLeftHand, newRightHand);
+    
+    console.log('Datos simulados enviados:', {
+      leftHand: newLeftHand,
+      rightHand: newRightHand
     });
     
-    // Cerrar el popover después de enviar
     setIsOpen(false);
   };
 

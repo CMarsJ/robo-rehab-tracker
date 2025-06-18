@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/contexts/AppContext";
+import { SimulationProvider } from "@/contexts/SimulationContext";
 import Layout from "@/components/Layout";
 import Index from "./pages/Index";
 import Reports from "./pages/Reports";
@@ -18,19 +19,21 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AppProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/configuration" element={<Configuration />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
-        </BrowserRouter>
+        <SimulationProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/configuration" element={<Configuration />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          </BrowserRouter>
+        </SimulationProvider>
       </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/contexts/AppContext';
+import { useSimulation } from '@/contexts/SimulationContext';
 
 interface HandMonitoringProps {
   isTherapyActive?: boolean;
@@ -19,25 +20,7 @@ interface HandAngles {
 
 const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false }) => {
   const t = useTranslation();
-  
-  // Ángulos simulados para cada mano
-  const [nonPareticAngles] = useState<HandAngles>({
-    thumb1: 45,
-    thumb2: 30,
-    thumb3: 25,
-    finger1: 60,
-    finger2: 55,
-    finger3: 50
-  });
-
-  const [pareticAngles] = useState<HandAngles>({
-    thumb1: 35,
-    thumb2: 25,
-    thumb3: 20,
-    finger1: 40,
-    finger2: 35,
-    finger3: 30
-  });
+  const { leftHand, rightHand } = useSimulation();
 
   const AngleDisplay = ({ angles, title }: { angles: HandAngles; title: string }) => (
     <div className="mt-4 space-y-2">
@@ -81,7 +64,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       {/* Mano No Parética */}
       <Card className={`border-2 transition-all duration-300 ${
-        isTherapyActive 
+        leftHand.active && isTherapyActive
           ? 'border-medical-green/60 bg-medical-green/5 hover:border-medical-green/80' 
           : 'border-medical-green/20 hover:border-medical-green/40'
       }`}>
@@ -95,30 +78,33 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
         </CardHeader>
         <CardContent className="flex flex-col items-center">
           <div className={`hand-non-paretic w-32 h-40 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${
-            isTherapyActive 
+            leftHand.active && isTherapyActive
               ? 'animate-pulse bg-medical-green/10' 
               : 'bg-muted/50'
           }`}>
             <div className="text-4xl">✋</div>
           </div>
           
-          <AngleDisplay angles={nonPareticAngles} title="Ángulos de Articulación" />
+          <AngleDisplay angles={leftHand.angles} title="Ángulos de Articulación" />
           
-          <div className="mt-3">
+          <div className="mt-3 flex flex-col items-center gap-2">
             <Badge variant="outline" className={`${
-              isTherapyActive 
+              leftHand.active && isTherapyActive
                 ? 'text-medical-green border-medical-green bg-medical-green/10' 
                 : 'text-muted-foreground border-muted-foreground'
             }`}>
-              {isTherapyActive ? t.active : t.inactive}
+              {leftHand.active && isTherapyActive ? t.active : t.inactive}
             </Badge>
+            <div className="text-xs text-muted-foreground">
+              Esfuerzo: {leftHand.effort}%
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Mano Parética */}
       <Card className={`border-2 transition-all duration-300 ${
-        isTherapyActive 
+        rightHand.active && isTherapyActive
           ? 'border-medical-orange/60 bg-medical-orange/5 hover:border-medical-orange/80' 
           : 'border-medical-orange/20 hover:border-medical-orange/40'
       }`}>
@@ -132,23 +118,26 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
         </CardHeader>
         <CardContent className="flex flex-col items-center">
           <div className={`hand-paretic w-32 h-40 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${
-            isTherapyActive 
+            rightHand.active && isTherapyActive
               ? 'animate-pulse bg-medical-orange/10' 
               : 'bg-muted/50'
           }`}>
             <div className="text-4xl">✋</div>
           </div>
           
-          <AngleDisplay angles={pareticAngles} title="Ángulos de Articulación" />
+          <AngleDisplay angles={rightHand.angles} title="Ángulos de Articulación" />
           
-          <div className="mt-3">
+          <div className="mt-3 flex flex-col items-center gap-2">
             <Badge variant="outline" className={`${
-              isTherapyActive 
+              rightHand.active && isTherapyActive
                 ? 'text-medical-orange border-medical-orange bg-medical-orange/10' 
                 : 'text-muted-foreground border-muted-foreground'
             }`}>
-              {isTherapyActive ? t.active : t.inactive}
+              {rightHand.active && isTherapyActive ? t.active : t.inactive}
             </Badge>
+            <div className="text-xs text-muted-foreground">
+              Esfuerzo: {rightHand.effort}%
+            </div>
           </div>
         </CardContent>
       </Card>
