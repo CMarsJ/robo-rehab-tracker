@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				medical: {
+					blue: '#2563eb',
+					'blue-light': '#3b82f6',
+					'blue-dark': '#1d4ed8',
+					green: '#10b981',
+					'green-light': '#34d399',
+					'green-dark': '#059669',
+					orange: '#f59e0b',
+					'orange-light': '#fbbf24',
+					red: '#ef4444',
+					'red-light': '#f87171'
 				}
 			},
 			borderRadius: {
@@ -84,11 +97,20 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-medical': {
+					'0%, 100%': {
+						opacity: '1'
+					},
+					'50%': {
+						opacity: '0.5'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-medical': 'pulse-medical 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
 			}
 		}
 	},

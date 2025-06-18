@@ -1,0 +1,174 @@
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { play, Pause, Square } from 'lucide-react';
+import { useApp, useTranslation } from '@/contexts/AppContext';
+
+const TherapyTimer = () => {
+  const [duration, setDuration] = useState([15]); // en minutos
+  const [timeLeft, setTimeLeft] = useState(0); // en segundos
+  const [isActive, setIsActive] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const { addNotification } = useApp();
+  const t = useTranslation();
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (isActive && !isPaused && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((time) => {
+          if (time <= 1) {
+            // Sesión completada
+            setIsActive(false);
+            setIsPaused(false);
+            addNotification({
+              title: t.congratulationsTraining,
+              message: t.sessionCompleted,
+              type: 'success'
+            });
+            return 0;
+          }
+          return time - 1;
+        });
+      }, 1000);
+    } else if (!isActive) {
+      setTimeLeft(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, isPaused, timeLeft, addNotification, t]);
+
+  const handleStart = () => {
+    if (!isActive) {
+      setTimeLeft(duration[0] * 60);
+      setIsActive(true);
+      setIsPaused(false);
+    } else {
+      setIsPaused(!isPaused);
+    }
+  };
+
+  const handleStop = () => {
+    setIsActive(false);
+    setIsPaused(false);
+    setTimeLeft(0);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = timeLeft > 0 ? ((duration[0] * 60 - timeLeft) / (duration[0] * 60)) * 100 : 0;
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">{t.therapyTimer}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Selector de duración */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium">{t.duration}</label>
+          <Slider
+            value={duration}
+            onValueChange={setDuration}
+            max={60}
+            min={5}
+            step={5}
+            className="w-full"
+            disabled={isActive}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>5min</span>
+            <span>{duration[0]}min</span>
+            <span>60min</span>
+          </div>
+        </div>
+
+        {/* Timer circular */}
+        <div className="flex justify-center">
+          <div className="relative w-32 h-32">
+            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+                className="text-muted-foreground/20"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+                strokeDasharray={`${2 * Math.PI * 45}`}
+                strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+                className="text-primary transition-all duration-1000 ease-linear"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="text-2xl font-bold">
+                {isActive ? formatTime(timeLeft) : `${duration[0]}:00`}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {isActive ? (isPaused ? 'Pausado' : 'Activo') : t.ready}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Controles */}
+        <div className="flex gap-3 justify-center">
+          <Button
+            onClick={handleStart}
+            className={`${
+              isActive && !isPaused ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-medical-blue hover:bg-medical-blue-dark'
+            } text-white px-6`}
+          >
+            {isActive ? (
+              isPaused ? (
+                <>
+                  <play className="w-4 h-4 mr-2" />
+                  {t.start}
+                </>
+              ) : (
+                <>
+                  <Pause className="w-4 h-4 mr-2" />
+                  {t.pause}
+                </>
+              )
+            ) : (
+              <>
+                <play className="w-4 h-4 mr-2" />
+                {t.start}
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleStop}
+            variant="destructive"
+            className="px-6"
+            disabled={!isActive && timeLeft === 0}
+          >
+            <Square className="w-4 h-4 mr-2" />
+            {t.restart}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default TherapyTimer;
