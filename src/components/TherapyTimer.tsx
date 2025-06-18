@@ -3,10 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { play, Pause, Square } from 'lucide-react';
+import { Play, Pause, Square } from 'lucide-react';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 
-const TherapyTimer = () => {
+interface TherapyTimerProps {
+  onSessionComplete?: () => void;
+}
+
+const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [duration, setDuration] = useState([15]); // en minutos
   const [timeLeft, setTimeLeft] = useState(0); // en segundos
   const [isActive, setIsActive] = useState(false);
@@ -29,6 +33,10 @@ const TherapyTimer = () => {
               message: t.sessionCompleted,
               type: 'success'
             });
+            // Llamar callback para marcar el día como completado
+            if (onSessionComplete) {
+              onSessionComplete();
+            }
             return 0;
           }
           return time - 1;
@@ -41,7 +49,7 @@ const TherapyTimer = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, isPaused, timeLeft, addNotification, t]);
+  }, [isActive, isPaused, timeLeft, addNotification, t, onSessionComplete]);
 
   const handleStart = () => {
     if (!isActive) {
@@ -140,7 +148,7 @@ const TherapyTimer = () => {
             {isActive ? (
               isPaused ? (
                 <>
-                  <play className="w-4 h-4 mr-2" />
+                  <Play className="w-4 h-4 mr-2" />
                   {t.start}
                 </>
               ) : (
@@ -151,7 +159,7 @@ const TherapyTimer = () => {
               )
             ) : (
               <>
-                <play className="w-4 h-4 mr-2" />
+                <Play className="w-4 h-4 mr-2" />
                 {t.start}
               </>
             )}

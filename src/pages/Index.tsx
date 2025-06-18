@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '@/contexts/AppContext';
 import HandMonitoring from '@/components/HandMonitoring';
 import TherapyTimer from '@/components/TherapyTimer';
@@ -9,6 +9,15 @@ import PatientAnalysis from '@/components/PatientAnalysis';
 
 const Index = () => {
   const t = useTranslation();
+  const [isTherapyActive, setIsTherapyActive] = useState(false);
+  const [dayCompleted, setDayCompleted] = useState(false);
+
+  const handleSessionComplete = () => {
+    setDayCompleted(true);
+    setIsTherapyActive(false);
+    // Reset después de un breve delay para permitir que se procese la actualización
+    setTimeout(() => setDayCompleted(false), 1000);
+  };
 
   return (
     <div className="space-y-8">
@@ -24,12 +33,12 @@ const Index = () => {
       </div>
 
       {/* Monitoreo de manos */}
-      <HandMonitoring />
+      <HandMonitoring isTherapyActive={isTherapyActive} />
 
       {/* Sección media: Temporizador y Progreso */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TherapyTimer />
-        <ProgressTracker />
+        <TherapyTimer onSessionComplete={handleSessionComplete} />
+        <ProgressTracker onDayCompleted={dayCompleted} />
       </div>
 
       {/* Gráfico de esfuerzo muscular */}

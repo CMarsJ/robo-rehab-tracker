@@ -5,13 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Check } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
 
-const ProgressTracker = () => {
+interface ProgressTrackerProps {
+  onDayCompleted?: boolean;
+}
+
+const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => {
   const t = useTranslation();
-  const [weekProgress, setWeekProgress] = useState<boolean[]>([false, false, false, true, true, false, false]);
+  const [weekProgress, setWeekProgress] = useState<boolean[]>([false, false, false, false, false, false, false]);
   const [monthProgress] = useState(60); // Porcentaje del mes
   
   const currentDate = new Date();
-  const currentMonth = currentDate.toLocaleString('es-ES', { month: 'long' });
+  const currentMonth = currentDate.toLocaleString(t.locale || 'es-ES', { month: 'long' });
   const currentYear = currentDate.getFullYear();
   
   // Obtener los días de la semana actual
@@ -31,8 +35,25 @@ const ProgressTracker = () => {
   };
 
   const weekDays = getWeekDays();
-  const completedDays = weekProgress.filter(Boolean).length;
+  const today = new Date();
 
+  // Marcar día como completado cuando se termine una sesión
+  useEffect(() => {
+    if (onDayCompleted) {
+      const todayIndex = weekDays.findIndex(day => 
+        day.toDateString() === today.toDateString()
+      );
+      if (todayIndex !== -1) {
+        setWeekProgress(prev => {
+          const newProgress = [...prev];
+          newProgress[todayIndex] = true;
+          return newProgress;
+        });
+      }
+    }
+  }, [onDayCompleted]);
+
+  const completedDays = weekProgress.filter(Boolean).length;
   const dayNames = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
   return (
@@ -48,25 +69,28 @@ const ProgressTracker = () => {
           <h4 className="text-sm font-medium mb-3">{t.weeklyProgress}</h4>
           <div className="grid grid-cols-7 gap-2 mb-3">
             {weekDays.map((day, index) => {
-              const isToday = day.toDateString() === new Date().toDateString();
+              const isToday = day.toDateString() === today.toDateString();
               const isCompleted = weekProgress[index];
+              const isFuture = day > today;
               
               return (
                 <div
                   key={index}
                   className={`
                     relative h-12 rounded-lg border-2 flex flex-col items-center justify-center text-xs
-                    ${isCompleted 
-                      ? 'bg-medical-green/20 border-medical-green text-medical-green' 
-                      : isToday 
-                        ? 'bg-primary/20 border-primary text-primary' 
-                        : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                    ${isFuture 
+                      ? 'bg-muted/30 border-muted-foreground/10 text-muted-foreground/50' 
+                      : isCompleted 
+                        ? 'bg-medical-green/20 border-medical-green text-medical-green' 
+                        : isToday 
+                          ? 'bg-primary/20 border-primary text-primary' 
+                          : 'bg-muted border-muted-foreground/20 text-muted-foreground'
                     }
                   `}
                 >
                   <span className="font-medium">{dayNames[index]}</span>
                   <span className="text-[10px]">{day.getDate()}</span>
-                  {isCompleted && (
+                  {isCompleted && !isFuture && (
                     <div className="absolute -top-1 -right-1 bg-medical-green rounded-full p-1">
                       <Check className="w-3 h-3 text-white" />
                     </div>

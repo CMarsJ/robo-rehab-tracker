@@ -2,12 +2,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface AppContextType {
-  language: 'es' | 'en' | 'pt';
-  setLanguage: (lang: 'es' | 'en' | 'pt') => void;
+  language: 'es' | 'en' | 'pt' | 'ru';
+  setLanguage: (lang: 'es' | 'en' | 'pt' | 'ru') => void;
   darkMode: boolean;
   setDarkMode: (dark: boolean) => void;
   notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
 }
@@ -40,6 +40,7 @@ export const translations = {
     withSensors: 'Con Sensores',
     withExoskeleton: 'Con Exoesqueleto',
     inactive: 'Inactivo',
+    active: 'Activo',
     therapyTimer: 'Temporizador de Terapia',
     duration: 'Duración (minutos)',
     start: 'Iniciar',
@@ -55,12 +56,15 @@ export const translations = {
     averageWeeklyTime: 'Tiempo promedio semanal',
     minutes: 'min',
     week: 'semana',
+    currentWeek: 'Semana actual',
+    previousWeek: 'Semana anterior',
     notifications: 'Notificaciones',
     markAsRead: 'Marcar como leída',
     markAllAsRead: 'Marcar todas como leídas',
     noNotifications: 'No hay notificaciones',
     congratulationsTraining: 'Felicidades por completar el entrenamiento diario',
-    sessionCompleted: 'Sesión de terapia completada exitosamente'
+    sessionCompleted: 'Sesión de terapia completada exitosamente',
+    locale: 'es-ES'
   },
   en: {
     dashboard: 'Dashboard',
@@ -78,6 +82,7 @@ export const translations = {
     withSensors: 'With Sensors',
     withExoskeleton: 'With Exoskeleton',
     inactive: 'Inactive',
+    active: 'Active',
     therapyTimer: 'Therapy Timer',
     duration: 'Duration (minutes)',
     start: 'Start',
@@ -93,12 +98,15 @@ export const translations = {
     averageWeeklyTime: 'Weekly average time',
     minutes: 'min',
     week: 'week',
+    currentWeek: 'Current week',
+    previousWeek: 'Previous week',
     notifications: 'Notifications',
     markAsRead: 'Mark as read',
     markAllAsRead: 'Mark all as read',
     noNotifications: 'No notifications',
     congratulationsTraining: 'Congratulations on completing daily training',
-    sessionCompleted: 'Therapy session completed successfully'
+    sessionCompleted: 'Therapy session completed successfully',
+    locale: 'en-US'
   },
   pt: {
     dashboard: 'Dashboard',
@@ -116,6 +124,7 @@ export const translations = {
     withSensors: 'Com Sensores',
     withExoskeleton: 'Com Exoesqueleto',
     inactive: 'Inativo',
+    active: 'Ativo',
     therapyTimer: 'Temporizador de Terapia',
     duration: 'Duração (minutos)',
     start: 'Iniciar',
@@ -131,17 +140,62 @@ export const translations = {
     averageWeeklyTime: 'Tempo médio semanal',
     minutes: 'min',
     week: 'semana',
+    currentWeek: 'Semana atual',
+    previousWeek: 'Semana anterior',
     notifications: 'Notificações',
     markAsRead: 'Marcar como lida',
     markAllAsRead: 'Marcar todas como lidas',
     noNotifications: 'Nenhuma notificação',
     congratulationsTraining: 'Parabéns por completar o treinamento diário',
-    sessionCompleted: 'Sessão de terapia concluída com sucesso'
+    sessionCompleted: 'Sessão de terapia concluída com sucesso',
+    locale: 'pt-BR'
+  },
+  ru: {
+    dashboard: 'Панель управления',
+    reports: 'Отчеты',
+    history: 'История',
+    configuration: 'Настройки',
+    trainingMode: 'Тренировка',
+    therapyMode: 'Терапия',
+    systemTitle: 'Двусторонняя роботизированная терапия',
+    monitoringSystem: 'Система мониторинга и управления',
+    rehabilitation: 'Двусторонняя роботизированная реабилитация после инсульта',
+    realTimeMonitoring: 'Мониторинг в реальном времени',
+    nonPareticHand: 'Непаретичная рука',
+    pareticHand: 'Паретичная рука',
+    withSensors: 'С датчиками',
+    withExoskeleton: 'С экзоскелетом',
+    inactive: 'Неактивно',
+    active: 'Активно',
+    therapyTimer: 'Таймер терапии',
+    duration: 'Продолжительность (минуты)',
+    start: 'Начать',
+    pause: 'Пауза',
+    restart: 'Перезапуск',
+    ready: 'Готов',
+    achievements: 'Достижения',
+    weeklyProgress: 'Недельный прогресс',
+    monthlyProgress: 'Месячный прогресс',
+    completed: 'завершено на этой неделе',
+    effortAnalysis: 'Анализ усилий пациента',
+    patientAnalysis: 'Анализ пациента',
+    averageWeeklyTime: 'Среднее недельное время',
+    minutes: 'мин',
+    week: 'неделя',
+    currentWeek: 'Текущая неделя',
+    previousWeek: 'Предыдущая неделя',
+    notifications: 'Уведомления',
+    markAsRead: 'Отметить как прочитанное',
+    markAllAsRead: 'Отметить все как прочитанные',
+    noNotifications: 'Нет уведомлений',
+    congratulationsTraining: 'Поздравляем с завершением ежедневной тренировки',
+    sessionCompleted: 'Сеанс терапии успешно завершен',
+    locale: 'ru-RU'
   }
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<'es' | 'en' | 'pt'>('es');
+  const [language, setLanguage] = useState<'es' | 'en' | 'pt' | 'ru'>('es');
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -153,7 +207,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [darkMode]);
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'>) => {
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     const newNotification: Notification = {
       ...notification,
       id: Math.random().toString(36).substr(2, 9),

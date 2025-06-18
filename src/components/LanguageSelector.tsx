@@ -16,6 +16,7 @@ const LanguageSelector = () => {
     { code: 'es' as const, name: 'Español', flag: '🇪🇸' },
     { code: 'en' as const, name: 'English', flag: '🇺🇸' },
     { code: 'pt' as const, name: 'Português', flag: '🇧🇷' },
+    { code: 'ru' as const, name: 'Русский', flag: '🇷🇺' },
   ];
 
   return (

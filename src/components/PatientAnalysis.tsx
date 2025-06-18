@@ -9,8 +9,18 @@ const PatientAnalysis = () => {
   const t = useTranslation();
 
   const weeklyData = [
-    { hand: t.nonPareticHand, current: 127, previous: 115, change: 10.4 },
-    { hand: t.pareticHand, current: 164, previous: 150, change: 9.3 },
+    { 
+      hand: t.nonPareticHand, 
+      current: 127, 
+      previous: 115, 
+      change: 10.4 
+    },
+    { 
+      hand: t.pareticHand, 
+      current: 164, 
+      previous: 150, 
+      change: 9.3 
+    },
   ];
 
   return (
@@ -29,13 +39,22 @@ const PatientAnalysis = () => {
                   <XAxis dataKey="hand" />
                   <YAxis label={{ value: 'Minutos', angle: -90, position: 'insideLeft' }} />
                   <Tooltip 
-                    formatter={(value) => [`${value} min/${t.week}`, t.averageWeeklyTime]}
+                    formatter={(value, name) => [
+                      `${value} min/${t.week}`, 
+                      name === 'current' ? t.currentWeek : t.previousWeek
+                    ]}
+                  />
+                  <Bar 
+                    dataKey="previous" 
+                    fill="#94a3b8" 
+                    radius={[4, 4, 0, 0]}
+                    name="previous"
                   />
                   <Bar 
                     dataKey="current" 
                     fill="#2563eb" 
                     radius={[4, 4, 0, 0]}
-                    name="Semana actual"
+                    name="current"
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -58,12 +77,15 @@ const PatientAnalysis = () => {
                     {item.change > 0 ? '+' : ''}{item.change}%
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-primary">{item.current}</div>
-                <div className="text-xs text-muted-foreground">
-                  {t.minutes}/{t.week}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Anterior: {item.previous} min
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">{t.currentWeek}:</span>
+                    <span className="text-lg font-bold text-primary">{item.current} {t.minutes}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">{t.previousWeek}:</span>
+                    <span className="text-sm text-muted-foreground">{item.previous} {t.minutes}</span>
+                  </div>
                 </div>
               </div>
             ))}
