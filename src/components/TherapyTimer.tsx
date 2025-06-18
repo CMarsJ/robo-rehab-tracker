@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Square } from 'lucide-react';
 import { useApp, useTranslation } from '@/contexts/AppContext';
+import { useSimulation } from '@/contexts/SimulationContext';
+import { useConfig } from '@/contexts/ConfigContext';
 
 interface TherapyTimerProps {
   onSessionComplete?: () => void;
@@ -15,11 +18,12 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const { addNotification } = useApp();
+  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
+  const { patientName } = useConfig();
   const t = useTranslation();
 
   // Función para reproducir sonido de victoria
   const playVictorySound = () => {
-    // Crear sonido de victoria usando Web Audio API
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     
     const playNote = (frequency: number, startTime: number, duration: number) => {
@@ -58,21 +62,28 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
             // Sesión completada
             setIsActive(false);
             setIsPaused(false);
+            setIsTherapyActive(false);
             
             // Reproducir sonido de victoria
             playVictorySound();
             
             addNotification({
-              title: t.congratulationsTraining,
+              title: `¡Felicidades ${patientName}!`,
               message: t.sessionCompleted,
               type: 'success'
             });
-            // Llamar callback para marcar el día como completado
+            
             if (onSessionComplete) {
               onSessionComplete();
             }
             return 0;
           }
+
+          // Agregar datos de esfuerzo cada 5 segundos durante la terapia
+          if ((duration[0] * 60 - time) % 5 === 0 && (leftHand.active || rightHand.active)) {
+            addEffortData(rightHand.effort, leftHand.effort);
+          }
+
           return time - 1;
         });
       }, 1000);
@@ -83,13 +94,15 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, isPaused, timeLeft, addNotification, t, onSessionComplete]);
+  }, [isActive, isPaused, timeLeft, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration]);
 
   const handleStart = () => {
     if (!isActive) {
       setTimeLeft(duration[0] * 60);
       setIsActive(true);
       setIsPaused(false);
+      setIsTherapyActive(true);
+      clearEffortHistory(); // Limpiar historial anterior
     } else {
       setIsPaused(!isPaused);
     }
@@ -99,6 +112,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     setIsActive(false);
     setIsPaused(false);
     setTimeLeft(0);
+    setIsTherapyActive(false);
+    clearEffortHistory();
   };
 
   const formatTime = (seconds: number) => {

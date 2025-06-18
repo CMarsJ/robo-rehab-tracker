@@ -91,9 +91,11 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             <Badge variant="outline" className={`${
               leftHand.active && isTherapyActive
                 ? 'text-medical-green border-medical-green bg-medical-green/10' 
-                : 'text-muted-foreground border-muted-foreground'
+                : leftHand.active
+                  ? 'text-blue-600 border-blue-600 bg-blue-50'
+                  : 'text-muted-foreground border-muted-foreground'
             }`}>
-              {leftHand.active && isTherapyActive ? t.active : t.inactive}
+              {leftHand.active ? t.active : t.inactive}
             </Badge>
             <div className="text-xs text-muted-foreground">
               Esfuerzo: {leftHand.effort}%
@@ -131,9 +133,11 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             <Badge variant="outline" className={`${
               rightHand.active && isTherapyActive
                 ? 'text-medical-orange border-medical-orange bg-medical-orange/10' 
-                : 'text-muted-foreground border-muted-foreground'
+                : rightHand.active
+                  ? 'text-blue-600 border-blue-600 bg-blue-50'
+                  : 'text-muted-foreground border-muted-foreground'
             }`}>
-              {rightHand.active && isTherapyActive ? t.active : t.inactive}
+              {rightHand.active ? t.active : t.inactive}
             </Badge>
             <div className="text-xs text-muted-foreground">
               Esfuerzo: {rightHand.effort}%

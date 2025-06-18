@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from '@/contexts/AppContext';
+import { useSimulation } from '@/contexts/SimulationContext';
 import HandMonitoring from '@/components/HandMonitoring';
 import TherapyTimer from '@/components/TherapyTimer';
 import ProgressTracker from '@/components/ProgressTracker';
@@ -9,12 +10,11 @@ import PatientAnalysis from '@/components/PatientAnalysis';
 
 const Index = () => {
   const t = useTranslation();
-  const [isTherapyActive, setIsTherapyActive] = useState(false);
+  const { isTherapyActive } = useSimulation();
   const [dayCompleted, setDayCompleted] = useState(false);
 
   const handleSessionComplete = () => {
     setDayCompleted(true);
-    setIsTherapyActive(false);
     // Reset después de un breve delay para permitir que se procese la actualización
     setTimeout(() => setDayCompleted(false), 1000);
   };

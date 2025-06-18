@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,7 +75,7 @@ const DataSimulator = () => {
       rightHand: newRightHand
     });
     
-    setIsOpen(false);
+    // NO cerrar el popover - eliminar esta línea: setIsOpen(false);
   };
 
   const AngleSliders = ({ 
