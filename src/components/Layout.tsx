@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/AppSidebar';
-import { NotificationDropdown } from '@/components/NotificationDropdown';
+import AppSidebar from '@/components/AppSidebar';
+import NotificationDropdown from '@/components/NotificationDropdown';
 import LanguageSelector from '@/components/LanguageSelector';
 import DataSimulator from '@/components/DataSimulator';
 import { useApp } from '@/contexts/AppContext';
