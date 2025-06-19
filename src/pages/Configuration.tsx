@@ -27,15 +27,19 @@ const Configuration = () => {
   const [autoSave, setAutoSave] = useState(true);
   const [dataBackup, setDataBackup] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [hasTriedAuth, setHasTriedAuth] = useState(false);
   
   // Estados locales para editar nombres
   const [editPatientName, setEditPatientName] = useState(patientName);
   const [editTherapistName, setEditTherapistName] = useState(therapistName);
 
-  // Solicitar autenticación cada vez que se accede a la página
+  // Solo cerrar sesión una vez al entrar a la página
   useEffect(() => {
-    logout(); // Cerrar sesión al acceder
-  }, [logout]);
+    if (!hasTriedAuth) {
+      logout();
+      setHasTriedAuth(true);
+    }
+  }, [logout, hasTriedAuth]);
 
   const handleAuthenticate = (password: string) => {
     const success = authenticate(password);
