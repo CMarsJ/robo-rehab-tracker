@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,8 +18,16 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [isPaused, setIsPaused] = useState(false);
   const { addNotification } = useApp();
   const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
-  const { patientName } = useConfig();
   const t = useTranslation();
+
+  // Safely get patient name with fallback
+  let patientName = 'Paciente';
+  try {
+    const config = useConfig();
+    patientName = config.patientName;
+  } catch (error) {
+    console.log('Config context not available, using default patient name');
+  }
 
   // Función para reproducir sonido de victoria
   const playVictorySound = () => {
