@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -122,8 +123,9 @@ const Configuration = () => {
               <h4 className="font-medium text-blue-900 mb-2">Reglas del juego:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• 4 naranjas exprimidas = 1 vaso de jugo</li>
-                <li>• Se completa una naranja cuando A4 + A5 + A6 > 230°</li>
+                <li>• Se completa una naranja cuando A4 + A5 + A6 supera 230°</li>
                 <li>• Solo cuenta cuando la mano parética está activa</li>
+                <li>• Se debe bajar a menos de 80% para poder exprimir otra naranja</li>
               </ul>
             </div>
             <Button onClick={handleSaveGameConfig}>

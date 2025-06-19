@@ -13,6 +13,7 @@ interface TherapyOverlayProps {
   onCancel: () => void;
   formatTime: (seconds: number) => string;
   duration: number;
+  mode: 'therapy' | 'fun';
 }
 
 type GameMode = 'selection' | 'orange-squeeze' | 'frog-defense' | 'regular';
@@ -23,9 +24,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   onPause,
   onCancel,
   formatTime,
-  duration
+  duration,
+  mode
 }) => {
-  const [gameMode, setGameMode] = useState<GameMode>('selection');
+  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'regular' : 'selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
 
@@ -33,7 +35,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const handleGameComplete = () => {
     setGameCompleted(true);
-    // Mostrar mensaje de completado del juego pero continuar con el temporizador
   };
 
   const renderGameSelection = () => (
@@ -123,7 +124,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-8 w-full max-w-4xl mx-4 relative max-h-[90vh] overflow-y-auto">
-        {gameMode === 'selection' ? (
+        {(gameMode === 'selection' && mode === 'fun') ? (
           renderGameSelection()
         ) : (
           <>

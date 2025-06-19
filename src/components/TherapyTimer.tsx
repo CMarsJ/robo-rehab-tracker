@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play } from 'lucide-react';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useSimulation } from '@/contexts/SimulationContext';
+import { useConfig } from '@/contexts/ConfigContext';
 import TherapyOverlay from '@/components/TherapyOverlay';
 
 interface TherapyTimerProps {
@@ -18,19 +21,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [sampleCounter, setSampleCounter] = useState(0); // Contador para muestreo
+  const [mode, setMode] = useState<'therapy' | 'fun'>('therapy');
   const { addNotification } = useApp();
   const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
+  const { patientName } = useConfig();
   const t = useTranslation();
-
-  // Safely get patient name with fallback
-  let patientName = 'Paciente';
-  try {
-    const { useConfig } = require('@/contexts/ConfigContext');
-    const config = useConfig();
-    patientName = config.patientName;
-  } catch (error) {
-    console.log('Config context not available, using default patient name');
-  }
 
   // Función para reproducir sonido de victoria
   const playVictorySound = () => {
@@ -156,6 +151,20 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           <CardTitle className="text-lg font-semibold">{t.therapyTimer}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Selector de modo */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Modo de Sesión</label>
+            <Select value={mode} onValueChange={(value: 'therapy' | 'fun') => setMode(value)} disabled={isActive}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el modo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="therapy">🩺 Terapia</SelectItem>
+                <SelectItem value="fun">🎮 Diversión</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Selector de duración */}
           <div className="space-y-3">
             <label className="text-sm font-medium">{t.duration}</label>
@@ -220,7 +229,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
               disabled={isActive}
             >
               <Play className="w-4 h-4 mr-2" />
-              {t.start}
+              {t.start} {mode === 'therapy' ? 'Terapia' : 'Diversión'}
             </Button>
           </div>
         </CardContent>
@@ -235,6 +244,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           onCancel={handleCancel}
           formatTime={formatTime}
           duration={duration[0]}
+          mode={mode}
         />
       )}
     </>
