@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/contexts/AppContext";
 import { SimulationProvider } from "@/contexts/SimulationContext";
 import { ConfigProvider } from "@/contexts/ConfigContext";
+import { GameConfigProvider } from "@/contexts/GameConfigContext";
 import Layout from "@/components/Layout";
 import Index from "./pages/Index";
 import Reports from "./pages/Reports";
@@ -21,21 +22,23 @@ const App = () => (
     <TooltipProvider>
       <AppProvider>
         <ConfigProvider>
-          <SimulationProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/history" element={<History />} />
-                  <Route path="/configuration" element={<Configuration />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Layout>
-            </BrowserRouter>
-          </SimulationProvider>
+          <GameConfigProvider>
+            <SimulationProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/configuration" element={<Configuration />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Layout>
+              </BrowserRouter>
+            </SimulationProvider>
+          </GameConfigProvider>
         </ConfigProvider>
       </AppProvider>
     </TooltipProvider>

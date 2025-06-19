@@ -1,262 +1,146 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { useTranslation } from '@/contexts/AppContext';
 import { useConfig } from '@/contexts/ConfigContext';
-import { Settings, User, Database, Volume2, LogOut } from 'lucide-react';
+import { useGameConfig } from '@/contexts/GameConfigContext';
 import ConfigAuth from '@/components/ConfigAuth';
 
 const Configuration = () => {
   const t = useTranslation();
-  const { 
-    patientName, 
-    therapistName, 
-    setPatientName, 
-    setTherapistName, 
-    isAuthenticated, 
-    authenticate, 
-    logout 
-  } = useConfig();
-  
-  const [volume, setVolume] = useState([70]);
-  const [autoSave, setAutoSave] = useState(true);
-  const [dataBackup, setDataBackup] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [hasTriedAuth, setHasTriedAuth] = useState(false);
-  
-  // Estados locales para editar nombres
-  const [editPatientName, setEditPatientName] = useState(patientName);
-  const [editTherapistName, setEditTherapistName] = useState(therapistName);
+  const { isAuthenticated, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
+  const { orangeJuiceGoal, setOrangeJuiceGoal } = useGameConfig();
+  const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
+  const [localPatientName, setLocalPatientName] = useState(patientName);
+  const [localTherapistName, setLocalTherapistName] = useState(therapistName);
 
-  // Solo cerrar sesión una vez al entrar a la página
   useEffect(() => {
-    if (!hasTriedAuth) {
-      logout();
-      setHasTriedAuth(true);
-    }
-  }, [logout, hasTriedAuth]);
+    setLocalOrangeGoal(orangeJuiceGoal.toString());
+  }, [orangeJuiceGoal]);
 
-  const handleAuthenticate = (password: string) => {
-    const success = authenticate(password);
-    if (!success) {
-      setAuthError('Clave incorrecta. Intente nuevamente.');
-    } else {
-      setAuthError('');
-    }
-  };
+  useEffect(() => {
+    setLocalPatientName(patientName);
+  }, [patientName]);
 
-  const handleSaveNames = () => {
-    setPatientName(editPatientName);
-    setTherapistName(editTherapistName);
-  };
+  useEffect(() => {
+    setLocalTherapistName(therapistName);
+  }, [therapistName]);
 
   if (!isAuthenticated) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">{t.configuration}</h1>
-          <p className="text-muted-foreground">
-            Configuración del sistema de terapia robótica
-          </p>
-        </div>
-        <ConfigAuth onAuthenticate={handleAuthenticate} error={authError} />
-      </div>
-    );
+    return <ConfigAuth />;
   }
+
+  const handleSaveProfile = () => {
+    setPatientName(localPatientName);
+    setTherapistName(localTherapistName);
+  };
+
+  const handleSaveGameConfig = () => {
+    const goal = parseInt(localOrangeGoal);
+    if (!isNaN(goal) && goal > 0) {
+      setOrangeJuiceGoal(goal);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">{t.configuration}</h1>
-          <p className="text-muted-foreground">
-            Configuración del sistema de terapia robótica
-          </p>
-        </div>
-        <Button onClick={logout} variant="outline" size="sm">
-          <LogOut className="w-4 h-4 mr-2" />
-          Cerrar Sesión
-        </Button>
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-foreground">{t.configuration}</h1>
+        <p className="text-muted-foreground">Configuración del sistema y pacientes</p>
       </div>
 
-      <div className="grid gap-6">
-        {/* Información del Paciente y Terapeuta */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Información del Paciente y Terapeuta
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Configuración de Perfil */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">👤 Configuración de Perfil</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <Label htmlFor="patient-name">Nombre del Paciente</Label>
+            <Input
+              id="patient-name"
+              type="text"
+              value={localPatientName}
+              onChange={(e) => setLocalPatientName(e.target.value)}
+              placeholder="Nombre del paciente"
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="therapist-name">Nombre del Terapeuta</Label>
+            <Input
+              id="therapist-name"
+              type="text"
+              value={localTherapistName}
+              onChange={(e) => setLocalTherapistName(e.target.value)}
+              placeholder="Nombre del terapeuta"
+            />
+          </div>
+          <Button onClick={handleSaveProfile}>
+            Guardar Perfil
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Configuración de Juegos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">🎮 Configuración de Juegos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">🍊 Juego de Exprimiendo Naranjas</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="patient-name">Nombre del Paciente</Label>
+              <div className="space-y-2">
+                <Label htmlFor="orange-goal">Vasos de jugo objetivo (15 min)</Label>
                 <Input
-                  id="patient-name"
-                  value={editPatientName}
-                  onChange={(e) => setEditPatientName(e.target.value)}
-                  placeholder="Ingrese el nombre del paciente"
+                  id="orange-goal"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={localOrangeGoal}
+                  onChange={(e) => setLocalOrangeGoal(e.target.value)}
+                  placeholder="Número de vasos"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Este valor se ajusta automáticamente según la duración seleccionada
+                </p>
               </div>
-              <div>
-                <Label htmlFor="therapist-name">Nombre del Terapeuta</Label>
-                <Input
-                  id="therapist-name"
-                  value={editTherapistName}
-                  onChange={(e) => setEditTherapistName(e.target.value)}
-                  placeholder="Ingrese el nombre del terapeuta"
-                />
+              <div className="space-y-2">
+                <Label>Ejemplos para diferentes tiempos:</Label>
+                <div className="text-sm space-y-1 text-muted-foreground">
+                  <div>• 5 min: ~1 vaso</div>
+                  <div>• 15 min: {orangeJuiceGoal} vasos</div>
+                  <div>• 30 min: ~{Math.round(30 * orangeJuiceGoal / 15)} vasos</div>
+                  <div>• 60 min: ~{Math.round(60 * orangeJuiceGoal / 15)} vasos</div>
+                </div>
               </div>
             </div>
-            <Button onClick={handleSaveNames} className="w-full">
-              Guardar Información
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">Reglas del juego:</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• 4 naranjas exprimidas = 1 vaso de jugo</li>
+                <li>• Se completa una naranja cuando A4 + A5 + A6 > 230°</li>
+                <li>• Solo cuenta cuando la mano parética está activa</li>
+              </ul>
+            </div>
+            <Button onClick={handleSaveGameConfig}>
+              Guardar Configuración de Juegos
             </Button>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Configuración de Audio */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Volume2 className="w-5 h-5" />
-              Audio del Sistema
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <Label>Volumen de Notificaciones</Label>
-              <Slider
-                value={volume}
-                onValueChange={setVolume}
-                max={100}
-                min={0}
-                step={5}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>0%</span>
-                <span>{volume[0]}%</span>
-                <span>100%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Separator />
 
-        {/* Configuración de Datos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5" />
-              Gestión de Datos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="auto-save">Guardado Automático</Label>
-                <p className="text-sm text-muted-foreground">
-                  Guarda automáticamente los datos de las sesiones
-                </p>
-              </div>
-              <Switch
-                id="auto-save"
-                checked={autoSave}
-                onCheckedChange={setAutoSave}
-              />
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">🐸 Defensa de la Rana</h3>
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
+              <p className="text-gray-600">Próximamente...</p>
             </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="data-backup">Respaldo de Datos</Label>
-                <p className="text-sm text-muted-foreground">
-                  Crear respaldos automáticos de los datos de terapia
-                </p>
-              </div>
-              <Switch
-                id="data-backup"
-                checked={dataBackup}
-                onCheckedChange={setDataBackup}
-              />
-            </div>
-            
-            <div className="pt-4 border-t space-y-3">
-              <Button variant="outline" className="w-full">
-                Exportar Datos de Sesiones
-              </Button>
-              <Button variant="destructive" className="w-full">
-                Limpiar Datos de Sesiones
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Esta acción eliminará todos los datos históricos de las sesiones. 
-                Esta acción no se puede deshacer.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Configuración del Sistema */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Sistema de Terapia
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <Label>Duración Predeterminada de Sesión</Label>
-              <Slider
-                defaultValue={[15]}
-                max={60}
-                min={5}
-                step={5}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>5min</span>
-                <span>15min</span>
-                <span>60min</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Información del Sistema */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Información del Sistema
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Paciente Actual</p>
-                <p className="font-medium">{patientName}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Terapeuta</p>
-                <p className="font-medium">{therapistName}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Versión del Sistema</p>
-                <p className="font-medium">v1.0.0</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Estado</p>
-                <p className="font-medium text-medical-green">Conectado</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

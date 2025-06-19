@@ -9,12 +9,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { HelpCircle, Settings } from 'lucide-react';
+import { HelpCircle, Settings, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
 
 const DataSimulator = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { leftHand, rightHand, updateSimulationData } = useSimulation();
+  const { leftHand, rightHand, updateSimulationData, autoMode, setAutoMode } = useSimulation();
   
   const [leftHandActive, setLeftHandActive] = useState(leftHand.active);
   const [rightHandActive, setRightHandActive] = useState(rightHand.active);
@@ -182,6 +182,25 @@ const DataSimulator = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Modo automático */}
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+                <div className="flex items-center space-x-3">
+                  {autoMode ? (
+                    <ToggleRight className="h-6 w-6 text-blue-600" />
+                  ) : (
+                    <ToggleLeft className="h-6 w-6 text-gray-400" />
+                  )}
+                  <div>
+                    <Label className="text-sm font-medium">Modo Automático</Label>
+                    <p className="text-xs text-gray-500">Datos aleatorios cada 30s</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={autoMode}
+                  onCheckedChange={setAutoMode}
+                />
+              </div>
+
               {/* Estado de activación */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
@@ -189,6 +208,7 @@ const DataSimulator = () => {
                     id="left-hand"
                     checked={leftHandActive}
                     onCheckedChange={setLeftHandActive}
+                    disabled={autoMode}
                   />
                   <Label htmlFor="left-hand" className="text-xs">Mano Izq. Activa</Label>
                 </div>
@@ -197,6 +217,7 @@ const DataSimulator = () => {
                     id="right-hand"
                     checked={rightHandActive}
                     onCheckedChange={setRightHandActive}
+                    disabled={autoMode}
                   />
                   <Label htmlFor="right-hand" className="text-xs">Mano Der. Activa</Label>
                 </div>
@@ -247,8 +268,9 @@ const DataSimulator = () => {
               <Button 
                 onClick={simulateData}
                 className="w-full"
+                disabled={autoMode}
               >
-                Enviar Datos Simulados
+                {autoMode ? 'Modo Automático Activo' : 'Enviar Datos Simulados'}
               </Button>
             </CardContent>
           </Card>

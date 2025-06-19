@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, X } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useSimulation } from '@/contexts/SimulationContext';
-import { useConfig } from '@/contexts/ConfigContext';
 import TherapyOverlay from '@/components/TherapyOverlay';
 
 interface TherapyTimerProps {
@@ -27,6 +25,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   // Safely get patient name with fallback
   let patientName = 'Paciente';
   try {
+    const { useConfig } = require('@/contexts/ConfigContext');
     const config = useConfig();
     patientName = config.patientName;
   } catch (error) {
@@ -235,6 +234,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           onPause={handlePause}
           onCancel={handleCancel}
           formatTime={formatTime}
+          duration={duration[0]}
         />
       )}
     </>

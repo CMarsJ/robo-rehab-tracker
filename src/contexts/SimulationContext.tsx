@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface HandAngles {
@@ -25,6 +24,8 @@ interface SimulationContextType {
   effortHistory: Array<{ time: string; paretica: number; noParetica: number; }>;
   addEffortData: (paretica: number, noParetica: number) => void;
   clearEffortHistory: () => void;
+  autoMode: boolean;
+  setAutoMode: (active: boolean) => void;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -58,6 +59,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [isTherapyActive, setIsTherapyActive] = useState(false);
   const [effortHistory, setEffortHistory] = useState<Array<{ time: string; paretica: number; noParetica: number; }>>([]);
+  const [autoMode, setAutoMode] = useState(false);
 
   // Cargar datos del localStorage al inicializar
   useEffect(() => {
@@ -89,6 +91,47 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     }
   }, []);
+
+  // Auto mode effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (autoMode) {
+      interval = setInterval(() => {
+        const randomLeftHand: HandData = {
+          active: Math.random() > 0.3, // 70% chance of being active
+          angles: {
+            thumb1: Math.floor(Math.random() * 90),
+            thumb2: Math.floor(Math.random() * 90),
+            thumb3: Math.floor(Math.random() * 90),
+            finger1: Math.floor(Math.random() * 90),
+            finger2: Math.floor(Math.random() * 90),
+            finger3: Math.floor(Math.random() * 90)
+          },
+          effort: Math.floor(Math.random() * 100)
+        };
+
+        const randomRightHand: HandData = {
+          active: Math.random() > 0.3, // 70% chance of being active
+          angles: {
+            thumb1: Math.floor(Math.random() * 90),
+            thumb2: Math.floor(Math.random() * 90),
+            thumb3: Math.floor(Math.random() * 90),
+            finger1: Math.floor(Math.random() * 90),
+            finger2: Math.floor(Math.random() * 90),
+            finger3: Math.floor(Math.random() * 90)
+          },
+          effort: Math.floor(Math.random() * 100)
+        };
+
+        updateSimulationData(randomLeftHand, randomRightHand);
+      }, 30000); // 30 segundos
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [autoMode]);
 
   const updateSimulationData = (newLeftHand: HandData, newRightHand: HandData) => {
     setLeftHand(newLeftHand);
@@ -133,7 +176,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsTherapyActive,
       effortHistory,
       addEffortData,
-      clearEffortHistory
+      clearEffortHistory,
+      autoMode,
+      setAutoMode
     }}>
       {children}
     </SimulationContext.Provider>
