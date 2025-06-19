@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,11 +11,12 @@ import ConfigAuth from '@/components/ConfigAuth';
 
 const Configuration = () => {
   const t = useTranslation();
-  const { isAuthenticated, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
+  const { isAuthenticated, authenticate, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
   const { orangeJuiceGoal, setOrangeJuiceGoal } = useGameConfig();
   const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
   const [localPatientName, setLocalPatientName] = useState(patientName);
   const [localTherapistName, setLocalTherapistName] = useState(therapistName);
+  const [authError, setAuthError] = useState<string>('');
 
   useEffect(() => {
     setLocalOrangeGoal(orangeJuiceGoal.toString());
@@ -30,8 +30,17 @@ const Configuration = () => {
     setLocalTherapistName(therapistName);
   }, [therapistName]);
 
+  const handleAuthenticate = (password: string) => {
+    const success = authenticate(password);
+    if (!success) {
+      setAuthError('Clave incorrecta. Inténtalo de nuevo.');
+    } else {
+      setAuthError('');
+    }
+  };
+
   if (!isAuthenticated) {
-    return <ConfigAuth />;
+    return <ConfigAuth onAuthenticate={handleAuthenticate} error={authError} />;
   }
 
   const handleSaveProfile = () => {
