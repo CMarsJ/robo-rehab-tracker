@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 interface Ranking {
   date: string;
   glasses: number;
+  timePerGlass: number;
+  totalTime: number;
 }
 
 const GameRankings = () => {
@@ -15,6 +17,12 @@ const GameRankings = () => {
     const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
     setOrangeRankings(rankings.slice(0, 5)); // Top 5
   }, []);
+
+  const formatTime = (minutes: number) => {
+    const mins = Math.floor(minutes);
+    const secs = Math.round((minutes - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -31,7 +39,8 @@ const GameRankings = () => {
               <TableRow>
                 <TableHead className="w-16">Pos.</TableHead>
                 <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Vasos</TableHead>
+                <TableHead className="text-center">Vasos</TableHead>
+                <TableHead className="text-right">Tiempo/Vaso</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -40,12 +49,13 @@ const GameRankings = () => {
                   <TableRow key={index}>
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>{entry.date}</TableCell>
-                    <TableCell className="text-right">{entry.glasses}</TableCell>
+                    <TableCell className="text-center">{entry.glasses}</TableCell>
+                    <TableCell className="text-right">{formatTime(entry.timePerGlass)}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No hay registros aún
                   </TableCell>
                 </TableRow>

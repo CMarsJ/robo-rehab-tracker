@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -16,6 +15,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   const [squeezePercentage, setSqueezePercentage] = useState(0);
   const [canSqueeze, setCanSqueeze] = useState(true);
   const [showOrangeMessage, setShowOrangeMessage] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const { rightHand } = useSimulation();
 
   // Función para reproducir sonido de exprimir naranja
@@ -76,6 +76,12 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   };
 
   useEffect(() => {
+    if (startTime === null) {
+      setStartTime(Date.now());
+    }
+  }, []);
+
+  useEffect(() => {
     // Calcular porcentaje basado en la suma de A4, A5, A6 (target: 230 grados)
     const fingerSum = rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3;
     const percentage = Math.min((fingerSum / 230) * 100, 100);
@@ -113,12 +119,20 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
           // Reproducir sonido de beber
           playDrinkSound();
           
-          if (newGlasses >= targetGlasses) {
-            // Guardar el logro en localStorage
+          if (newGlasses >= targetGlasses && startTime) {
+            const endTime = Date.now();
+            const totalTimeMinutes = (endTime - startTime) / (1000 * 60);
+            const timePerGlass = totalTimeMinutes / newGlasses;
+            
             const today = new Date().toLocaleDateString();
             const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
-            rankings.push({ date: today, glasses: newGlasses });
-            rankings.sort((a: any, b: any) => b.glasses - a.glasses);
+            rankings.push({ 
+              date: today, 
+              glasses: newGlasses,
+              timePerGlass: timePerGlass,
+              totalTime: totalTimeMinutes
+            });
+            rankings.sort((a: any, b: any) => a.timePerGlass - b.timePerGlass);
             localStorage.setItem('orangeRankings', JSON.stringify(rankings.slice(0, 5)));
             
             onComplete();
@@ -128,7 +142,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
         return newCount;
       });
     }
-  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, onComplete, canSqueeze]);
+  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, onComplete, canSqueeze, startTime]);
 
   const currentOrangesInGlass = orangesSqueezed % 4;
   const progressPercent = (currentOrangesInGlass / 4) * 100;
@@ -179,9 +193,9 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
               }`}
               style={{ height: `${squeezePercentage}%` }}
             />
-            <div className="absolute top-0 right-full mr-2 text-xs">100%</div>
-            <div className="absolute top-1/5 right-full mr-2 text-xs">80%</div>
-            <div className="absolute bottom-0 right-full mr-2 text-xs">0%</div>
+            <div className="absolute top-0 left-full ml-2 text-xs">100%</div>
+            <div className="absolute top-1/5 left-full ml-2 text-xs">80%</div>
+            <div className="absolute bottom-0 left-full ml-2 text-xs">0%</div>
           </div>
           <div className="text-center mt-2">
             <span className="text-lg font-bold">{Math.round(squeezePercentage)}%</span>
