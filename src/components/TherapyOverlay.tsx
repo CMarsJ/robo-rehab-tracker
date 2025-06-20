@@ -27,7 +27,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
-  // Solo mostrar selección de juegos si está en modo diversión
+  // En modo terapia siempre regular, en modo diversión empezar con selección
   const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'regular' : 'selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();

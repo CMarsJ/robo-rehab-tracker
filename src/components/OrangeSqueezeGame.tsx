@@ -100,7 +100,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
       
       // Mostrar mensaje de naranja exprimida
       setShowOrangeMessage(true);
-      setTimeout(() => setShowOrangeMessage(false), 10000); // 10 segundos
+      setTimeout(() => setShowOrangeMessage(false), 2000); // 2 segundos
       
       setOrangesSqueezed(prev => {
         const newCount = prev + 1;
@@ -179,9 +179,9 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
               }`}
               style={{ height: `${squeezePercentage}%` }}
             />
-            <div className="absolute top-0 left-full ml-2 text-xs">100%</div>
-            <div className="absolute top-1/5 left-full ml-2 text-xs">80%</div>
-            <div className="absolute bottom-0 left-full ml-2 text-xs">0%</div>
+            <div className="absolute top-0 right-full mr-2 text-xs">100%</div>
+            <div className="absolute top-1/5 right-full mr-2 text-xs">80%</div>
+            <div className="absolute bottom-0 right-full mr-2 text-xs">0%</div>
           </div>
           <div className="text-center mt-2">
             <span className="text-lg font-bold">{Math.round(squeezePercentage)}%</span>
@@ -201,11 +201,11 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
         <CardContent className="p-4 text-center">
           {!canSqueeze ? (
             <p className="text-sm text-yellow-800">
-              Relaja la mano (baja de 80%) para poder exprimir otra naranja
+              Relaja la mano para poder exprimir otra naranja
             </p>
           ) : (
             <p className="text-sm text-blue-800">
-              Exprime la naranja con la mano parética para llegar al 100%
+              Exprime la naranja con la mano parética
             </p>
           )}
         </CardContent>

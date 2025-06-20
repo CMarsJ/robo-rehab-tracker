@@ -25,6 +25,21 @@ const AppSidebar = () => {
   const { language } = useApp();
   const [isTrainingMode, setIsTrainingMode] = React.useState(false);
 
+  // Cargar el estado inicial desde localStorage
+  React.useEffect(() => {
+    const saved = localStorage.getItem('isTrainingMode');
+    if (saved !== null) {
+      setIsTrainingMode(saved === 'true');
+    }
+  }, []);
+
+  const handleTrainingModeChange = (checked: boolean) => {
+    setIsTrainingMode(checked);
+    localStorage.setItem('isTrainingMode', checked.toString());
+    // Disparar evento personalizado para notificar el cambio
+    window.dispatchEvent(new Event('storage'));
+  };
+
   const menuItems = [
     {
       title: t.dashboard,
@@ -97,7 +112,7 @@ const AppSidebar = () => {
             </span>
             <Switch
               checked={isTrainingMode}
-              onCheckedChange={setIsTrainingMode}
+              onCheckedChange={handleTrainingModeChange}
             />
           </div>
           <p className="text-xs text-muted-foreground">

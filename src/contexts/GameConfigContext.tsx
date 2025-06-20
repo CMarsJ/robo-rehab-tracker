@@ -10,23 +10,25 @@ interface GameConfigContextType {
 const GameConfigContext = createContext<GameConfigContextType | undefined>(undefined);
 
 export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [orangeJuiceGoal, setOrangeJuiceGoalState] = useState(4); // vasos por defecto para 15 min
+  const [orangeJuiceGoal, setOrangeJuiceGoalState] = useState(1); // mínimo 1 vaso
 
   useEffect(() => {
     const saved = localStorage.getItem('orangeJuiceGoal');
     if (saved) {
-      setOrangeJuiceGoalState(parseInt(saved));
+      const goal = parseInt(saved);
+      setOrangeJuiceGoalState(Math.max(1, goal)); // Asegurar mínimo 1
     }
   }, []);
 
   const setOrangeJuiceGoal = (goal: number) => {
-    setOrangeJuiceGoalState(goal);
-    localStorage.setItem('orangeJuiceGoal', goal.toString());
+    const validGoal = Math.max(1, goal); // Asegurar mínimo 1
+    setOrangeJuiceGoalState(validGoal);
+    localStorage.setItem('orangeJuiceGoal', validGoal.toString());
   };
 
   const calculateOrangeGoalForTime = (minutes: number) => {
-    // Usar directamente el objetivo configurado para cualquier tiempo
-    return orangeJuiceGoal;
+    // Siempre retornar mínimo 1 vaso, sin importar los minutos
+    return Math.max(1, orangeJuiceGoal);
   };
 
   return (

@@ -13,7 +13,25 @@ const Index = () => {
   const t = useTranslation();
   const { isTherapyActive } = useSimulation();
   const [dayCompleted, setDayCompleted] = useState(false);
-  const [isTrainingMode] = useState(true); // This would come from sidebar context
+  const [isTrainingMode, setIsTrainingMode] = useState(false);
+
+  // Escuchar cambios en el switch del sidebar
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      const trainingMode = localStorage.getItem('isTrainingMode') === 'true';
+      setIsTrainingMode(trainingMode);
+    };
+
+    // Verificar al cargar
+    handleStorageChange();
+    
+    // Escuchar cambios en localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleSessionComplete = () => {
     setDayCompleted(true);
@@ -39,7 +57,7 @@ const Index = () => {
 
       {/* Sección media: Temporizador y Progreso */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TherapyTimer onSessionComplete={handleSessionComplete} />
+        <TherapyTimer onSessionComplete={handleSessionComplete} isTrainingMode={isTrainingMode} />
         <ProgressTracker onDayCompleted={dayCompleted} />
       </div>
 

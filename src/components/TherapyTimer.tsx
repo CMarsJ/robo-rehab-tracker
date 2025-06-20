@@ -11,15 +11,17 @@ import TherapyOverlay from '@/components/TherapyOverlay';
 
 interface TherapyTimerProps {
   onSessionComplete?: () => void;
+  isTrainingMode?: boolean;
 }
 
-const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
+const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTrainingMode = false }) => {
   const [duration, setDuration] = useState([15]); // en minutos
   const [timeLeft, setTimeLeft] = useState(0); // en segundos
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [sampleCounter, setSampleCounter] = useState(0); // Contador para muestreo
+  const [sessionMode, setSessionMode] = useState<'therapy' | 'fun'>('therapy');
   const { addNotification } = useApp();
   const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
   const { patientName } = useConfig();
@@ -108,8 +110,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     };
   }, [isActive, isPaused, timeLeft, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration]);
 
-  const handleStart = (mode: 'therapy' | 'fun') => {
+  const handleStart = () => {
     if (!isActive) {
+      // Determinar el modo basado en isTrainingMode
+      const mode = isTrainingMode ? 'fun' : 'therapy';
+      setSessionMode(mode);
       setTimeLeft(duration[0] * 60);
       setIsActive(true);
       setIsPaused(false);
@@ -205,23 +210,15 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
             </div>
           </div>
 
-          {/* Controles */}
-          <div className="flex gap-3 justify-center">
+          {/* Control único */}
+          <div className="flex justify-center">
             <Button
-              onClick={() => handleStart('therapy')}
-              className="bg-medical-blue hover:bg-medical-blue-dark text-white px-6"
+              onClick={handleStart}
+              className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg"
               disabled={isActive}
             >
-              <Play className="w-4 h-4 mr-2" />
-              {t.start} Terapia
-            </Button>
-            <Button
-              onClick={() => handleStart('fun')}
-              className="bg-green-500 hover:bg-green-600 text-white px-6"
-              disabled={isActive}
-            >
-              <Play className="w-4 h-4 mr-2" />
-              {t.start} Diversión
+              <Play className="w-5 h-5 mr-2" />
+              {t.start}
             </Button>
           </div>
         </CardContent>
@@ -236,7 +233,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           onCancel={handleCancel}
           formatTime={formatTime}
           duration={duration[0]}
-          mode={showOverlay ? 'fun' : 'therapy'}
+          mode={sessionMode}
         />
       )}
     </>
