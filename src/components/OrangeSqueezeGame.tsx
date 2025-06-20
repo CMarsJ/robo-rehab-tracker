@@ -47,6 +47,13 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
         if (newGlasses > glassesCompleted) {
           setGlassesCompleted(newGlasses);
           if (newGlasses >= targetGlasses) {
+            // Guardar el logro en localStorage
+            const today = new Date().toLocaleDateString();
+            const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
+            rankings.push({ date: today, glasses: newGlasses });
+            rankings.sort((a: any, b: any) => b.glasses - a.glasses);
+            localStorage.setItem('orangeRankings', JSON.stringify(rankings.slice(0, 5)));
+            
             onComplete();
           }
         }
@@ -131,12 +138,9 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             </p>
           ) : (
             <p className="text-sm text-blue-800">
-              Suma los dedos A4, A5 y A6 de la mano parética para llegar al 100% y exprimir una naranja
+              Exprime la naranja con la mano parética para llegar al 100%
             </p>
           )}
-          <p className="text-xs text-muted-foreground mt-2">
-            Ángulos actuales: A4({rightHand.angles.finger1}°) + A5({rightHand.angles.finger2}°) + A6({rightHand.angles.finger3}°) = {rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3}°
-          </p>
         </CardContent>
       </Card>
     </div>

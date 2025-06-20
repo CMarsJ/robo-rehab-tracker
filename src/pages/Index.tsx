@@ -7,11 +7,13 @@ import TherapyTimer from '@/components/TherapyTimer';
 import ProgressTracker from '@/components/ProgressTracker';
 import EffortChart from '@/components/EffortChart';
 import PatientAnalysis from '@/components/PatientAnalysis';
+import GameRankings from '@/components/GameRankings';
 
 const Index = () => {
   const t = useTranslation();
   const { isTherapyActive } = useSimulation();
   const [dayCompleted, setDayCompleted] = useState(false);
+  const [isTrainingMode] = useState(true); // This would come from sidebar context
 
   const handleSessionComplete = () => {
     setDayCompleted(true);
@@ -43,6 +45,9 @@ const Index = () => {
 
       {/* Gráfico de esfuerzo muscular */}
       <EffortChart />
+
+      {/* Rankings solo en modo diversión */}
+      {isTrainingMode && <GameRankings />}
 
       {/* Análisis del paciente */}
       <PatientAnalysis />

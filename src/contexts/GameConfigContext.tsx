@@ -25,9 +25,8 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const calculateOrangeGoalForTime = (minutes: number) => {
-    // Proporción: 4 vasos para 15 minutos
-    const baseRatio = 4 / 15;
-    return Math.round(minutes * baseRatio);
+    // Usar directamente el objetivo configurado para cualquier tiempo
+    return orangeJuiceGoal;
   };
 
   return (
