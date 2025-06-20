@@ -18,6 +18,63 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   const [showOrangeMessage, setShowOrangeMessage] = useState(false);
   const { rightHand } = useSimulation();
 
+  // Función para reproducir sonido de exprimir naranja
+  const playSqueezeSound = () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    const playTone = (frequency: number, startTime: number, duration: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      oscillator.type = 'sawtooth';
+      
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+    };
+
+    // Sonido de "squish" al exprimir
+    const now = audioContext.currentTime;
+    playTone(150, now, 0.3);
+    playTone(120, now + 0.1, 0.2);
+  };
+
+  // Función para reproducir sonido de beber
+  const playDrinkSound = () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    const playBubble = (frequency: number, startTime: number, duration: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+    };
+
+    // Sonido de burbujas al beber
+    const now = audioContext.currentTime;
+    playBubble(800, now, 0.2);
+    playBubble(600, now + 0.1, 0.2);
+    playBubble(400, now + 0.2, 0.3);
+  };
+
   useEffect(() => {
     // Calcular porcentaje basado en la suma de A4, A5, A6 (target: 230 grados)
     const fingerSum = rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3;
@@ -29,12 +86,17 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
     // Si el porcentaje baja de 80%, permite exprimir otra naranja
     if (percentage < 80 && !canSqueeze) {
       setCanSqueeze(true);
+      console.log('Puede exprimir otra naranja (bajó de 80%)');
     }
     
     // Si llega al 100% y puede exprimir, cuenta como naranja exprimida
     if (percentage >= 100 && rightHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
+      console.log('Naranja exprimida!');
       setLastSqueezeTime(currentTime);
       setCanSqueeze(false); // No puede exprimir hasta que baje del 80%
+      
+      // Reproducir sonido de exprimir
+      playSqueezeSound();
       
       // Mostrar mensaje de naranja exprimida
       setShowOrangeMessage(true);
@@ -45,7 +107,12 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
         const newGlasses = Math.floor(newCount / 4);
         
         if (newGlasses > glassesCompleted) {
+          console.log('Vaso completado!');
           setGlassesCompleted(newGlasses);
+          
+          // Reproducir sonido de beber
+          playDrinkSound();
+          
           if (newGlasses >= targetGlasses) {
             // Guardar el logro en localStorage
             const today = new Date().toLocaleDateString();

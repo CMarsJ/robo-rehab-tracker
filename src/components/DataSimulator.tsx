@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -15,6 +16,7 @@ import { useSimulation } from '@/contexts/SimulationContext';
 const DataSimulator = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { leftHand, rightHand, updateSimulationData, autoMode, setAutoMode } = useSimulation();
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   const [leftHandActive, setLeftHandActive] = useState(leftHand.active);
   const [rightHandActive, setRightHandActive] = useState(rightHand.active);
@@ -42,6 +44,9 @@ const DataSimulator = () => {
   const [rightEffort, setRightEffort] = useState([rightHand.effort]);
 
   const simulateData = () => {
+    // Mantener posición de scroll antes de enviar datos
+    const currentScrollTop = scrollRef.current?.scrollTop || 0;
+    
     const newLeftHand = {
       active: leftHandActive,
       angles: {
@@ -75,7 +80,12 @@ const DataSimulator = () => {
       rightHand: newRightHand
     });
     
-    // NO cerrar el popover - eliminar esta línea: setIsOpen(false);
+    // Restaurar posición de scroll después de un breve delay
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = currentScrollTop;
+      }
+    }, 0);
   };
 
   const AngleSliders = ({ 
@@ -170,110 +180,112 @@ const DataSimulator = () => {
           </Button>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-96 max-h-96 overflow-y-auto" 
+          className="w-96 max-h-96" 
           align="end" 
           side="top"
         >
-          <Card className="border-0 shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Simulador de Datos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Modo automático */}
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
-                <div className="flex items-center space-x-3">
-                  {autoMode ? (
-                    <ToggleRight className="h-6 w-6 text-blue-600" />
-                  ) : (
-                    <ToggleLeft className="h-6 w-6 text-gray-400" />
-                  )}
-                  <div>
-                    <Label className="text-sm font-medium">Modo Automático</Label>
-                    <p className="text-xs text-gray-500">Datos aleatorios cada 30s</p>
+          <div ref={scrollRef} className="overflow-y-auto max-h-96">
+            <Card className="border-0 shadow-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Simulador de Datos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Modo automático */}
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+                  <div className="flex items-center space-x-3">
+                    {autoMode ? (
+                      <ToggleRight className="h-6 w-6 text-blue-600" />
+                    ) : (
+                      <ToggleLeft className="h-6 w-6 text-gray-400" />
+                    )}
+                    <div>
+                      <Label className="text-sm font-medium">Modo Automático</Label>
+                      <p className="text-xs text-gray-500">Datos aleatorios cada 30s</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={autoMode}
+                    onCheckedChange={setAutoMode}
+                  />
+                </div>
+
+                {/* Estado de activación */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="left-hand"
+                      checked={leftHandActive}
+                      onCheckedChange={setLeftHandActive}
+                      disabled={autoMode}
+                    />
+                    <Label htmlFor="left-hand" className="text-xs">Mano Izq. Activa</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="right-hand"
+                      checked={rightHandActive}
+                      onCheckedChange={setRightHandActive}
+                      disabled={autoMode}
+                    />
+                    <Label htmlFor="right-hand" className="text-xs">Mano Der. Activa</Label>
                   </div>
                 </div>
-                <Switch
-                  checked={autoMode}
-                  onCheckedChange={setAutoMode}
+
+                {/* Ángulos mano izquierda */}
+                <AngleSliders 
+                  angles={leftAngles}
+                  setAngles={setLeftAngles}
+                  title="Mano Izquierda (No Parética)"
                 />
-              </div>
 
-              {/* Estado de activación */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="left-hand"
-                    checked={leftHandActive}
-                    onCheckedChange={setLeftHandActive}
-                    disabled={autoMode}
-                  />
-                  <Label htmlFor="left-hand" className="text-xs">Mano Izq. Activa</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="right-hand"
-                    checked={rightHandActive}
-                    onCheckedChange={setRightHandActive}
-                    disabled={autoMode}
-                  />
-                  <Label htmlFor="right-hand" className="text-xs">Mano Der. Activa</Label>
-                </div>
-              </div>
+                {/* Ángulos mano derecha */}
+                <AngleSliders 
+                  angles={rightAngles}
+                  setAngles={setRightAngles}
+                  title="Mano Derecha (Parética)"
+                />
 
-              {/* Ángulos mano izquierda */}
-              <AngleSliders 
-                angles={leftAngles}
-                setAngles={setLeftAngles}
-                title="Mano Izquierda (No Parética)"
-              />
-
-              {/* Ángulos mano derecha */}
-              <AngleSliders 
-                angles={rightAngles}
-                setAngles={setRightAngles}
-                title="Mano Derecha (Parética)"
-              />
-
-              {/* Esfuerzo muscular */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-sm">Esfuerzo Muscular</h4>
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-xs">Mano Izquierda: {leftEffort[0]}%</Label>
-                    <Slider
-                      value={leftEffort}
-                      onValueChange={setLeftEffort}
-                      max={100}
-                      min={0}
-                      step={5}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Mano Derecha: {rightEffort[0]}%</Label>
-                    <Slider
-                      value={rightEffort}
-                      onValueChange={setRightEffort}
-                      max={100}
-                      min={0}
-                      step={5}
-                    />
+                {/* Esfuerzo muscular */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Esfuerzo Muscular</h4>
+                  <div className="space-y-2">
+                    <div>
+                      <Label className="text-xs">Mano Izquierda: {leftEffort[0]}%</Label>
+                      <Slider
+                        value={leftEffort}
+                        onValueChange={setLeftEffort}
+                        max={100}
+                        min={0}
+                        step={5}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Mano Derecha: {rightEffort[0]}%</Label>
+                      <Slider
+                        value={rightEffort}
+                        onValueChange={setRightEffort}
+                        max={100}
+                        min={0}
+                        step={5}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Botón de simulación */}
-              <Button 
-                onClick={simulateData}
-                className="w-full"
-                disabled={autoMode}
-              >
-                {autoMode ? 'Modo Automático Activo' : 'Enviar Datos Simulados'}
-              </Button>
-            </CardContent>
-          </Card>
+                {/* Botón de simulación */}
+                <Button 
+                  onClick={simulateData}
+                  className="w-full"
+                  disabled={autoMode}
+                >
+                  {autoMode ? 'Modo Automático Activo' : 'Enviar Datos Simulados'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </PopoverContent>
       </Popover>
     </div>

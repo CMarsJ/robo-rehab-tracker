@@ -12,11 +12,24 @@ interface ProgressTrackerProps {
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => {
   const t = useTranslation();
   const [weekProgress, setWeekProgress] = useState<boolean[]>([false, false, false, false, false, false, false]);
-  const [monthlyCompletedDays, setMonthlyCompletedDays] = useState(0); // Iniciar en 0
+  const [monthlyCompletedDays, setMonthlyCompletedDays] = useState(0);
   
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString(t.locale || 'es-ES', { month: 'long' });
   const currentYear = currentDate.getFullYear();
+  
+  // Cargar datos guardados al inicializar
+  useEffect(() => {
+    const savedWeekProgress = localStorage.getItem('weekProgress');
+    const savedMonthlyDays = localStorage.getItem('monthlyCompletedDays');
+    
+    if (savedWeekProgress) {
+      setWeekProgress(JSON.parse(savedWeekProgress));
+    }
+    if (savedMonthlyDays) {
+      setMonthlyCompletedDays(parseInt(savedMonthlyDays));
+    }
+  }, []);
   
   // Obtener los días de la semana actual
   const getWeekDays = () => {
@@ -48,14 +61,19 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
           const newProgress = [...prev];
           if (!newProgress[todayIndex]) {
             newProgress[todayIndex] = true;
+            // Guardar en localStorage
+            localStorage.setItem('weekProgress', JSON.stringify(newProgress));
+            
             // Solo incrementar si no estaba completado antes
-            setMonthlyCompletedDays(prevMonthly => prevMonthly + 1);
+            const newMonthlyDays = monthlyCompletedDays + 1;
+            setMonthlyCompletedDays(newMonthlyDays);
+            localStorage.setItem('monthlyCompletedDays', newMonthlyDays.toString());
           }
           return newProgress;
         });
       }
     }
-  }, [onDayCompleted]);
+  }, [onDayCompleted, monthlyCompletedDays]);
 
   const completedDays = weekProgress.filter(Boolean).length;
   const dayNames = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];

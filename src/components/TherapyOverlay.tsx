@@ -27,6 +27,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
+  // Solo mostrar selección de juegos si está en modo diversión
   const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'regular' : 'selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
@@ -124,6 +125,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-8 w-full max-w-4xl mx-4 relative max-h-[90vh] overflow-y-auto">
+        {/* Solo mostrar selección de juegos en modo diversión */}
         {(gameMode === 'selection' && mode === 'fun') ? (
           renderGameSelection()
         ) : (
