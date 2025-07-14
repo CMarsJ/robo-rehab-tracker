@@ -99,10 +99,20 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       case 'regular':
         return (
           <div className="text-center space-y-6">
-            {/* Imagen de la mano */}
+            {/* Contenedor central - iframe de YouTube en modo terapia, mano en modo diversión */}
             <div className="flex justify-center">
-              <div className="w-80 h-60 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300">
-                <div className="text-6xl">👋</div>
+              <div className="w-80 h-60 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden">
+                {mode === 'therapy' ? (
+                  <iframe
+                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0"
+                    className="w-full h-full border-0"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen={false}
+                    title="Terapia de Rehabilitación"
+                  />
+                ) : (
+                  <div className="text-6xl">👋</div>
+                )}
               </div>
             </div>
             

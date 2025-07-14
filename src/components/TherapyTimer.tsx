@@ -7,6 +7,8 @@ import { Play } from 'lucide-react';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useConfig } from '@/contexts/ConfigContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import TherapyOverlay from '@/components/TherapyOverlay';
 
 interface TherapyTimerProps {
@@ -22,9 +24,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
   const [showOverlay, setShowOverlay] = useState(false);
   const [sampleCounter, setSampleCounter] = useState(0); // Contador para muestreo
   const [sessionMode, setSessionMode] = useState<'therapy' | 'fun'>('therapy');
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const { addNotification } = useApp();
   const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
   const { patientName } = useConfig();
+  const { user } = useAuth();
   const t = useTranslation();
 
   // Función para reproducir sonido de victoria
@@ -74,6 +78,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
             // Reproducir sonido de victoria
             playVictorySound();
             
+            // Finalizar sesión en Supabase
+            if (currentSessionId && user) {
+              finishSession();
+            }
+            
             addNotification({
               title: `¡Felicidades ${patientName}!`,
               message: t.sessionCompleted,
@@ -108,13 +117,70 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, isPaused, timeLeft, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration]);
+  }, [isActive, isPaused, timeLeft, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration, currentSessionId, user]);
 
-  const handleStart = () => {
-    if (!isActive) {
+  const startSession = async () => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert({
+          user_id: user.id,
+          tipo_actividad: isTrainingMode ? 'training' : 'therapy',
+          duracion_minutos: duration[0],
+          estado: 'active'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (error) {
+      console.error('Error creating session:', error);
+      return null;
+    }
+  };
+
+  const finishSession = async () => {
+    if (!currentSessionId || !user) return;
+
+    try {
+      await supabase
+        .from('sessions')
+        .update({ estado: 'completed' })
+        .eq('id', currentSessionId);
+
+      // Si hay datos de juego de naranjas en localStorage, guardarlos
+      const orangeRankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
+      if (orangeRankings.length > 0) {
+        const latestGame = orangeRankings[orangeRankings.length - 1];
+        await supabase
+          .from('game_records')
+          .insert({
+            session_id: currentSessionId,
+            user_id: user.id,
+            game_type: 'orange_squeeze',
+            total_oranges: latestGame.glasses * 4,
+            total_glasses: latestGame.glasses,
+            average_oranges_per_minute: latestGame.glasses * 4 / latestGame.totalTime
+          });
+      }
+    } catch (error) {
+      console.error('Error finishing session:', error);
+    }
+  };
+
+  const handleStart = async () => {
+    if (!isActive && user) {
       // Determinar el modo basado en isTrainingMode
       const mode = isTrainingMode ? 'fun' : 'therapy';
       setSessionMode(mode);
+      
+      // Crear sesión en Supabase
+      const sessionId = await startSession();
+      setCurrentSessionId(sessionId);
+      
       setTimeLeft(duration[0] * 60);
       setIsActive(true);
       setIsPaused(false);
@@ -129,12 +195,25 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
     setIsPaused(!isPaused);
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    // Cancelar sesión en Supabase si existe
+    if (currentSessionId && user) {
+      try {
+        await supabase
+          .from('sessions')
+          .update({ estado: 'cancelled' })
+          .eq('id', currentSessionId);
+      } catch (error) {
+        console.error('Error cancelling session:', error);
+      }
+    }
+    
     setIsActive(false);
     setIsPaused(false);
     setTimeLeft(0);
     setIsTherapyActive(false);
     setShowOverlay(false);
+    setCurrentSessionId(null);
     clearEffortHistory();
     setSampleCounter(0);
   };

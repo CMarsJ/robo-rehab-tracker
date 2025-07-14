@@ -1,7 +1,10 @@
 
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/contexts/AppContext';
 import { useSimulation } from '@/contexts/SimulationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import HandMonitoring from '@/components/HandMonitoring';
 import TherapyTimer from '@/components/TherapyTimer';
 import ProgressTracker from '@/components/ProgressTracker';
@@ -12,8 +15,29 @@ import GameRankings from '@/components/GameRankings';
 const Index = () => {
   const t = useTranslation();
   const { isTherapyActive } = useSimulation();
+  const { user, loading, signOut } = useAuth();
   const [dayCompleted, setDayCompleted] = useState(false);
   const [isTrainingMode, setIsTrainingMode] = useState(false);
+
+  // Redirect if not authenticated
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-2xl font-semibold mb-2">Cargando...</div>
+          <div className="text-muted-foreground">Verificando autenticación</div>
+        </div>
+      </div>
+    );
+  }
 
   // Escuchar cambios en el switch del sidebar
   React.useEffect(() => {
@@ -43,8 +67,16 @@ const Index = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">{t.monitoringSystem}</h1>
-        <p className="text-muted-foreground">{t.rehabilitation}</p>
+        <div className="flex justify-between items-center mb-4">
+          <div></div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{t.monitoringSystem}</h1>
+            <p className="text-muted-foreground">{t.rehabilitation}</p>
+          </div>
+          <Button variant="outline" onClick={handleSignOut}>
+            Cerrar Sesión
+          </Button>
+        </div>
       </div>
 
       {/* Título de monitoreo en tiempo real */}

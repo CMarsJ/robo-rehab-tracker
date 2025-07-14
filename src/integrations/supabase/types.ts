@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_records: {
+        Row: {
+          average_oranges_per_minute: number | null
+          created_at: string
+          game_type: string
+          id: string
+          session_id: string
+          total_glasses: number | null
+          total_oranges: number | null
+          user_id: string
+        }
+        Insert: {
+          average_oranges_per_minute?: number | null
+          created_at?: string
+          game_type: string
+          id?: string
+          session_id: string
+          total_glasses?: number | null
+          total_oranges?: number | null
+          user_id: string
+        }
+        Update: {
+          average_oranges_per_minute?: number | null
+          created_at?: string
+          game_type?: string
+          id?: string
+          session_id?: string
+          total_glasses?: number | null
+          total_oranges?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          duracion_minutos: number
+          estado: string
+          fecha_inicio: string
+          id: string
+          tipo_actividad: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duracion_minutos: number
+          estado?: string
+          fecha_inicio?: string
+          id?: string
+          tipo_actividad: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duracion_minutos?: number
+          estado?: string
+          fecha_inicio?: string
+          id?: string
+          tipo_actividad?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

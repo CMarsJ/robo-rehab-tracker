@@ -1,118 +1,214 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Eye, Download, Calendar } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FileText, Eye, Download, Calendar, Trophy, Clock, Activity } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Navigate } from 'react-router-dom';
+
+interface SessionData {
+  id: string;
+  tipo_actividad: string;
+  fecha_inicio: string;
+  duracion_minutos: number;
+  estado: string;
+  game_records?: {
+    total_oranges: number;
+    total_glasses: number;
+    average_oranges_per_minute: number;
+  }[];
+}
 
 const History = () => {
   const t = useTranslation();
+  const { user, loading } = useAuth();
+  const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const historyData = [
-    {
-      id: 1,
-      type: 'Reporte Mensual',
-      period: 'Mayo 2024',
-      date: '2024-05-31',
-      size: '5.1 MB',
-      sessions: 28,
-      avgEffort: 72
-    },
-    {
-      id: 2,
-      type: 'Reporte Semanal',
-      period: 'Semana 24',
-      date: '2024-06-10',
-      size: '2.1 MB',
-      sessions: 6,
-      avgEffort: 68
-    },
-    {
-      id: 3,
-      type: 'Reporte Semanal',
-      period: 'Semana 23',
-      date: '2024-06-03',
-      size: '2.0 MB',
-      sessions: 7,
-      avgEffort: 65
-    },
-    {
-      id: 4,
-      type: 'Reporte Mensual',
-      period: 'Abril 2024',
-      date: '2024-04-30',
-      size: '4.8 MB',
-      sessions: 25,
-      avgEffort: 63
-    },
-  ];
+  // Redirect if not authenticated
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchSessions();
+    }
+  }, [user]);
+
+  const fetchSessions = async () => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('sessions')
+        .select(`
+          id,
+          tipo_actividad,
+          fecha_inicio,
+          duracion_minutos,
+          estado,
+          game_records (
+            total_oranges,
+            total_glasses,
+            average_oranges_per_minute
+          )
+        `)
+        .eq('user_id', user!.id)
+        .order('fecha_inicio', { ascending: false });
+
+      if (sessionsError) {
+        throw sessionsError;
+      }
+
+      setSessions(sessionsData || []);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar las sesiones');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getSessionIcon = (tipo: string) => {
+    return tipo === 'therapy' ? <Activity className="w-6 h-6 text-blue-600" /> : <Trophy className="w-6 h-6 text-orange-600" />;
+  };
+
+  const getSessionType = (tipo: string) => {
+    return tipo === 'therapy' ? 'Terapia' : 'Entrenamiento';
+  };
+  
+  if (loading || loadingData) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">{t.history}</h1>
+          <p className="text-muted-foreground">Cargando historial...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">{t.history}</h1>
         <p className="text-muted-foreground">
-          Revisa los reportes generados anteriormente y el progreso histórico
+          Historial cronológico de tus sesiones de rehabilitación
         </p>
       </div>
 
-      <div className="grid gap-4">
-        {historyData.map((item) => (
-          <Card key={item.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{item.type}</h3>
-                    <p className="text-muted-foreground">{item.period}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {item.date}
-                      </span>
-                      <span>{item.size}</span>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {sessions.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No hay sesiones registradas</h3>
+            <p className="text-muted-foreground">
+              Completa tu primera sesión de terapia o entrenamiento para ver tu historial aquí.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {sessions.map((session) => (
+            <Card key={session.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      {getSessionIcon(session.tipo_actividad)}
                     </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{getSessionType(session.tipo_actividad)}</h3>
+                      <p className="text-muted-foreground">
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        {session.duracion_minutos} minutos
+                      </p>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(session.fecha_inicio)}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          session.estado === 'completed' ? 'bg-green-100 text-green-800' :
+                          session.estado === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {session.estado === 'completed' ? 'Completada' :
+                           session.estado === 'cancelled' ? 'Cancelada' : 'Activa'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right space-y-2">
+                    {session.game_records && session.game_records[0] && (
+                      <div className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span>🍊 {session.game_records[0].total_oranges} naranjas</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>🥤 {session.game_records[0].total_glasses} vasos</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>⚡ {session.game_records[0].average_oranges_per_minute.toFixed(1)} naranjas/min</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
-                <div className="text-right space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    <div>{item.sessions} sesiones</div>
-                    <div>Esfuerzo promedio: {item.avgEffort}%</div>
+                {/* Información de rendimiento para juegos */}
+                {session.game_records && session.game_records[0] && (
+                  <div className="mt-4 p-4 bg-orange-50 rounded-lg">
+                    <h4 className="font-semibold mb-2 text-orange-800">🍊 Resumen del Juego de Naranjas</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-orange-600">{session.game_records[0].total_oranges}</div>
+                        <div className="text-orange-700">Naranjas totales</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{session.game_records[0].total_glasses}</div>
+                        <div className="text-blue-700">Vasos completados</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {session.game_records[0].average_oranges_per_minute.toFixed(1)}
+                        </div>
+                        <div className="text-green-700">Naranjas/minuto</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{session.duracion_minutos}</div>
+                        <div className="text-purple-700">Minutos</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Ver
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="w-4 h-4 mr-2" />
-                      Descargar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Barra de progreso del esfuerzo */}
-              <div className="mt-4">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>Esfuerzo Promedio</span>
-                  <span>{item.avgEffort}%</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-medical-green to-medical-blue h-2 rounded-full"
-                    style={{ width: `${item.avgEffort}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

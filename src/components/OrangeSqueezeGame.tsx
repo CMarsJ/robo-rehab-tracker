@@ -193,9 +193,10 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
               }`}
               style={{ height: `${squeezePercentage}%` }}
             />
-            <div className="absolute top-0 left-full ml-2 text-xs">100%</div>
-            <div className="absolute top-1/5 left-full ml-2 text-xs">80%</div>
-            <div className="absolute bottom-0 left-full ml-2 text-xs">0%</div>
+            {/* Etiquetas de porcentaje separadas para evitar solapamiento */}
+            <div className="absolute -top-4 -left-8 text-xs font-medium">100%</div>
+            <div className="absolute top-1/5 -right-8 text-xs font-medium">80%</div>
+            <div className="absolute -bottom-4 -left-6 text-xs font-medium">0%</div>
           </div>
           <div className="text-center mt-2">
             <span className="text-lg font-bold">{Math.round(squeezePercentage)}%</span>
