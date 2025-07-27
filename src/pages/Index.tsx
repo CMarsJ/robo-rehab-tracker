@@ -19,27 +19,7 @@ const Index = () => {
   const [dayCompleted, setDayCompleted] = useState(false);
   const [isTrainingMode, setIsTrainingMode] = useState(false);
 
-  // Redirect if not authenticated
-  if (!loading && !user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-2xl font-semibold mb-2">Cargando...</div>
-          <div className="text-muted-foreground">Verificando autenticación</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Escuchar cambios en el switch del sidebar
+  // Escuchar cambios en el switch del sidebar - MOVED BEFORE EARLY RETURNS
   React.useEffect(() => {
     const handleStorageChange = () => {
       const trainingMode = localStorage.getItem('isTrainingMode') === 'true';
@@ -56,6 +36,26 @@ const Index = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  // Redirect if not authenticated
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-2xl font-semibold mb-2">Cargando...</div>
+          <div className="text-muted-foreground">Verificando autenticación</div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSessionComplete = () => {
     setDayCompleted(true);
