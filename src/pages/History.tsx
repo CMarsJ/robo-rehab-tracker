@@ -162,7 +162,7 @@ const History = () => {
                   </div>
                   
                   <div className="text-right space-y-2">
-                    {session.game_records && session.game_records[0] && (
+                    {session.tipo_actividad === 'training' && session.game_records && session.game_records[0] && (
                       <div className="text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <span>🍊 {session.game_records[0].total_oranges} naranjas</span>
@@ -178,8 +178,8 @@ const History = () => {
                   </div>
                 </div>
                 
-                {/* Información de rendimiento para juegos */}
-                {session.game_records && session.game_records[0] && (
+                {/* Información de rendimiento según el tipo de sesión */}
+                {session.tipo_actividad === 'training' && session.game_records && session.game_records[0] && (
                   <div className="mt-4 p-4 bg-orange-50 rounded-lg">
                     <h4 className="font-semibold mb-2 text-orange-800">🍊 Resumen del Juego de Naranjas</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -201,6 +201,19 @@ const History = () => {
                         <div className="text-2xl font-bold text-purple-600">{session.duracion_minutos}</div>
                         <div className="text-purple-700">Minutos</div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Placeholder para sesiones de terapia */}
+                {session.tipo_actividad === 'therapy' && (
+                  <div className="mt-4 p-6 bg-blue-50 rounded-lg border-2 border-dashed border-blue-200">
+                    <div className="text-center">
+                      <div className="text-4xl mb-3">🧠</div>
+                      <h4 className="font-semibold mb-2 text-blue-800">Datos de Terapia</h4>
+                      <p className="text-sm text-blue-700 italic">
+                        En futuras versiones aquí se mostrarán datos específicos sobre el esfuerzo físico y duración de la sesión de terapia
+                      </p>
                     </div>
                   </div>
                 )}
