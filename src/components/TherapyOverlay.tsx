@@ -98,16 +98,16 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         );
       case 'regular':
         return (
-          <div className="text-center space-y-6">
+          <div className="h-full flex flex-col">
             {/* Contenedor central - iframe de YouTube en modo terapia, mano en modo diversión */}
-            <div className="flex justify-center">
-              <div className="w-80 h-60 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden">
+            <div className="flex-1 flex justify-center mb-6">
+              <div className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ height: '80%' }}>
                 {mode === 'therapy' ? (
                   <iframe
-                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0"
+                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
                     className="w-full h-full border-0"
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen={false}
+                    allow="autoplay; encrypted-media; fullscreen"
+                    allowFullScreen
                     title="Terapia de Rehabilitación"
                   />
                 ) : (
@@ -117,7 +117,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             </div>
             
             {/* Tiempo central */}
-            <div className="text-center">
+            <div className="text-center mb-6">
               <div className="text-4xl font-bold text-primary mb-2">
                 {formatTime(timeLeft)}
               </div>
@@ -134,14 +134,16 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-lg p-8 w-full max-w-4xl mx-4 relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-background rounded-lg p-8 relative overflow-y-auto" style={{ width: '90vw', height: '90vh' }}>
         {/* Solo mostrar selección de juegos en modo diversión */}
         {(gameMode === 'selection' && mode === 'fun') ? (
-          renderGameSelection()
+          <div className="flex items-center justify-center h-full">
+            {renderGameSelection()}
+          </div>
         ) : (
-          <>
+          <div className="h-full flex flex-col">
             {/* Contenido del juego o modo regular */}
-            <div className="mb-8">
+            <div className="flex-1">
               {renderGameContent()}
             </div>
 
@@ -153,7 +155,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             )}
 
             {/* Controles inferiores */}
-            <div className="flex items-center justify-center gap-8">
+            <div className="flex items-center justify-center gap-8 mt-auto">
               {/* Botón de pausar/reanudar */}
               <Button
                 onClick={onPause}
@@ -196,7 +198,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 Cancelar
               </Button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
