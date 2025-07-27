@@ -26,7 +26,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
   const [sessionMode, setSessionMode] = useState<'therapy' | 'fun'>('therapy');
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [pausedTime, setPausedTime] = useState(0); // Tiempo total pausado
+  const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
+  const [totalPausedTime, setTotalPausedTime] = useState(0);
   const { addNotification } = useApp();
   const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
   const { patientName } = useConfig();
@@ -69,8 +70,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
     if (isActive && !isPaused && startTime) {
       interval = setInterval(() => {
         const now = Date.now();
-        const elapsed = Math.floor((now - startTime - pausedTime) / 1000);
-        const newTimeLeft = Math.max(0, duration[0] * 60 - elapsed);
+        const elapsedTime = now - startTime - totalPausedTime;
+        const elapsedSeconds = Math.floor(elapsedTime / 1000);
+        const newTimeLeft = Math.max(0, duration[0] * 60 - elapsedSeconds);
         
         setTimeLeft(newTimeLeft);
 
@@ -82,7 +84,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
           setShowOverlay(false);
           setSampleCounter(0);
           setStartTime(null);
-          setPausedTime(0);
+          setPauseStartTime(null);
+          setTotalPausedTime(0);
           
           // Reproducir sonido de victoria
           playVictorySound();
@@ -102,8 +105,10 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
             onSessionComplete();
           }
         }
+      }, 1000); // 1 segundo real
 
-        // Incrementar contador de muestreo cada 0.1 segundos (100ms)
+      // Intervalo separado para muestreo de datos cada 100ms
+      const sampleInterval = setInterval(() => {
         setSampleCounter(prev => {
           const newCounter = prev + 1;
           // Agregar datos de esfuerzo cada 60 muestras (6 segundos a 0.1s por muestra)
@@ -113,18 +118,24 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
           }
           return newCounter;
         });
-      }, 100); // 100ms = 0.1 segundos
+      }, 100);
+
+      return () => {
+        if (interval) clearInterval(interval);
+        clearInterval(sampleInterval);
+      };
     } else if (!isActive) {
       setTimeLeft(0);
       setSampleCounter(0);
       setStartTime(null);
-      setPausedTime(0);
+      setPauseStartTime(null);
+      setTotalPausedTime(0);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, isPaused, startTime, pausedTime, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration, currentSessionId, user]);
+  }, [isActive, isPaused, startTime, totalPausedTime, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration, currentSessionId, user]);
 
   const startSession = async () => {
     if (!user) return null;
@@ -188,9 +199,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
       
-      setTimeLeft(duration[0] * 60);
+      const initialTimeLeft = duration[0] * 60;
+      setTimeLeft(initialTimeLeft);
       setStartTime(Date.now());
-      setPausedTime(0);
+      setPauseStartTime(null);
+      setTotalPausedTime(0);
       setIsActive(true);
       setIsPaused(false);
       setIsTherapyActive(true);
@@ -202,12 +215,14 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
 
   const handlePause = () => {
     if (isPaused) {
-      // Reanudar: agregar el tiempo pausado al total
-      if (startTime) {
-        setPausedTime(prev => prev + (Date.now() - (startTime + prev)));
+      // Reanudar: agregar el tiempo que estuvo pausado
+      if (pauseStartTime) {
+        setTotalPausedTime(prev => prev + (Date.now() - pauseStartTime));
+        setPauseStartTime(null);
       }
     } else {
-      // Pausar: no necesitamos hacer nada especial aquí
+      // Pausar: registrar el momento de la pausa
+      setPauseStartTime(Date.now());
     }
     setIsPaused(!isPaused);
   };
@@ -232,7 +247,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
     setShowOverlay(false);
     setCurrentSessionId(null);
     setStartTime(null);
-    setPausedTime(0);
+    setPauseStartTime(null);
+    setTotalPausedTime(0);
     clearEffortHistory();
     setSampleCounter(0);
   };
