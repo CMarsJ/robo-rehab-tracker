@@ -55,6 +55,33 @@ export type Database = {
           },
         ]
       }
+      game_settings: {
+        Row: {
+          created_at: string
+          enemy_speed: number
+          id: string
+          player_shot_speed: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enemy_speed?: number
+          id?: string
+          player_shot_speed?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enemy_speed?: number
+          id?: string
+          player_shot_speed?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

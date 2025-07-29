@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
 import { useTranslation } from '@/contexts/AppContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useGameConfig } from '@/contexts/GameConfigContext';
@@ -12,10 +13,12 @@ import ConfigAuth from '@/components/ConfigAuth';
 const Configuration = () => {
   const t = useTranslation();
   const { isAuthenticated, authenticate, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
-  const { orangeJuiceGoal, setOrangeJuiceGoal } = useGameConfig();
+  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed } = useGameConfig();
   const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
   const [localPatientName, setLocalPatientName] = useState(patientName);
   const [localTherapistName, setLocalTherapistName] = useState(therapistName);
+  const [localEnemySpeed, setLocalEnemySpeed] = useState(enemySpeed);
+  const [localShotSpeed, setLocalShotSpeed] = useState(shotSpeed);
   const [authError, setAuthError] = useState<string>('');
 
   useEffect(() => {
@@ -29,6 +32,14 @@ const Configuration = () => {
   useEffect(() => {
     setLocalTherapistName(therapistName);
   }, [therapistName]);
+
+  useEffect(() => {
+    setLocalEnemySpeed(enemySpeed);
+  }, [enemySpeed]);
+
+  useEffect(() => {
+    setLocalShotSpeed(shotSpeed);
+  }, [shotSpeed]);
 
   const handleAuthenticate = (password: string) => {
     const success = authenticate(password);
@@ -53,6 +64,11 @@ const Configuration = () => {
     if (!isNaN(goal) && goal > 0) {
       setOrangeJuiceGoal(goal);
     }
+  };
+
+  const handleSaveSpaceInvadersConfig = () => {
+    setEnemySpeed(localEnemySpeed);
+    setShotSpeed(localShotSpeed);
   };
 
   return (
@@ -145,10 +161,47 @@ const Configuration = () => {
           <Separator />
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">🐸 Defensa de la Rana</h3>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <p className="text-gray-600">Próximamente...</p>
+            <h3 className="text-lg font-semibold">🚀 Space Invaders Terapéutico</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="enemy-speed">Velocidad de Enemigos: {localEnemySpeed}/5</Label>
+                <Slider
+                  id="enemy-speed"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={[localEnemySpeed]}
+                  onValueChange={(value) => setLocalEnemySpeed(value[0])}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Controla qué tan rápido se mueven las frutas espaciales
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="shot-speed">Velocidad de Disparo: {localShotSpeed}/5</Label>
+                <Slider
+                  id="shot-speed"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={[localShotSpeed]}
+                  onValueChange={(value) => setLocalShotSpeed(value[0])}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Controla qué tan rápido disparas proyectiles
+                </div>
+              </div>
+              
+              <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                <strong>Instrucciones:</strong> Tu nave se mueve automáticamente. Presiona el botón de disparo para atacar las frutas espaciales. ¡Completa 3 oleadas para ganar!
+              </div>
             </div>
+            <Button onClick={handleSaveSpaceInvadersConfig}>
+              Guardar Configuración Space Invaders
+            </Button>
           </div>
         </CardContent>
       </Card>

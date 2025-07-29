@@ -65,17 +65,20 @@ const GameRankings = () => {
         </CardContent>
       </Card>
 
-      {/* Ranking Rana */}
+      {/* Ranking Space Invaders */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            🐸 Ranking - Defensa de la Rana
+            🚀 Ranking - Space Invaders Terapéutico
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="text-4xl mb-4">🐸</div>
+            <div className="text-4xl mb-4">🚀</div>
             <p className="text-muted-foreground">Próximamente...</p>
+            <div className="text-xs text-gray-500 mt-2">
+              Rankings de puntuación y oleadas completadas
+            </div>
           </div>
         </CardContent>
       </Card>
