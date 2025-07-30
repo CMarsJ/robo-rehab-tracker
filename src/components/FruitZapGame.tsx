@@ -16,6 +16,8 @@ interface Position {
 interface Enemy extends Position {
   id: number;
   destroyed: boolean;
+  row: number;
+  col: number;
 }
 
 interface Bullet extends Position {
@@ -30,7 +32,6 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const { enemySpeed, shotSpeed } = useGameConfig();
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
-  const [playerAngle, setPlayerAngle] = useState(0); // 0=centro, -1=izquierda, 1=derecha
   const [playerPosition, setPlayerPosition] = useState(400);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [bullets, setBullets] = useState<Bullet[]>([]);
@@ -41,6 +42,8 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const [extraWaves, setExtraWaves] = useState(0);
   const [enemiesDestroyed, setEnemiesDestroyed] = useState(0);
   const [shotsFired, setShotsFired] = useState(0);
+  const [enemyDirection, setEnemyDirection] = useState(1); // 1 = derecha, -1 = izquierda
+  const [enemyMoveDown, setEnemyMoveDown] = useState(false);
   const gameRef = useRef<HTMLDivElement>(null);
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
@@ -52,35 +55,58 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
     return emojis[(waveNumber - 1) % emojis.length];
   };
 
-  // Crear enemigos con posiciones aleatorias
+  // Crear enemigos con posiciones más variables
   const createEnemies = useCallback((waveNumber: number) => {
     const newEnemies: Enemy[] = [];
     const rows = Math.min(3 + Math.floor(waveNumber / 2), 5);
-    const cols = Math.min(6 + waveNumber, 10);
+    const cols = Math.min(6 + waveNumber, 8);
     
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
-        // Posición base con offset aleatorio
-        const baseX = 100 + col * 60;
-        const baseY = 50 + row * 50;
-        const offsetX = (Math.random() - 0.5) * 30; // ±15px horizontal
-        const offsetY = (Math.random() - 0.5) * 20; // ±10px vertical
+        // Espaciado más variable y natural
+        const baseX = 80 + col * (gameWidth - 160) / (cols - 1);
+        const baseY = 60 + row * 60;
+        const offsetX = (Math.random() - 0.5) * 40; // Mayor variabilidad horizontal
+        const offsetY = (Math.random() - 0.5) * 25; // Mayor variabilidad vertical
         
         newEnemies.push({
           id: enemyIdRef.current++,
-          x: Math.max(30, Math.min(gameWidth - 30, baseX + offsetX)),
-          y: Math.max(20, baseY + offsetY),
-          destroyed: false
+          x: Math.max(40, Math.min(gameWidth - 40, baseX + offsetX)),
+          y: Math.max(30, baseY + offsetY),
+          destroyed: false,
+          row,
+          col
         });
       }
     }
     return newEnemies;
   }, [gameWidth]);
 
+  // Sonidos terapéuticos suaves
+  const playHitSound = useCallback(() => {
+    // Crear un sonido suave y agradable usando Web Audio API
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Configuración para sonido suave y terapéutico
+    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  }, []);
+
   // Inicializar juego
   const initGame = useCallback(() => {
     setScore(0);
-    setPlayerAngle(0);
     setPlayerPosition(400);
     setBullets([]);
     setExplosions([]);
@@ -88,58 +114,73 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
     setExtraWaves(0);
     setEnemiesDestroyed(0);
     setShotsFired(0);
+    setEnemyDirection(1);
+    setEnemyMoveDown(false);
     setEnemies(createEnemies(1));
     setGameStarted(true);
   }, [createEnemies]);
 
-  // Movimiento automático del jugador en 3 ángulos
+  // Control del jugador basado en suma de ángulos de la mano (simulado por ahora)
   useEffect(() => {
     if (!gameStarted) return;
 
+    // TODO: Integrar con datos reales de handAngles cuando esté disponible
+    // Por ahora simular movimiento automático
     const movePlayer = () => {
-      setPlayerAngle(prev => {
-        // Ciclo: centro -> izquierda -> centro -> derecha -> centro
-        if (prev === 0) return Math.random() < 0.5 ? -1 : 1;
-        return 0;
+      setPlayerPosition(prev => {
+        const center = gameWidth / 2;
+        const amplitude = 250;
+        const time = Date.now() / 1000;
+        return center + Math.sin(time * 0.5) * amplitude;
       });
     };
 
-    // Cambiar ángulo cada 2 segundos
-    const interval = setInterval(movePlayer, 2000);
+    const interval = setInterval(movePlayer, 100);
     return () => clearInterval(interval);
-  }, [gameStarted]);
+  }, [gameStarted, gameWidth]);
 
-  // Actualizar posición basada en el ángulo
-  useEffect(() => {
-    const centerX = gameWidth / 2;
-    const offset = 150; // distancia desde el centro
-    
-    switch (playerAngle) {
-      case -1: // izquierda
-        setPlayerPosition(centerX - offset);
-        break;
-      case 1: // derecha
-        setPlayerPosition(centerX + offset);
-        break;
-      default: // centro
-        setPlayerPosition(centerX);
-    }
-  }, [playerAngle, gameWidth]);
-
-  // Movimiento de enemigos
+  // Movimiento mejorado de enemigos (comportamiento clásico)
   useEffect(() => {
     if (!gameStarted || enemies.length === 0) return;
 
     const moveEnemies = () => {
-      setEnemies(prev => prev.map(enemy => ({
-        ...enemy,
-        y: enemy.y + enemySpeed * 0.5
-      })));
+      setEnemies(prev => {
+        let shouldMoveDown = false;
+        const activeEnemies = prev.filter(e => !e.destroyed);
+        
+        // Verificar si algún enemigo tocó un borde
+        const rightmostX = Math.max(...activeEnemies.map(e => e.x));
+        const leftmostX = Math.min(...activeEnemies.map(e => e.x));
+        
+        if ((enemyDirection === 1 && rightmostX >= gameWidth - 50) || 
+            (enemyDirection === -1 && leftmostX <= 50)) {
+          shouldMoveDown = true;
+          setEnemyDirection(prev => prev * -1);
+          setEnemyMoveDown(true);
+        }
+
+        return prev.map(enemy => {
+          if (enemy.destroyed) return enemy;
+          
+          if (enemyMoveDown) {
+            // Mover hacia abajo
+            return { ...enemy, y: enemy.y + 30 };
+          } else {
+            // Mover lateralmente
+            return { ...enemy, x: enemy.x + (enemyDirection * enemySpeed * 2) };
+          }
+        });
+      });
+      
+      // Reset del movimiento hacia abajo
+      if (enemyMoveDown) {
+        setTimeout(() => setEnemyMoveDown(false), 100);
+      }
     };
 
-    const interval = setInterval(moveEnemies, 100);
+    const interval = setInterval(moveEnemies, 200);
     return () => clearInterval(interval);
-  }, [gameStarted, enemies.length, enemySpeed]);
+  }, [gameStarted, enemies.length, enemySpeed, enemyDirection, enemyMoveDown]);
 
   // Movimiento de balas
   useEffect(() => {
@@ -181,9 +222,10 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
                   y: enemy.y
                 }]);
                 
-                // Incrementar puntuación
+                // Incrementar puntuación y reproducir sonido
                 setScore(s => s + 10);
                 setEnemiesDestroyed(d => d + 1);
+                playHitSound();
                 
                 return { ...enemy, destroyed: true };
               }
@@ -353,8 +395,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
             className="absolute transition-all duration-500"
             style={{ 
               left: playerPosition - 30, 
-              top: gameHeight - 80,
-              transform: `rotate(${playerAngle * 15}deg)`
+              top: gameHeight - 80
             }}
           >
             <img 
@@ -381,7 +422,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
           <div className="text-xs text-muted-foreground">
             Precisión: {shotsFired > 0 ? Math.round((enemiesDestroyed / shotsFired) * 100) : 0}% | 
             Disparos: {shotsFired} | 
-            Posición: {playerAngle === -1 ? 'Izquierda' : playerAngle === 1 ? 'Derecha' : 'Centro'}
+            Posición: {Math.round(playerPosition)}
           </div>
         </div>
       </CardContent>
