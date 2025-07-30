@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Pause, Play, X, Gamepad2 } from 'lucide-react';
 import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
-import SpaceInvadersGame from '@/components/SpaceInvadersGame';
+import FruitZapGame from '@/components/FruitZapGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 
 interface TherapyOverlayProps {
@@ -17,7 +17,7 @@ interface TherapyOverlayProps {
   mode: 'therapy' | 'fun';
 }
 
-type GameMode = 'selection' | 'orange-squeeze' | 'space-invaders' | 'regular';
+type GameMode = 'selection' | 'orange-squeeze' | 'fruit-zap' | 'regular';
 
 const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   timeLeft,
@@ -57,11 +57,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         </Button>
         
         <Button
-          onClick={() => setGameMode('space-invaders')}
+          onClick={() => setGameMode('fruit-zap')}
           className="w-full h-16 text-lg bg-purple-500 hover:bg-purple-600"
         >
-          🚀 Space Invaders Terapéutico
-          <div className="text-sm mt-1">Dispara a las frutas espaciales</div>
+          🎯 Fruit Zap
+          <div className="text-sm mt-1">Dispara automáticamente a las frutas</div>
         </Button>
         
         <Button
@@ -79,8 +79,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     switch (gameMode) {
       case 'orange-squeeze':
         return <OrangeSqueezeGame targetGlasses={targetGlasses} onComplete={handleGameComplete} />;
-      case 'space-invaders':
-        return <SpaceInvadersGame onComplete={handleGameComplete} />;
+      case 'fruit-zap':
+        return <FruitZapGame onComplete={handleGameComplete} />;
       case 'regular':
         return (
           <div className="h-full flex flex-col">

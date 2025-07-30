@@ -65,19 +65,19 @@ const GameRankings = () => {
         </CardContent>
       </Card>
 
-      {/* Ranking Space Invaders */}
+      {/* Ranking Fruit Zap */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            🚀 Ranking - Space Invaders Terapéutico
+            🎯 Ranking - Fruit Zap
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="text-4xl mb-4">🚀</div>
+            <div className="text-4xl mb-4">🎯</div>
             <p className="text-muted-foreground">Próximamente...</p>
             <div className="text-xs text-gray-500 mt-2">
-              Rankings de puntuación y oleadas completadas
+              Ranking por fecha, rondas principales, enemigos/min, rondas extra y calificación
             </div>
           </div>
         </CardContent>

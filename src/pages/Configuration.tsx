@@ -161,7 +161,7 @@ const Configuration = () => {
           <Separator />
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">🚀 Space Invaders Terapéutico</h3>
+            <h3 className="text-lg font-semibold">🎯 Fruit Zap</h3>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="enemy-speed">Velocidad de Enemigos: {localEnemySpeed}/5</Label>
@@ -195,12 +195,12 @@ const Configuration = () => {
                 </div>
               </div>
               
-              <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
-                <strong>Instrucciones:</strong> Tu nave se mueve automáticamente. Presiona el botón de disparo para atacar las frutas espaciales. ¡Completa 3 oleadas para ganar!
+                <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                <strong>Instrucciones:</strong> Tu mano se mueve automáticamente en 3 ángulos. Los disparos son automáticos. ¡Completa 3 oleadas principales y sigue con rondas extra infinitas!
               </div>
             </div>
             <Button onClick={handleSaveSpaceInvadersConfig}>
-              Guardar Configuración Space Invaders
+              Guardar Configuración Fruit Zap
             </Button>
           </div>
         </CardContent>

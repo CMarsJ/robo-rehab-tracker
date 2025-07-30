@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useGameConfig } from '@/contexts/GameConfigContext';
+import playerHandImage from '@/assets/player-hand.png';
 
-interface SpaceInvadersGameProps {
+interface FruitZapGameProps {
   onComplete: () => void;
 }
 
@@ -26,19 +26,21 @@ interface Explosion extends Position {
   id: number;
 }
 
-const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => {
+const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const { enemySpeed, shotSpeed } = useGameConfig();
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
-  const [playerX, setPlayerX] = useState(400);
-  const [playerDirection, setPlayerDirection] = useState(1);
+  const [playerAngle, setPlayerAngle] = useState(0); // 0=centro, -1=izquierda, 1=derecha
+  const [playerPosition, setPlayerPosition] = useState(400);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [bullets, setBullets] = useState<Bullet[]>([]);
   const [explosions, setExplosions] = useState<Explosion[]>([]);
   const [gameWidth] = useState(800);
   const [gameHeight] = useState(600);
   const [wave, setWave] = useState(1);
+  const [extraWaves, setExtraWaves] = useState(0);
   const [enemiesDestroyed, setEnemiesDestroyed] = useState(0);
+  const [shotsFired, setShotsFired] = useState(0);
   const gameRef = useRef<HTMLDivElement>(null);
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
@@ -50,7 +52,7 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
     return emojis[(waveNumber - 1) % emojis.length];
   };
 
-  // Crear enemigos para una oleada
+  // Crear enemigos con posiciones aleatorias
   const createEnemies = useCallback((waveNumber: number) => {
     const newEnemies: Enemy[] = [];
     const rows = Math.min(3 + Math.floor(waveNumber / 2), 5);
@@ -58,48 +60,71 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
     
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
+        // Posición base con offset aleatorio
+        const baseX = 100 + col * 60;
+        const baseY = 50 + row * 50;
+        const offsetX = (Math.random() - 0.5) * 30; // ±15px horizontal
+        const offsetY = (Math.random() - 0.5) * 20; // ±10px vertical
+        
         newEnemies.push({
           id: enemyIdRef.current++,
-          x: 100 + col * 60,
-          y: 50 + row * 50,
+          x: Math.max(30, Math.min(gameWidth - 30, baseX + offsetX)),
+          y: Math.max(20, baseY + offsetY),
           destroyed: false
         });
       }
     }
     return newEnemies;
-  }, []);
+  }, [gameWidth]);
 
   // Inicializar juego
   const initGame = useCallback(() => {
     setScore(0);
-    setPlayerX(400);
-    setPlayerDirection(1);
+    setPlayerAngle(0);
+    setPlayerPosition(400);
     setBullets([]);
     setExplosions([]);
     setWave(1);
+    setExtraWaves(0);
     setEnemiesDestroyed(0);
+    setShotsFired(0);
     setEnemies(createEnemies(1));
     setGameStarted(true);
   }, [createEnemies]);
 
-  // Movimiento automático del jugador
+  // Movimiento automático del jugador en 3 ángulos
   useEffect(() => {
     if (!gameStarted) return;
 
     const movePlayer = () => {
-      setPlayerX(prev => {
-        const newX = prev + playerDirection * 2;
-        if (newX <= 20 || newX >= gameWidth - 20) {
-          setPlayerDirection(d => -d);
-          return prev;
-        }
-        return newX;
+      setPlayerAngle(prev => {
+        // Ciclo: centro -> izquierda -> centro -> derecha -> centro
+        if (prev === 0) return Math.random() < 0.5 ? -1 : 1;
+        return 0;
       });
     };
 
-    const interval = setInterval(movePlayer, 50);
+    // Cambiar ángulo cada 2 segundos
+    const interval = setInterval(movePlayer, 2000);
     return () => clearInterval(interval);
-  }, [gameStarted, playerDirection, gameWidth]);
+  }, [gameStarted]);
+
+  // Actualizar posición basada en el ángulo
+  useEffect(() => {
+    const centerX = gameWidth / 2;
+    const offset = 150; // distancia desde el centro
+    
+    switch (playerAngle) {
+      case -1: // izquierda
+        setPlayerPosition(centerX - offset);
+        break;
+      case 1: // derecha
+        setPlayerPosition(centerX + offset);
+        break;
+      default: // centro
+        setPlayerPosition(centerX);
+    }
+  }, [playerAngle, gameWidth]);
 
   // Movimiento de enemigos
   useEffect(() => {
@@ -194,20 +219,20 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
     
     const activeEnemies = enemies.filter(e => !e.destroyed);
     if (activeEnemies.length === 0 && enemies.length > 0) {
-      // Nueva oleada
       setTimeout(() => {
-        const nextWave = wave + 1;
-        setWave(nextWave);
-        setEnemies(createEnemies(nextWave));
-        
-        if (nextWave > 3) {
-          // Completar juego después de 3 oleadas
-          setGameStarted(false);
-          onComplete();
+        if (wave < 3) {
+          // Oleadas principales
+          const nextWave = wave + 1;
+          setWave(nextWave);
+          setEnemies(createEnemies(nextWave));
+        } else {
+          // Oleadas extra infinitas
+          setExtraWaves(prev => prev + 1);
+          setEnemies(createEnemies(3 + Math.floor(extraWaves / 2))); // Incrementar dificultad gradualmente
         }
       }, 1000);
     }
-  }, [enemies, gameStarted, wave, createEnemies, onComplete]);
+  }, [enemies, gameStarted, wave, extraWaves, createEnemies]);
 
   // Disparo automático
   useEffect(() => {
@@ -216,51 +241,35 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
     const autoShoot = () => {
       setBullets(prev => [...prev, {
         id: bulletIdRef.current++,
-        x: playerX,
+        x: playerPosition,
         y: gameHeight - 80
       }]);
+      setShotsFired(prev => prev + 1);
     };
 
-    const shootInterval = setInterval(autoShoot, 1000 - (shotSpeed * 150));
+    const shootInterval = setInterval(autoShoot, 1200 - (shotSpeed * 200));
     return () => clearInterval(shootInterval);
-  }, [gameStarted, playerX, gameHeight, shotSpeed]);
+  }, [gameStarted, playerPosition, gameHeight, shotSpeed]);
 
-  // Disparo manual
-  const handleShoot = () => {
-    if (!gameStarted) return;
+  // Calcular estadísticas
+  const calculateStats = useCallback(() => {
+    const accuracy = shotsFired > 0 ? (enemiesDestroyed / shotsFired) * 100 : 0;
+    const enemiesPerMinute = enemiesDestroyed; // Se puede ajustar con tiempo real
+    const totalRounds = wave > 3 ? 3 : wave;
+    const rating = Math.round((accuracy * 0.3) + (enemiesPerMinute * 0.4) + (totalRounds * 0.2) + (extraWaves * 0.1));
     
-    setBullets(prev => [...prev, {
-      id: bulletIdRef.current++,
-      x: playerX,
-      y: gameHeight - 80
-    }]);
-  };
+    return { accuracy, enemiesPerMinute, totalRounds, extraWaves, rating };
+  }, [shotsFired, enemiesDestroyed, wave, extraWaves]);
 
   const activeEnemies = enemies.filter(e => !e.destroyed);
   const progress = enemies.length > 0 ? ((enemies.length - activeEnemies.length) / enemies.length) * 100 : 0;
 
-  if (!gameStarted) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <div className="text-6xl mb-4">🚀</div>
-          <h3 className="text-2xl font-bold mb-4">Space Invaders Terapéutico</h3>
-          <p className="text-muted-foreground mb-6">
-            Tu nave se mueve automáticamente. ¡Presiona el botón para disparar a las frutas!
-          </p>
-          <div className="mb-6">
-            <div className="text-lg font-semibold">Configuración:</div>
-            <div className="text-sm text-muted-foreground">
-              Velocidad enemigos: {enemySpeed}/5 | Velocidad disparo: {shotSpeed}/5
-            </div>
-          </div>
-          <Button onClick={initGame} size="lg" className="bg-purple-600 hover:bg-purple-700">
-            🚀 Comenzar Misión
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Auto-iniciar el juego (eliminar menú)
+  useEffect(() => {
+    if (!gameStarted) {
+      initGame();
+    }
+  }, [initGame, gameStarted]);
 
   return (
     <Card>
@@ -268,7 +277,9 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
         {/* Header del juego */}
         <div className="flex justify-between items-center mb-4">
           <div className="text-lg font-bold">Puntuación: {score}</div>
-          <div className="text-lg font-bold">Oleada: {wave}/3</div>
+          <div className="text-lg font-bold">
+            {wave <= 3 ? `Oleada: ${wave}/3` : `Extra: ${extraWaves}`}
+          </div>
           <div className="text-lg font-bold">Eliminados: {enemiesDestroyed}</div>
         </div>
 
@@ -277,6 +288,7 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
           <Progress value={progress} className="h-2" />
           <div className="text-xs text-center mt-1">
             {activeEnemies.length} frutas restantes
+            {extraWaves > 0 && ` | Rondas Extra: ${extraWaves}`}
           </div>
         </div>
 
@@ -320,8 +332,8 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
           {bullets.map(bullet => (
             <div
               key={bullet.id}
-              className="absolute w-2 h-4 bg-yellow-400 rounded-full animate-pulse"
-              style={{ left: bullet.x - 1, top: bullet.y - 2 }}
+              className="absolute w-3 h-6 bg-blue-300 rounded-full animate-pulse shadow-md"
+              style={{ left: bullet.x - 1.5, top: bullet.y - 3 }}
             />
           ))}
 
@@ -338,40 +350,43 @@ const SpaceInvadersGame: React.FC<SpaceInvadersGameProps> = ({ onComplete }) => 
 
           {/* Jugador */}
           <div
-            className="absolute text-4xl transition-all duration-100"
+            className="absolute transition-all duration-500"
             style={{ 
-              left: playerX - 20, 
-              top: gameHeight - 60,
-              transform: 'scale(1.1)'
+              left: playerPosition - 30, 
+              top: gameHeight - 80,
+              transform: `rotate(${playerAngle * 15}deg)`
             }}
           >
-            🚀
+            <img 
+              src={playerHandImage} 
+              alt="Mano del jugador" 
+              className="w-16 h-16 object-contain"
+            />
           </div>
 
-          {/* Botón de disparo */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-            <Button
-              onClick={handleShoot}
-              size="lg"
-              className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-2xl"
-            >
-              🔥
-            </Button>
-          </div>
         </div>
 
         {/* Mensajes motivacionales */}
-        {wave > 1 && (
+        {(wave > 1 || extraWaves > 0) && (
           <div className="text-center mt-4 p-3 bg-green-100 rounded-lg">
             <div className="text-lg font-bold text-green-800">
-              ¡Oleada {wave-1} completada! 🎉
+              {extraWaves > 0 ? `¡Ronda Extra ${extraWaves} completada!` : `¡Oleada ${wave-1} completada!`} 🎉
             </div>
             <div className="text-sm text-green-600">¡Excelente trabajo, sigue así!</div>
           </div>
         )}
+
+        {/* Estadísticas del juego */}
+        <div className="text-center mt-4 p-3 bg-blue-50 rounded-lg">
+          <div className="text-xs text-muted-foreground">
+            Precisión: {shotsFired > 0 ? Math.round((enemiesDestroyed / shotsFired) * 100) : 0}% | 
+            Disparos: {shotsFired} | 
+            Posición: {playerAngle === -1 ? 'Izquierda' : playerAngle === 1 ? 'Derecha' : 'Centro'}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 };
 
-export default SpaceInvadersGame;
+export default FruitZapGame;
