@@ -50,6 +50,8 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const [enemyDirection, setEnemyDirection] = useState(1); // 1 = derecha, -1 = izquierda
   const [enemyMoveDown, setEnemyMoveDown] = useState(false);
   const [shootInterval, setShootInterval] = useState(1000); // Intervalo de disparo en ms
+  const [gameOver, setGameOver] = useState(false);
+  const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const gameRef = useRef<HTMLDivElement>(null);
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
@@ -122,8 +124,10 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
     setShotsFired(0);
     setEnemyDirection(1);
     setEnemyMoveDown(false);
+    setGameOver(false);
     setEnemies(createEnemies(1));
     setGameStarted(true);
+    setGameStartTime(new Date());
   }, [createEnemies]);
 
   // Cargar configuración de disparo desde Supabase
@@ -291,11 +295,34 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
     });
   }, [explosions]);
 
-  // Verificar fin de oleada
+  // Verificar fin de oleada y lógica de derrota
   useEffect(() => {
-    if (!gameStarted) return;
+    if (!gameStarted || gameOver) return;
     
     const activeEnemies = enemies.filter(e => !e.destroyed);
+    const playerY = gameHeight - 70;
+    
+    // Verificar si algún enemigo alcanzó la altura de la nave
+    const enemyReachedPlayer = activeEnemies.some(enemy => enemy.y >= playerY - 30);
+    
+    if (enemyReachedPlayer) {
+      // Lógica de derrota
+      const remainingEnemies = activeEnemies.length;
+      const penalty = remainingEnemies * 5; // 5 puntos por cada enemigo restante
+      setScore(prev => Math.max(0, prev - penalty));
+      setGameOver(true);
+      
+      // Guardar datos en Supabase antes de mostrar derrota
+      saveGameData(true);
+      
+      setTimeout(() => {
+        alert(`¡Ronda perdida! Los enemigos alcanzaron tu posición. Penalización: -${penalty} puntos`);
+        onComplete();
+      }, 500);
+      return;
+    }
+    
+    // Verificar si se completó la oleada
     if (activeEnemies.length === 0 && enemies.length > 0) {
       setTimeout(() => {
         if (wave < 3) {
@@ -310,11 +337,11 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
         }
       }, 1000);
     }
-  }, [enemies, gameStarted, wave, extraWaves, createEnemies]);
+  }, [enemies, gameStarted, wave, extraWaves, createEnemies, gameHeight, gameOver, onComplete]);
 
   // Disparo automático
   useEffect(() => {
-    if (!gameStarted) return;
+    if (!gameStarted || gameOver) return;
 
     const autoShoot = () => {
       setBullets(prev => [...prev, {
@@ -327,7 +354,52 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
 
     const shootIntervalRef = setInterval(autoShoot, shootInterval);
     return () => clearInterval(shootIntervalRef);
-  }, [gameStarted, playerPosition, gameHeight, shootInterval]);
+  }, [gameStarted, playerPosition, gameHeight, shootInterval, gameOver]);
+
+  // Guardar datos del juego en Supabase
+  const saveGameData = useCallback(async (defeated: boolean = false) => {
+    if (!user || !gameStartTime) return;
+    
+    const gameEndTime = new Date();
+    const gameDurationMinutes = (gameEndTime.getTime() - gameStartTime.getTime()) / (1000 * 60);
+    const accuracy = shotsFired > 0 ? (enemiesDestroyed / shotsFired) * 100 : 0;
+    const enemiesPerMinute = gameDurationMinutes > 0 ? enemiesDestroyed / gameDurationMinutes : 0;
+    const totalRounds = wave > 3 ? 3 : wave;
+    const rating = Math.round((accuracy * 0.3) + (enemiesPerMinute * 0.4) + (totalRounds * 0.2) + (extraWaves * 0.1));
+    
+    try {
+      // Crear sesión
+      const { data: session, error: sessionError } = await supabase
+        .from('sessions')
+        .insert({
+          user_id: user.id,
+          duracion_minutos: Math.round(gameDurationMinutes),
+          tipo_actividad: 'fruit_zap',
+          estado: defeated ? 'failed' : 'completed'
+        })
+        .select()
+        .single();
+        
+      if (sessionError) throw sessionError;
+      
+      // Crear registro del juego
+      const { error: gameError } = await supabase
+        .from('game_records')
+        .insert({
+          user_id: user.id,
+          session_id: session.id,
+          game_type: 'fruit_zap',
+          total_oranges: enemiesDestroyed,
+          total_glasses: totalRounds + extraWaves,
+          average_oranges_per_minute: enemiesPerMinute
+        });
+        
+      if (gameError) throw gameError;
+      
+    } catch (error) {
+      console.error('Error saving game data:', error);
+    }
+  }, [user, gameStartTime, shotsFired, enemiesDestroyed, wave, extraWaves]);
 
   // Calcular estadísticas
   const calculateStats = useCallback(() => {
@@ -430,7 +502,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
           <div
             className="absolute transition-all duration-300 ease-out"
             style={{ 
-              left: playerPosition - 25, 
+              left: playerPosition, 
               top: gameHeight - 70,
               transform: 'translateX(-50%)'
             }}
@@ -438,8 +510,11 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
             <img 
               src={playerHandImage} 
               alt="Mano del jugador" 
-              className="w-12 h-12 object-contain drop-shadow-lg"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))' }}
+              className="w-16 h-16 object-contain drop-shadow-lg bg-transparent"
+              style={{ 
+                filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))',
+                imageRendering: 'crisp-edges'
+              }}
             />
           </div>
 
