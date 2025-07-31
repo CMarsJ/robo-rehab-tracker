@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useGameConfig } from '@/contexts/GameConfigContext';
+import { useSimulation } from '@/contexts/SimulationContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import playerHandImage from '@/assets/player-hand.png';
 
 interface FruitZapGameProps {
@@ -30,6 +33,8 @@ interface Explosion extends Position {
 
 const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const { enemySpeed, shotSpeed } = useGameConfig();
+  const { leftHand, rightHand } = useSimulation();
+  const { user } = useAuth();
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
   const [playerPosition, setPlayerPosition] = useState(400);
@@ -44,6 +49,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const [shotsFired, setShotsFired] = useState(0);
   const [enemyDirection, setEnemyDirection] = useState(1); // 1 = derecha, -1 = izquierda
   const [enemyMoveDown, setEnemyMoveDown] = useState(false);
+  const [shootInterval, setShootInterval] = useState(1000); // Intervalo de disparo en ms
   const gameRef = useRef<HTMLDivElement>(null);
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
@@ -120,24 +126,54 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
     setGameStarted(true);
   }, [createEnemies]);
 
-  // Control del jugador basado en suma de ángulos de la mano (simulado por ahora)
+  // Cargar configuración de disparo desde Supabase
+  useEffect(() => {
+    const loadShootInterval = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('game_settings')
+          .select('intervalo_disparo_ms')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (data && !error) {
+          setShootInterval(data.intervalo_disparo_ms);
+        }
+      } catch (error) {
+        console.error('Error loading shoot interval:', error);
+      }
+    };
+    
+    loadShootInterval();
+  }, [user]);
+
+  // Control del jugador basado en suma de ángulos A4 + A5 + A6 de la mano paretica
   useEffect(() => {
     if (!gameStarted) return;
 
-    // TODO: Integrar con datos reales de handAngles cuando esté disponible
-    // Por ahora simular movimiento automático
-    const movePlayer = () => {
-      setPlayerPosition(prev => {
-        const center = gameWidth / 2;
-        const amplitude = 250;
-        const time = Date.now() / 1000;
-        return center + Math.sin(time * 0.5) * amplitude;
-      });
+    const updatePlayerPosition = () => {
+      // Determinar cuál mano es la paretica (por ahora usar la mano izquierda)
+      const pareticHand = leftHand.active ? leftHand : rightHand;
+      
+      if (pareticHand.active) {
+        // Suma de ángulos A4 + A5 + A6 (finger1 + finger2 + finger3)
+        const angleSum = pareticHand.angles.finger1 + pareticHand.angles.finger2 + pareticHand.angles.finger3;
+        
+        // Mapeo inverso: suma=0 → derecha (gameWidth-50), suma>=200 → izquierda (50)
+        // Interpolación lineal entre [0, 200] → [gameWidth-50, 50]
+        const clampedSum = Math.max(0, Math.min(200, angleSum));
+        const normalizedPosition = clampedSum / 200; // [0, 1]
+        const newPosition = (gameWidth - 50) - (normalizedPosition * (gameWidth - 100)); // Invertir
+        
+        setPlayerPosition(Math.max(50, Math.min(gameWidth - 50, newPosition)));
+      }
     };
 
-    const interval = setInterval(movePlayer, 100);
+    const interval = setInterval(updatePlayerPosition, 100);
     return () => clearInterval(interval);
-  }, [gameStarted, gameWidth]);
+  }, [gameStarted, gameWidth, leftHand, rightHand]);
 
   // Movimiento mejorado de enemigos (comportamiento clásico)
   useEffect(() => {
@@ -289,9 +325,9 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
       setShotsFired(prev => prev + 1);
     };
 
-    const shootInterval = setInterval(autoShoot, 1200 - (shotSpeed * 200));
-    return () => clearInterval(shootInterval);
-  }, [gameStarted, playerPosition, gameHeight, shotSpeed]);
+    const shootIntervalRef = setInterval(autoShoot, shootInterval);
+    return () => clearInterval(shootIntervalRef);
+  }, [gameStarted, playerPosition, gameHeight, shootInterval]);
 
   // Calcular estadísticas
   const calculateStats = useCallback(() => {
@@ -392,16 +428,18 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
 
           {/* Jugador */}
           <div
-            className="absolute transition-all duration-500"
+            className="absolute transition-all duration-300 ease-out"
             style={{ 
-              left: playerPosition - 30, 
-              top: gameHeight - 80
+              left: playerPosition - 25, 
+              top: gameHeight - 70,
+              transform: 'translateX(-50%)'
             }}
           >
             <img 
               src={playerHandImage} 
               alt="Mano del jugador" 
-              className="w-16 h-16 object-contain"
+              className="w-12 h-12 object-contain drop-shadow-lg"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))' }}
             />
           </div>
 

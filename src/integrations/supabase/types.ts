@@ -60,6 +60,7 @@ export type Database = {
           created_at: string
           enemy_speed: number
           id: string
+          intervalo_disparo_ms: number
           player_shot_speed: number
           updated_at: string
           user_id: string
@@ -68,6 +69,7 @@ export type Database = {
           created_at?: string
           enemy_speed?: number
           id?: string
+          intervalo_disparo_ms?: number
           player_shot_speed?: number
           updated_at?: string
           user_id: string
@@ -76,6 +78,7 @@ export type Database = {
           created_at?: string
           enemy_speed?: number
           id?: string
+          intervalo_disparo_ms?: number
           player_shot_speed?: number
           updated_at?: string
           user_id?: string
