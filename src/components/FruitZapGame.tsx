@@ -303,7 +303,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
     const playerY = gameHeight - 70;
     
     // Verificar si algún enemigo alcanzó la altura de la nave
-    const enemyReachedPlayer = activeEnemies.some(enemy => enemy.y >= playerY - 30);
+    const enemyReachedPlayer = activeEnemies.some(enemy => enemy.y >= playerY - 50);
     
     if (enemyReachedPlayer) {
       // Lógica de derrota
@@ -316,7 +316,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
       saveGameData(true);
       
       setTimeout(() => {
-        alert(`¡Ronda perdida! Los enemigos alcanzaron tu posición. Penalización: -${penalty} puntos`);
+        alert(`¡Ronda perdida! Los enemigos alcanzaron tu posición.\nEnemigos restantes: ${remainingEnemies}\nPenalización: -${penalty} puntos`);
         onComplete();
       }, 500);
       return;
@@ -500,20 +500,22 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
 
           {/* Jugador */}
           <div
-            className="absolute transition-all duration-300 ease-out"
+            className="absolute transition-all duration-200 ease-out"
             style={{ 
-              left: playerPosition, 
+              left: playerPosition - 32, // Centrar imagen de 64px
               top: gameHeight - 70,
-              transform: 'translateX(-50%)'
+              width: '64px',
+              height: '64px'
             }}
           >
             <img 
               src={playerHandImage} 
               alt="Mano del jugador" 
-              className="w-16 h-16 object-contain drop-shadow-lg bg-transparent"
+              className="w-full h-full object-contain select-none"
               style={{ 
-                filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))',
-                imageRendering: 'crisp-edges'
+                filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.6))',
+                imageRendering: 'pixelated',
+                background: 'transparent'
               }}
             />
           </div>
