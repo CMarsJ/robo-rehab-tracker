@@ -37,7 +37,7 @@ interface Explosion extends Position {
 }
 
 const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
-  const { enemySpeed, shotSpeed } = useGameConfig();
+  const { enemySpeed, shotSpeed, baseEnemyCount } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
   const { user } = useAuth();
   const [gameStarted, setGameStarted] = useState(false);
@@ -56,44 +56,42 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
   const [enemyMoveDown, setEnemyMoveDown] = useState(false);
   const [shootInterval, setShootInterval] = useState(1000); // Intervalo de disparo en ms
   const [gameOver, setGameOver] = useState(false);
+  const [gameLost, setGameLost] = useState(false);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const gameRef = useRef<HTMLDivElement>(null);
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
   const explosionIdRef = useRef(0);
 
-  // Imágenes de enemigos por oleada
-  const getEnemyImage = (waveNumber: number) => {
+  // Imágenes de enemigos por oleada (aleatorias)
+  const getEnemyImage = () => {
     const enemyImages = [enemigo1, enemigo2, enemigo3, enemigo4];
-    return enemyImages[(waveNumber - 1) % enemyImages.length];
+    return enemyImages[Math.floor(Math.random() * enemyImages.length)];
   };
 
-  // Crear enemigos con posiciones más variables
+  // Crear enemigos con posiciones aleatorias
   const createEnemies = useCallback((waveNumber: number) => {
     const newEnemies: Enemy[] = [];
-    const rows = Math.min(3 + Math.floor(waveNumber / 2), 5);
-    const cols = Math.min(6 + waveNumber, 8);
+    // Calcular número de enemigos: baseEnemyCount * (1.5^(waveNumber-1))
+    const enemyCount = Math.floor(baseEnemyCount * Math.pow(1.5, waveNumber - 1));
+    const maxEnemies = Math.min(enemyCount, 20); // Limitar a 20 enemigos máximo
     
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        // Espaciado más variable y natural
-        const baseX = 80 + col * (gameWidth - 160) / (cols - 1);
-        const baseY = 60 + row * 60;
-        const offsetX = (Math.random() - 0.5) * 40; // Mayor variabilidad horizontal
-        const offsetY = (Math.random() - 0.5) * 25; // Mayor variabilidad vertical
-        
-        newEnemies.push({
-          id: enemyIdRef.current++,
-          x: Math.max(40, Math.min(gameWidth - 40, baseX + offsetX)),
-          y: Math.max(30, baseY + offsetY),
-          destroyed: false,
-          row,
-          col
-        });
-      }
+    for (let i = 0; i < maxEnemies; i++) {
+      // Posiciones completamente aleatorias en horizontal
+      const x = 80 + Math.random() * (gameWidth - 160);
+      const y = 60 + Math.random() * 150; // Distribución vertical aleatoria
+      
+      newEnemies.push({
+        id: enemyIdRef.current++,
+        x: Math.max(40, Math.min(gameWidth - 40, x)),
+        y: Math.max(30, y),
+        destroyed: false,
+        row: Math.floor(i / 8), // Para compatibilidad
+        col: i % 8
+      });
     }
     return newEnemies;
-  }, [gameWidth]);
+  }, [gameWidth, baseEnemyCount]);
 
   // Sonidos terapéuticos suaves
   const playHitSound = useCallback(() => {
@@ -130,6 +128,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     setEnemyDirection(1);
     setEnemyMoveDown(false);
     setGameOver(false);
+    setGameLost(false);
     setEnemies(createEnemies(1));
     setGameStarted(true);
     setGameStartTime(new Date());
@@ -315,14 +314,16 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
       const remainingEnemies = activeEnemies.length;
       const penalty = remainingEnemies * 5; // 5 puntos por cada enemigo restante
       setScore(prev => Math.max(0, prev - penalty));
-      setGameOver(true);
+      setGameLost(true);
       
       // Guardar datos en Supabase antes de mostrar derrota
       saveGameData(true);
       
+      // Auto-ocultar mensaje después de 3 segundos
       setTimeout(() => {
+        setGameLost(false);
         onComplete();
-      }, 500);
+      }, 3000);
       return;
     }
     
@@ -335,10 +336,10 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
           setWave(nextWave);
           setEnemies(createEnemies(nextWave));
         } else {
-          // Oleadas extra infinitas - solo contar cuando se completa una ronda
+          // Oleadas extra infinitas - solo contar al finalizar ronda completa
           const newExtraWaves = extraWaves + 1;
           setExtraWaves(newExtraWaves);
-          setEnemies(createEnemies(3 + Math.floor(newExtraWaves / 2))); // Incrementar dificultad gradualmente
+          setEnemies(createEnemies(4 + newExtraWaves)); // Incrementar dificultad
         }
       }, 1000);
     }
@@ -481,7 +482,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
               }}
             >
               <img 
-                src={getEnemyImage(wave)} 
+                src={getEnemyImage()} 
                 alt="Enemigo" 
                 className="w-full h-full object-contain"
                 style={{ 
@@ -536,30 +537,21 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
 
         </div>
 
-        {/* Mensajes de estado del juego */}
-        {gameOver && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg text-center max-w-sm mx-4 shadow-xl">
-              <div className="text-2xl font-bold text-red-600 mb-2">¡Ronda Perdida!</div>
-              <div className="text-gray-700 mb-4">
-                Los enemigos alcanzaron tu posición
+        {/* Mensaje de ronda perdida - estilo inferior */}
+        {gameLost && (
+          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-lg max-w-md">
+              <div className="text-lg font-bold mb-2">¡Ronda Perdida!</div>
+              <div className="text-sm">
+                Los enemigos alcanzaron tu posición<br/>
+                Enemigos restantes: {enemies.filter(e => !e.destroyed).length} | Puntuación: {score}
               </div>
-              <div className="text-sm text-gray-600 mb-4">
-                Enemigos restantes: {enemies.filter(e => !e.destroyed).length}<br/>
-                Puntuación final: {score}
-              </div>
-              <Button 
-                onClick={onComplete}
-                className="bg-primary hover:bg-primary/90"
-              >
-                Continuar
-              </Button>
             </div>
           </div>
         )}
         
         {/* Mensajes de progreso */}
-        {(wave > 1 || extraWaves > 0) && !gameOver && (
+        {(wave > 1 || extraWaves > 0) && !gameOver && !gameLost && (
           <div className="text-center mt-4 p-3 bg-green-100 rounded-lg">
             <div className="text-lg font-bold text-green-800">
               {extraWaves > 0 ? `¡Ronda Extra ${extraWaves} completada!` : `¡Oleada ${wave-1} completada!`} 🎉

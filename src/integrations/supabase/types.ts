@@ -57,28 +57,37 @@ export type Database = {
       }
       game_settings: {
         Row: {
+          configuracion_inicio: Json | null
           created_at: string
           enemy_speed: number
           id: string
           intervalo_disparo_ms: number
+          modo_oscuro: boolean
+          numero_base_enemigos: number
           player_shot_speed: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          configuracion_inicio?: Json | null
           created_at?: string
           enemy_speed?: number
           id?: string
           intervalo_disparo_ms?: number
+          modo_oscuro?: boolean
+          numero_base_enemigos?: number
           player_shot_speed?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          configuracion_inicio?: Json | null
           created_at?: string
           enemy_speed?: number
           id?: string
           intervalo_disparo_ms?: number
+          modo_oscuro?: boolean
+          numero_base_enemigos?: number
           player_shot_speed?: number
           updated_at?: string
           user_id?: string

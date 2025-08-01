@@ -13,12 +13,13 @@ import ConfigAuth from '@/components/ConfigAuth';
 const Configuration = () => {
   const t = useTranslation();
   const { isAuthenticated, authenticate, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
-  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed } = useGameConfig();
+  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed, baseEnemyCount, setBaseEnemyCount } = useGameConfig();
   const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
   const [localPatientName, setLocalPatientName] = useState(patientName);
   const [localTherapistName, setLocalTherapistName] = useState(therapistName);
   const [localEnemySpeed, setLocalEnemySpeed] = useState(enemySpeed);
   const [localShotSpeed, setLocalShotSpeed] = useState(shotSpeed);
+  const [localBaseEnemyCount, setLocalBaseEnemyCount] = useState(baseEnemyCount);
   const [authError, setAuthError] = useState<string>('');
 
   useEffect(() => {
@@ -40,6 +41,10 @@ const Configuration = () => {
   useEffect(() => {
     setLocalShotSpeed(shotSpeed);
   }, [shotSpeed]);
+
+  useEffect(() => {
+    setLocalBaseEnemyCount(baseEnemyCount);
+  }, [baseEnemyCount]);
 
   const handleAuthenticate = (password: string) => {
     const success = authenticate(password);
@@ -66,9 +71,10 @@ const Configuration = () => {
     }
   };
 
-  const handleSaveSpaceInvadersConfig = () => {
+  const handleSaveNeuroLinkConfig = () => {
     setEnemySpeed(localEnemySpeed);
     setShotSpeed(localShotSpeed);
+    setBaseEnemyCount(localBaseEnemyCount);
   };
 
   return (
@@ -194,12 +200,28 @@ const Configuration = () => {
                   Controla qué tan rápido disparas proyectiles
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="base-enemy-count">Enemigos Base en Ronda 1: {localBaseEnemyCount}</Label>
+                <Slider
+                  id="base-enemy-count"
+                  min={3}
+                  max={12}
+                  step={1}
+                  value={[localBaseEnemyCount]}
+                  onValueChange={(value) => setLocalBaseEnemyCount(value[0])}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Número inicial de enemigos. Cada ronda multiplica por 1.5x
+                </div>
+              </div>
               
                 <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
                 <strong>Instrucciones:</strong> Tu mano se mueve automáticamente en 3 ángulos. Los disparos son automáticos. ¡Completa 3 oleadas principales y sigue con rondas extra infinitas!
               </div>
             </div>
-            <Button onClick={handleSaveSpaceInvadersConfig}>
+            <Button onClick={handleSaveNeuroLinkConfig}>
               Guardar Configuración NeuroLink
             </Button>
           </div>

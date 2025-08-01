@@ -9,6 +9,10 @@ interface GameConfigContextType {
   shotSpeed: number;
   setEnemySpeed: (speed: number) => void;
   setShotSpeed: (speed: number) => void;
+  baseEnemyCount: number;
+  setBaseEnemyCount: (count: number) => void;
+  darkMode: boolean;
+  setDarkMode: (mode: boolean) => void;
 }
 
 const GameConfigContext = createContext<GameConfigContextType | undefined>(undefined);
@@ -17,6 +21,8 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [orangeJuiceGoal, setOrangeJuiceGoalState] = useState(1); // mínimo 1 vaso
   const [enemySpeed, setEnemySpeedState] = useState(3);
   const [shotSpeed, setShotSpeedState] = useState(3);
+  const [baseEnemyCount, setBaseEnemyCountState] = useState(6);
+  const [darkMode, setDarkModeState] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('orangeJuiceGoal');
@@ -35,6 +41,17 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (savedShotSpeed) {
       const speed = parseInt(savedShotSpeed);
       setShotSpeedState(Math.max(1, Math.min(5, speed)));
+    }
+
+    const savedBaseEnemyCount = localStorage.getItem('baseEnemyCount');
+    if (savedBaseEnemyCount) {
+      const count = parseInt(savedBaseEnemyCount);
+      setBaseEnemyCountState(Math.max(3, Math.min(12, count)));
+    }
+
+    const savedDarkMode = localStorage.getItem('darkMode');
+    if (savedDarkMode) {
+      setDarkModeState(savedDarkMode === 'true');
     }
   }, []);
 
@@ -56,6 +73,17 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     localStorage.setItem('shotSpeed', validSpeed.toString());
   };
 
+  const setBaseEnemyCount = (count: number) => {
+    const validCount = Math.max(3, Math.min(12, count));
+    setBaseEnemyCountState(validCount);
+    localStorage.setItem('baseEnemyCount', validCount.toString());
+  };
+
+  const setDarkMode = (mode: boolean) => {
+    setDarkModeState(mode);
+    localStorage.setItem('darkMode', mode.toString());
+  };
+
   const calculateOrangeGoalForTime = (minutes: number) => {
     // Siempre retornar mínimo 1 vaso, sin importar los minutos
     return Math.max(1, orangeJuiceGoal);
@@ -69,7 +97,11 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       enemySpeed,
       shotSpeed,
       setEnemySpeed,
-      setShotSpeed
+      setShotSpeed,
+      baseEnemyCount,
+      setBaseEnemyCount,
+      darkMode,
+      setDarkMode
     }}>
       {children}
     </GameConfigContext.Provider>
