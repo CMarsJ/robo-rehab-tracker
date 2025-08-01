@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import playerHandImage from '@/assets/player-hand.png';
+import playerHandImage from '@/assets/NeuroLink/player-hand.png';
+import enemigo1 from '@/assets/NeuroLink/enemigo1.png';
+import enemigo2 from '@/assets/NeuroLink/enemigo2.png';
+import enemigo3 from '@/assets/NeuroLink/enemigo3.png';
+import enemigo4 from '@/assets/NeuroLink/enemigo4.png';
 
-interface FruitZapGameProps {
+interface NeuroLinkGameProps {
   onComplete: () => void;
 }
 
@@ -31,7 +36,7 @@ interface Explosion extends Position {
   id: number;
 }
 
-const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
+const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
   const { enemySpeed, shotSpeed } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
   const { user } = useAuth();
@@ -57,10 +62,10 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   const enemyIdRef = useRef(0);
   const explosionIdRef = useRef(0);
 
-  // Emojis para enemigos por oleada
-  const getEnemyEmoji = (waveNumber: number) => {
-    const emojis = ['🍎', '🍊', '🍌', '🍇', '🍓', '🥝', '🍑', '🍒'];
-    return emojis[(waveNumber - 1) % emojis.length];
+  // Imágenes de enemigos por oleada
+  const getEnemyImage = (waveNumber: number) => {
+    const enemyImages = [enemigo1, enemigo2, enemigo3, enemigo4];
+    return enemyImages[(waveNumber - 1) % enemyImages.length];
   };
 
   // Crear enemigos con posiciones más variables
@@ -316,7 +321,6 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
       saveGameData(true);
       
       setTimeout(() => {
-        alert(`¡Ronda perdida! Los enemigos alcanzaron tu posición.\nEnemigos restantes: ${remainingEnemies}\nPenalización: -${penalty} puntos`);
         onComplete();
       }, 500);
       return;
@@ -331,9 +335,10 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
           setWave(nextWave);
           setEnemies(createEnemies(nextWave));
         } else {
-          // Oleadas extra infinitas
-          setExtraWaves(prev => prev + 1);
-          setEnemies(createEnemies(3 + Math.floor(extraWaves / 2))); // Incrementar dificultad gradualmente
+          // Oleadas extra infinitas - solo contar cuando se completa una ronda
+          const newExtraWaves = extraWaves + 1;
+          setExtraWaves(newExtraWaves);
+          setEnemies(createEnemies(3 + Math.floor(newExtraWaves / 2))); // Incrementar dificultad gradualmente
         }
       }, 1000);
     }
@@ -374,7 +379,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
         .insert({
           user_id: user.id,
           duracion_minutos: Math.round(gameDurationMinutes),
-          tipo_actividad: 'fruit_zap',
+          tipo_actividad: 'neurolink',
           estado: defeated ? 'failed' : 'completed'
         })
         .select()
@@ -388,7 +393,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
         .insert({
           user_id: user.id,
           session_id: session.id,
-          game_type: 'fruit_zap',
+          game_type: 'neurolink',
           total_oranges: enemiesDestroyed,
           total_glasses: totalRounds + extraWaves,
           average_oranges_per_minute: enemiesPerMinute
@@ -437,7 +442,7 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
         <div className="mb-4">
           <Progress value={progress} className="h-2" />
           <div className="text-xs text-center mt-1">
-            {activeEnemies.length} frutas restantes
+            {activeEnemies.length} objetivos restantes
             {extraWaves > 0 && ` | Rondas Extra: ${extraWaves}`}
           </div>
         </div>
@@ -467,14 +472,23 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
           {enemies.map(enemy => !enemy.destroyed && (
             <div
               key={enemy.id}
-              className="absolute text-3xl transition-all duration-100"
+              className="absolute transition-all duration-100"
               style={{ 
-                left: enemy.x - 15, 
-                top: enemy.y - 15,
-                transform: 'scale(1.2)'
+                left: enemy.x - 20, 
+                top: enemy.y - 20,
+                width: '40px',
+                height: '40px'
               }}
             >
-              {getEnemyEmoji(wave)}
+              <img 
+                src={getEnemyImage(wave)} 
+                alt="Enemigo" 
+                className="w-full h-full object-contain"
+                style={{ 
+                  filter: 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.3))',
+                  imageRendering: 'pixelated'
+                }}
+              />
             </div>
           ))}
 
@@ -522,8 +536,30 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
 
         </div>
 
-        {/* Mensajes motivacionales */}
-        {(wave > 1 || extraWaves > 0) && (
+        {/* Mensajes de estado del juego */}
+        {gameOver && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg text-center max-w-sm mx-4 shadow-xl">
+              <div className="text-2xl font-bold text-red-600 mb-2">¡Ronda Perdida!</div>
+              <div className="text-gray-700 mb-4">
+                Los enemigos alcanzaron tu posición
+              </div>
+              <div className="text-sm text-gray-600 mb-4">
+                Enemigos restantes: {enemies.filter(e => !e.destroyed).length}<br/>
+                Puntuación final: {score}
+              </div>
+              <Button 
+                onClick={onComplete}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Continuar
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Mensajes de progreso */}
+        {(wave > 1 || extraWaves > 0) && !gameOver && (
           <div className="text-center mt-4 p-3 bg-green-100 rounded-lg">
             <div className="text-lg font-bold text-green-800">
               {extraWaves > 0 ? `¡Ronda Extra ${extraWaves} completada!` : `¡Oleada ${wave-1} completada!`} 🎉
@@ -545,4 +581,4 @@ const FruitZapGame: React.FC<FruitZapGameProps> = ({ onComplete }) => {
   );
 };
 
-export default FruitZapGame;
+export default NeuroLinkGame;

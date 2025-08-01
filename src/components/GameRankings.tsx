@@ -42,7 +42,7 @@ const GameRankings = () => {
             sessions!inner(fecha_inicio, duracion_minutos)
           `)
           .eq('user_id', user.id)
-          .eq('game_type', 'fruit_zap')
+          .eq('game_type', 'neurolink')
           .order('created_at', { ascending: false })
           .limit(5);
           
@@ -58,7 +58,7 @@ const GameRankings = () => {
           setFruitZapRankings(rankings);
         }
       } catch (error) {
-        console.error('Error loading Fruit Zap rankings:', error);
+        console.error('Error loading NeuroLink rankings:', error);
       }
     };
     
@@ -112,11 +112,11 @@ const GameRankings = () => {
         </CardContent>
       </Card>
 
-      {/* Ranking Fruit Zap */}
+      {/* Ranking NeuroLink */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            🎯 Ranking - Fruit Zap
+            🎯 Ranking - NeuroLink
           </CardTitle>
         </CardHeader>
         <CardContent>

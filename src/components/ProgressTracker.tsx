@@ -18,18 +18,28 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
   const currentMonth = currentDate.toLocaleString(t.locale || 'es-ES', { month: 'long' });
   const currentYear = currentDate.getFullYear();
   
-  // Cargar datos guardados al inicializar
+  // Cargar datos guardados al inicializar y verificar reset mensual
   useEffect(() => {
-    const savedWeekProgress = localStorage.getItem('weekProgress');
-    const savedMonthlyDays = localStorage.getItem('monthlyCompletedDays');
+    const currentMonthKey = `${currentYear}-${currentDate.getMonth()}`;
+    const savedMonthKey = localStorage.getItem('currentMonthKey');
     
+    // Si cambió el mes, reiniciar contador mensual
+    if (savedMonthKey !== currentMonthKey) {
+      localStorage.setItem('currentMonthKey', currentMonthKey);
+      localStorage.setItem('monthlyCompletedDays', '0');
+      setMonthlyCompletedDays(0);
+    } else {
+      const savedMonthlyDays = localStorage.getItem('monthlyCompletedDays');
+      if (savedMonthlyDays) {
+        setMonthlyCompletedDays(parseInt(savedMonthlyDays));
+      }
+    }
+    
+    const savedWeekProgress = localStorage.getItem('weekProgress');
     if (savedWeekProgress) {
       setWeekProgress(JSON.parse(savedWeekProgress));
     }
-    if (savedMonthlyDays) {
-      setMonthlyCompletedDays(parseInt(savedMonthlyDays));
-    }
-  }, []);
+  }, [currentYear, currentDate]);
   
   // Obtener los días de la semana actual
   const getWeekDays = () => {

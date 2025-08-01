@@ -161,7 +161,7 @@ const Configuration = () => {
           <Separator />
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">🎯 Fruit Zap</h3>
+            <h3 className="text-lg font-semibold">🎯 NeuroLink</h3>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="enemy-speed">Velocidad de Enemigos: {localEnemySpeed}/5</Label>
@@ -200,7 +200,7 @@ const Configuration = () => {
               </div>
             </div>
             <Button onClick={handleSaveSpaceInvadersConfig}>
-              Guardar Configuración Fruit Zap
+              Guardar Configuración NeuroLink
             </Button>
           </div>
         </CardContent>
