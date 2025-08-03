@@ -63,8 +63,10 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
   const enemyIdRef = useRef(0);
   const explosionIdRef = useRef(0);
 
-  // Imágenes de enemigos por oleada (aleatorias)
-  const getEnemyImage = () => {
+  // Imagen de enemigo fija por oleada
+  const [currentWaveEnemyImage, setCurrentWaveEnemyImage] = useState(enemigo1);
+  
+  const getRandomEnemyImage = () => {
     const enemyImages = [enemigo1, enemigo2, enemigo3, enemigo4];
     return enemyImages[Math.floor(Math.random() * enemyImages.length)];
   };
@@ -75,6 +77,9 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     // Calcular número de enemigos: baseEnemyCount * (1.5^(waveNumber-1))
     const enemyCount = Math.floor(baseEnemyCount * Math.pow(1.5, waveNumber - 1));
     const maxEnemies = Math.min(enemyCount, 20); // Limitar a 20 enemigos máximo
+    
+    // Seleccionar imagen aleatoria para toda la oleada
+    setCurrentWaveEnemyImage(getRandomEnemyImage());
     
     for (let i = 0; i < maxEnemies; i++) {
       // Posiciones completamente aleatorias en horizontal
@@ -367,11 +372,8 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     if (!user || !gameStartTime) return;
     
     const gameEndTime = new Date();
-    const gameDurationMinutes = (gameEndTime.getTime() - gameStartTime.getTime()) / (1000 * 60);
-    const accuracy = shotsFired > 0 ? (enemiesDestroyed / shotsFired) * 100 : 0;
-    const enemiesPerMinute = gameDurationMinutes > 0 ? enemiesDestroyed / gameDurationMinutes : 0;
-    const totalRounds = wave > 3 ? 3 : wave;
-    const rating = Math.round((accuracy * 0.3) + (enemiesPerMinute * 0.4) + (totalRounds * 0.2) + (extraWaves * 0.1));
+    const gameDurationSeconds = (gameEndTime.getTime() - gameStartTime.getTime()) / 1000;
+    const pointsPerSecond = gameDurationSeconds > 0 ? score / gameDurationSeconds : 0;
     
     try {
       // Crear sesión
@@ -379,7 +381,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         .from('sessions')
         .insert({
           user_id: user.id,
-          duracion_minutos: Math.round(gameDurationMinutes),
+          duracion_minutos: Math.round(gameDurationSeconds / 60),
           tipo_actividad: 'neurolink',
           estado: defeated ? 'failed' : 'completed'
         })
@@ -388,16 +390,16 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         
       if (sessionError) throw sessionError;
       
-      // Crear registro del juego
+      // Crear registro del juego con puntaje total y puntos por segundo
       const { error: gameError } = await supabase
         .from('game_records')
         .insert({
           user_id: user.id,
           session_id: session.id,
           game_type: 'neurolink',
-          total_oranges: enemiesDestroyed,
-          total_glasses: totalRounds + extraWaves,
-          average_oranges_per_minute: enemiesPerMinute
+          total_oranges: score, // Usar score como puntaje total
+          total_glasses: wave + extraWaves, // Total de rondas jugadas
+          average_oranges_per_minute: pointsPerSecond * 60 // Convertir a puntos por minuto para compatibilidad
         });
         
       if (gameError) throw gameError;
@@ -405,7 +407,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     } catch (error) {
       console.error('Error saving game data:', error);
     }
-  }, [user, gameStartTime, shotsFired, enemiesDestroyed, wave, extraWaves]);
+  }, [user, gameStartTime, score, wave, extraWaves]);
 
   // Calcular estadísticas
   const calculateStats = useCallback(() => {
@@ -482,7 +484,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
               }}
             >
               <img 
-                src={getEnemyImage()} 
+                src={currentWaveEnemyImage} 
                 alt="Enemigo" 
                 className="w-full h-full object-contain"
                 style={{ 

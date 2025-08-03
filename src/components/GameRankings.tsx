@@ -14,10 +14,10 @@ interface Ranking {
 
 interface FruitZapRanking {
   date: string;
-  enemiesDestroyed: number;
-  enemiesPerMinute: number;
-  extraRounds: number;
-  rating: number;
+  totalScore: number;
+  pointsPerSecond: number;
+  totalRounds: number;
+  duration: number;
 }
 
 const GameRankings = () => {
@@ -47,13 +47,19 @@ const GameRankings = () => {
           .limit(5);
           
         if (!error && data) {
-          const rankings = data.map(record => ({
-            date: new Date(record.sessions.fecha_inicio).toLocaleDateString(),
-            enemiesDestroyed: record.total_oranges || 0,
-            enemiesPerMinute: record.average_oranges_per_minute || 0,
-            extraRounds: Math.max(0, (record.total_glasses || 0) - 3),
-            rating: Math.round((record.average_oranges_per_minute || 0) * 10)
-          }));
+          const rankings = data.map(record => {
+            const duration = record.sessions?.duracion_minutos || 1;
+            const totalScore = record.total_oranges || 0;
+            const pointsPerSecond = duration > 0 ? totalScore / (duration * 60) : 0;
+            
+            return {
+              date: new Date(record.sessions.fecha_inicio).toLocaleDateString(),
+              totalScore: totalScore,
+              pointsPerSecond: pointsPerSecond,
+              totalRounds: record.total_glasses || 0,
+              duration: duration
+            };
+          });
           
           setFruitZapRankings(rankings);
         }
@@ -125,10 +131,10 @@ const GameRankings = () => {
               <TableRow>
                 <TableHead className="w-16">Pos.</TableHead>
                 <TableHead>Fecha</TableHead>
-                <TableHead className="text-center">Enemigos</TableHead>
-                <TableHead className="text-center">Enem/Min</TableHead>
-                <TableHead className="text-center">Extra</TableHead>
-                <TableHead className="text-right">Rating</TableHead>
+                <TableHead className="text-center">Puntaje</TableHead>
+                <TableHead className="text-center">Pts/Seg</TableHead>
+                <TableHead className="text-center">Rondas</TableHead>
+                <TableHead className="text-right">Duración</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,10 +143,10 @@ const GameRankings = () => {
                   <TableRow key={index}>
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>{entry.date}</TableCell>
-                    <TableCell className="text-center">{entry.enemiesDestroyed}</TableCell>
-                    <TableCell className="text-center">{entry.enemiesPerMinute.toFixed(1)}</TableCell>
-                    <TableCell className="text-center">{entry.extraRounds}</TableCell>
-                    <TableCell className="text-right font-bold">{entry.rating}</TableCell>
+                    <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
+                    <TableCell className="text-center">{entry.pointsPerSecond.toFixed(2)}</TableCell>
+                    <TableCell className="text-center">{entry.totalRounds}</TableCell>
+                    <TableCell className="text-right">{entry.duration}min</TableCell>
                   </TableRow>
                 ))
               ) : (

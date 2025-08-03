@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Pause, Play, X, Gamepad2 } from 'lucide-react';
 import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
+import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 
 interface TherapyOverlayProps {
@@ -17,7 +18,7 @@ interface TherapyOverlayProps {
   mode: 'therapy' | 'fun';
 }
 
-type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'regular';
+type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'flappy-bird';
 
 const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   timeLeft,
@@ -28,8 +29,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
-  // En modo terapia siempre regular, en modo diversión empezar con selección
-  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'regular' : 'selection');
+  // En modo terapia siempre flappy bird, en modo diversión empezar con selección
+  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'flappy-bird' : 'selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
 
@@ -65,11 +66,12 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         </Button>
         
         <Button
-          onClick={() => setGameMode('regular')}
+          onClick={() => setGameMode('flappy-bird')}
           variant="outline"
           className="w-full"
         >
-          Modo Regular (Solo temporizador)
+          🐦 Flappy Bird Terapéutico
+          <div className="text-sm mt-1">Controla la altura con los ángulos de tu mano</div>
         </Button>
       </CardContent>
     </Card>
@@ -81,37 +83,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         return <OrangeSqueezeGame targetGlasses={targetGlasses} onComplete={handleGameComplete} />;
       case 'neurolink':
         return <NeuroLinkGame onComplete={handleGameComplete} />;
-      case 'regular':
-        return (
-          <div className="h-full flex flex-col">
-            {/* Contenedor central - iframe de YouTube en modo terapia, mano en modo diversión */}
-            <div className="flex-1 flex justify-center mb-6">
-              <div className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ height: '80%' }}>
-                {mode === 'therapy' ? (
-                  <iframe
-                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
-                    className="w-full h-full border-0"
-                    allow="autoplay; encrypted-media; fullscreen"
-                    allowFullScreen
-                    title="Terapia de Rehabilitación"
-                  />
-                ) : (
-                  <div className="text-6xl">👋</div>
-                )}
-              </div>
-            </div>
-            
-            {/* Tiempo central */}
-            <div className="text-center mb-6">
-              <div className="text-4xl font-bold text-primary mb-2">
-                {formatTime(timeLeft)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {isPaused ? 'Terapia pausada' : 'Terapia en progreso'}
-              </div>
-            </div>
-          </div>
-        );
+      case 'flappy-bird':
+        return <FlappyBirdGame onComplete={handleGameComplete} />;
       default:
         return renderGameSelection();
     }
@@ -161,7 +134,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
               </Button>
 
               {/* Tiempo central para juegos */}
-              {gameMode !== 'regular' && (
+              {gameMode !== 'flappy-bird' && (
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2">
                     {formatTime(timeLeft)}

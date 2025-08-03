@@ -13,6 +13,8 @@ interface GameConfigContextType {
   setBaseEnemyCount: (count: number) => void;
   darkMode: boolean;
   setDarkMode: (mode: boolean) => void;
+  flappyPipeGap: number;
+  setFlappyPipeGap: (gap: number) => void;
 }
 
 const GameConfigContext = createContext<GameConfigContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [shotSpeed, setShotSpeedState] = useState(3);
   const [baseEnemyCount, setBaseEnemyCountState] = useState(6);
   const [darkMode, setDarkModeState] = useState(false);
+  const [flappyPipeGap, setFlappyPipeGapState] = useState(120);
 
   useEffect(() => {
     const saved = localStorage.getItem('orangeJuiceGoal');
@@ -52,6 +55,12 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const savedDarkMode = localStorage.getItem('darkMode');
     if (savedDarkMode) {
       setDarkModeState(savedDarkMode === 'true');
+    }
+
+    const savedFlappyPipeGap = localStorage.getItem('flappyPipeGap');
+    if (savedFlappyPipeGap) {
+      const gap = parseInt(savedFlappyPipeGap);
+      setFlappyPipeGapState(Math.max(80, Math.min(200, gap)));
     }
   }, []);
 
@@ -84,6 +93,12 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     localStorage.setItem('darkMode', mode.toString());
   };
 
+  const setFlappyPipeGap = (gap: number) => {
+    const validGap = Math.max(80, Math.min(200, gap));
+    setFlappyPipeGapState(validGap);
+    localStorage.setItem('flappyPipeGap', validGap.toString());
+  };
+
   const calculateOrangeGoalForTime = (minutes: number) => {
     // Siempre retornar mínimo 1 vaso, sin importar los minutos
     return Math.max(1, orangeJuiceGoal);
@@ -101,7 +116,9 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       baseEnemyCount,
       setBaseEnemyCount,
       darkMode,
-      setDarkMode
+      setDarkMode,
+      flappyPipeGap,
+      setFlappyPipeGap
     }}>
       {children}
     </GameConfigContext.Provider>

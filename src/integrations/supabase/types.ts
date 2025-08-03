@@ -60,6 +60,7 @@ export type Database = {
           configuracion_inicio: Json | null
           created_at: string
           enemy_speed: number
+          espacio_pilares_flappy: number
           id: string
           intervalo_disparo_ms: number
           modo_oscuro: boolean
@@ -72,6 +73,7 @@ export type Database = {
           configuracion_inicio?: Json | null
           created_at?: string
           enemy_speed?: number
+          espacio_pilares_flappy?: number
           id?: string
           intervalo_disparo_ms?: number
           modo_oscuro?: boolean
@@ -84,6 +86,7 @@ export type Database = {
           configuracion_inicio?: Json | null
           created_at?: string
           enemy_speed?: number
+          espacio_pilares_flappy?: number
           id?: string
           intervalo_disparo_ms?: number
           modo_oscuro?: boolean
