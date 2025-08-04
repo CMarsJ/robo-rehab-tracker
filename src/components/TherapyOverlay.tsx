@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +28,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
-  // En modo terapia NO hay selección de juegos, solo temporizador
   const [gameMode, setGameMode] = useState<GameMode>('selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
@@ -56,7 +54,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           🍊 Exprimiendo Naranjas
           <div className="text-sm mt-1">Meta: {targetGlasses} vasos</div>
         </Button>
-        
+
         <Button
           onClick={() => setGameMode('neurolink')}
           className="w-full h-16 text-lg bg-purple-500 hover:bg-purple-600"
@@ -64,7 +62,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           🎯 NeuroLink
           <div className="text-sm mt-1">Dispara automáticamente a los objetivos</div>
         </Button>
-        
+
         <Button
           onClick={() => setGameMode('flappy-bird')}
           variant="outline"
@@ -90,30 +88,23 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }
   };
 
-  // En modo terapia, solo mostrar temporizador
   if (mode === 'therapy') {
     return (
       <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div className="bg-background rounded-lg p-8 relative" style={{ width: '90vw', maxWidth: '500px' }}>
           <div className="h-full flex flex-col">
-            {/* Contenedor central - iframe de YouTube en modo terapia, mano en modo diversión */}
             <div className="flex-1 flex justify-center mb-6">
               <div className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ height: '80%' }}>
-                {mode === 'therapy' ? (
-                  <iframe
-                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
-                    className="w-full h-full border-0"
-                    allow="autoplay; encrypted-media; fullscreen"
-                    allowFullScreen
-                    title="Terapia de Rehabilitación"
-                  />
-                ) : (
-                  <div className="text-6xl">👋</div>
-                )}
+                <iframe
+                  src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                  className="w-full h-full border-0"
+                  allow="autoplay; encrypted-media; fullscreen"
+                  allowFullScreen
+                  title="Terapia de Rehabilitación"
+                />
               </div>
             </div>
-            
-            {/* Tiempo central */}
+
             <div className="text-center mb-6">
               <div className="text-4xl font-bold text-primary mb-2">
                 {formatTime(timeLeft)}
@@ -123,14 +114,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
               </div>
             </div>
           </div>
-        );
-          </Card>
         </div>
       </div>
     );
   }
 
-  // En modo diversión, mostrar selección de juegos
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-8 relative overflow-y-auto" style={{ width: '90vw', height: '90vh' }}>
@@ -140,19 +128,16 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           </div>
         ) : (
           <div className="h-full flex flex-col">
-            {/* Contenido del juego */}
             <div className="flex-1">
               {renderGameContent()}
             </div>
 
-            {/* Notificación de juego completado */}
             {gameCompleted && (
               <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg text-center">
                 <p className="text-green-800 font-semibold">🎉 ¡Juego completado! Continúa hasta que termine el tiempo</p>
               </div>
             )}
 
-            {/* Controles inferiores */}
             <div className="flex items-center justify-center gap-8 mt-auto">
               <Button
                 onClick={onPause}
