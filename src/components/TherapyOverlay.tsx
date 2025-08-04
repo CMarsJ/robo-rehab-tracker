@@ -93,6 +93,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   // En modo terapia, solo mostrar temporizador
   if (mode === 'therapy') {
     return (
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div className="bg-background rounded-lg p-8 relative" style={{ width: '90vw', maxWidth: '500px' }}>
           <div className="h-full flex flex-col">
             {/* Contenedor central - iframe de YouTube en modo terapia, mano en modo diversión */}
             <div className="flex-1 flex justify-center mb-6">
@@ -122,6 +124,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             </div>
           </div>
         );
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   // En modo diversión, mostrar selección de juegos
