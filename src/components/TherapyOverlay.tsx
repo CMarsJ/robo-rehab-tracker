@@ -91,7 +91,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   if (mode === 'therapy') {
     return (
       <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div className="bg-background rounded-lg p-8 relative" style={{ width: '90vw', maxWidth: '500px' }}>
+        <div className="bg-background rounded-lg p-8 relative" style={{ width: '700vw', maxWidth: '1000px' }}>
           <div className="h-full flex flex-col">
             <div className="flex-1 flex justify-center mb-6">
               <div className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ height: '80%' }}>
