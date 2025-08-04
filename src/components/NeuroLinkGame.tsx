@@ -1,263 +1,64 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { useGameConfig } from '@/contexts/GameConfigContext';
-import { useSimulation } from '@/contexts/SimulationContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import playerHandImage from '@/assets/NeuroLink/player-hand.png';
-import enemigo1 from '@/assets/NeuroLink/enemigo1.png';
-import enemigo2 from '@/assets/NeuroLink/enemigo2.png';
-import enemigo3 from '@/assets/NeuroLink/enemigo3.png';
-import enemigo4 from '@/assets/NeuroLink/enemigo4.png';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useUser } from '@supabase/auth-helpers-react';
+import { supabase } from '@/lib/supabaseClient';
 
-interface NeuroLinkGameProps {
-  onComplete: () => void;
-}
-
-interface Position {
+type Enemy = {
   x: number;
   y: number;
-}
-
-interface Enemy extends Position {
-  id: number;
   destroyed: boolean;
-  row: number;
-  col: number;
-}
+};
 
-interface Bullet extends Position {
-  id: number;
-}
+type Bullet = {
+  x: number;
+  y: number;
+};
 
-interface Explosion extends Position {
-  id: number;
-}
+const ENEMY_WIDTH = 50;
+const ENEMY_HEIGHT = 50;
+const BULLET_WIDTH = 5;
+const BULLET_HEIGHT = 10;
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+const PLAYER_WIDTH = 60;
+const PLAYER_HEIGHT = 20;
+const ENEMY_SPEED = 1;
+const BULLET_SPEED = 4;
+const PLAYER_Y = CANVAS_HEIGHT - 40;
 
-const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
-  const { enemySpeed, shotSpeed, baseEnemyCount } = useGameConfig();
-  const { leftHand, rightHand } = useSimulation();
-  const { user } = useAuth();
+const generateEnemies = (wave: number): Enemy[] => {
+  const enemies: Enemy[] = [];
+  const rows = Math.min(3 + wave, 6);
+  const cols = 6;
 
-  const [gameStarted, setGameStarted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [playerPosition, setPlayerPosition] = useState(400);
-  const [enemies, setEnemies] = useState<Enemy[]>([]);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = 100 + col * (ENEMY_WIDTH + 20);
+      const y = 50 + row * (ENEMY_HEIGHT + 20);
+      const overlap = enemies.some(e =>
+        Math.abs(e.x - x) < ENEMY_WIDTH && Math.abs(e.y - y) < ENEMY_HEIGHT
+      );
+      if (!overlap) {
+        enemies.push({ x, y, destroyed: false });
+      }
+    }
+  }
+
+  return enemies;
+};
+
+const NeuroLinkGame = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const user = useUser();
+
+  const [playerX, setPlayerX] = useState(CANVAS_WIDTH / 2);
   const [bullets, setBullets] = useState<Bullet[]>([]);
-  const [explosions, setExplosions] = useState<Explosion[]>([]);
-  const [gameWidth] = useState(800);
-  const [gameHeight] = useState(600);
+  const [enemies, setEnemies] = useState<Enemy[]>(generateEnemies(1));
+  const [gameActive, setGameActive] = useState(false);
+  const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
+  const [score, setScore] = useState(0);
   const [wave, setWave] = useState(1);
   const [extraWaves, setExtraWaves] = useState(0);
-  const [enemiesDestroyed, setEnemiesDestroyed] = useState(0);
-  const [shotsFired, setShotsFired] = useState(0);
-  const [enemyDirection, setEnemyDirection] = useState(1);
-  const [enemyMoveDown, setEnemyMoveDown] = useState(false);
-  const [shootInterval, setShootInterval] = useState(1000);
-  const [gameOver, setGameOver] = useState(false);
-  const [gameLost, setGameLost] = useState(false);
-  const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
-  const [currentWaveEnemyImage, setCurrentWaveEnemyImage] = useState(enemigo1);
 
-  const bulletIdRef = useRef(0);
-  const enemyIdRef = useRef(0);
-  const explosionIdRef = useRef(0);
-
-  const enemyImages = [enemigo1, enemigo2, enemigo3, enemigo4];
-
-  const getRandomEnemyImage = () => {
-    return enemyImages[Math.floor(Math.random() * enemyImages.length)];
-  };
-
-  const createEnemies = useCallback((waveNumber: number) => {
-    const newEnemies: Enemy[] = [];
-    const enemyCount = Math.floor(baseEnemyCount * Math.pow(1.5, waveNumber - 1));
-    const maxEnemies = Math.min(enemyCount, 20);
-
-    setCurrentWaveEnemyImage(getRandomEnemyImage());
-
-    for (let i = 0; i < maxEnemies; i++) {
-      let attempts = 0;
-      let x = 0;
-      let y = 0;
-      let isOverlapping = false;
-
-      do {
-        x = 80 + Math.random() * (gameWidth - 160);
-        y = 60 + Math.random() * 150;
-
-        isOverlapping = newEnemies.some(enemy =>
-          Math.abs(enemy.x - x) < 50 && Math.abs(enemy.y - y) < 50
-        );
-
-        attempts++;
-      } while (isOverlapping && attempts < 20);
-
-      newEnemies.push({
-        id: enemyIdRef.current++,
-        x: Math.max(40, Math.min(gameWidth - 40, x)),
-        y: Math.max(30, y),
-        destroyed: false,
-        row: Math.floor(i / 8),
-        col: i % 8
-      });
-    }
-    return newEnemies;
-  }, [baseEnemyCount, gameWidth]);
-
-  const playHitSound = useCallback(() => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
-
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.05);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
-  }, []);
-
-  const initGame = useCallback(() => {
-    setScore(0);
-    setPlayerPosition(400);
-    setBullets([]);
-    setExplosions([]);
-    setWave(1);
-    setExtraWaves(0);
-    setEnemiesDestroyed(0);
-    setShotsFired(0);
-    setEnemyDirection(1);
-    setEnemyMoveDown(false);
-    setGameOver(false);
-    setGameLost(false);
-    setEnemies(createEnemies(1));
-    setGameStarted(true);
-    setGameStartTime(new Date());
-  }, [createEnemies]);
-
-    // Disparo automático
-  useEffect(() => {
-    if (!gameStarted || gameOver) return;
-    const shoot = () => {
-      setBullets(prev => [...prev, {
-        id: bulletIdRef.current++,
-        x: playerPosition,
-        y: gameHeight - 80
-      }]);
-      setShotsFired(prev => prev + 1);
-    };
-    const interval = setInterval(shoot, shootInterval);
-    return () => clearInterval(interval);
-  }, [gameStarted, gameOver, playerPosition, gameHeight, shootInterval]);
-
-  // Movimiento del jugador (controlado por ángulos A4+A5+A6)
-  useEffect(() => {
-    if (!gameStarted) return;
-    const interval = setInterval(() => {
-      const pareticHand = leftHand.active ? leftHand : rightHand;
-      if (pareticHand.active) {
-        const sum = pareticHand.angles.finger1 + pareticHand.angles.finger2 + pareticHand.angles.finger3;
-        const clamped = Math.max(0, Math.min(200, sum));
-        const normalized = clamped / 200;
-        const newX = (gameWidth - 50) - (normalized * (gameWidth - 100));
-        setPlayerPosition(Math.max(50, Math.min(gameWidth - 50, newX)));
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [gameStarted, leftHand, rightHand, gameWidth]);
-
-  // Movimiento de enemigos
-  useEffect(() => {
-    if (!gameStarted || enemies.length === 0) return;
-    const interval = setInterval(() => {
-      setEnemies(prev => {
-        const active = prev.filter(e => !e.destroyed);
-        const rightmost = Math.max(...active.map(e => e.x));
-        const leftmost = Math.min(...active.map(e => e.x));
-        let moveDown = enemyMoveDown;
-
-        if ((enemyDirection === 1 && rightmost >= gameWidth - 50) ||
-            (enemyDirection === -1 && leftmost <= 50)) {
-          setEnemyDirection(d => d * -1);
-          setEnemyMoveDown(true);
-          moveDown = true;
-        }
-
-        return prev.map(enemy => {
-          if (enemy.destroyed) return enemy;
-          return moveDown
-            ? { ...enemy, y: enemy.y + 30 }
-            : { ...enemy, x: enemy.x + (enemyDirection * enemySpeed * 2) };
-        });
-      });
-
-      if (enemyMoveDown) {
-        setTimeout(() => setEnemyMoveDown(false), 100);
-      }
-    }, 200);
-    return () => clearInterval(interval);
-  }, [gameStarted, enemies.length, enemyDirection, enemyMoveDown, enemySpeed, gameWidth]);
-
-  // Movimiento de balas
-  useEffect(() => {
-    if (!gameStarted) return;
-    const interval = setInterval(() => {
-      setBullets(prev =>
-        prev.map(b => ({ ...b, y: b.y - shotSpeed * 2 }))
-           .filter(b => b.y > 0)
-      );
-    }, 50);
-    return () => clearInterval(interval);
-  }, [gameStarted, shotSpeed]);
-
-  // Colisiones
-  useEffect(() => {
-    if (!gameStarted) return;
-    const interval = setInterval(() => {
-      setBullets(prevBullets => {
-        const remaining: Bullet[] = [];
-        prevBullets.forEach(bullet => {
-          let hit = false;
-          setEnemies(prevEnemies => {
-            return prevEnemies.map(enemy => {
-              if (!enemy.destroyed &&
-                  Math.abs(bullet.x - enemy.x) < 30 &&
-                  Math.abs(bullet.y - enemy.y) < 30) {
-                hit = true;
-                setExplosions(prev => [...prev, { id: explosionIdRef.current++, x: enemy.x, y: enemy.y }]);
-                setScore(s => s + 10);
-                setEnemiesDestroyed(d => d + 1);
-                playHitSound();
-                return { ...enemy, destroyed: true };
-              }
-              return enemy;
-            });
-          });
-          if (!hit) remaining.push(bullet);
-        });
-        return remaining;
-      });
-    }, 50);
-    return () => clearInterval(interval);
-  }, [gameStarted, playHitSound]);
-
-  // Eliminar explosiones
-  useEffect(() => {
-    explosions.forEach(explosion => {
-      setTimeout(() => {
-        setExplosions(prev => prev.filter(e => e.id !== explosion.id));
-      }, 500);
-    });
-  }, [explosions]);
-  
   const saveGameData = useCallback(async (defeated: boolean = false) => {
     if (!user || !gameStartTime) return;
     const end = new Date();
@@ -295,196 +96,169 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     }
   }, [user, gameStartTime, score, wave, extraWaves]);
 
-  // Oleadas y derrota
   useEffect(() => {
-    if (!gameStarted || gameOver) return;
-    const active = enemies.filter(e => !e.destroyed);
-    const playerY = gameHeight - 70;
-    const reached = active.some(enemy => enemy.y >= playerY - 50);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!gameActive) return;
 
-    if (reached) {
-      const penalty = active.length * 5;
-      setScore(prev => Math.max(0, prev - penalty));
-      setGameLost(true);
-      saveGameData(true);
-      setTimeout(() => {
-        setGameLost(false);
-        onComplete();
-      }, 3000);
-      return;
-    }
-
-    if (active.length === 0 && enemies.length > 0) {
-      setTimeout(() => {
-        if (wave < 3) {
-          const next = wave + 1;
-          setWave(next);
-          setEnemies(createEnemies(next));
-        } else {
-          const extras = extraWaves + 1;
-          setExtraWaves(extras);
-          setEnemies(createEnemies(4 + extras));
-        }
-      }, 1000);
-    }
-  }, [enemies, wave, extraWaves, gameStarted, gameOver, gameHeight, createEnemies, saveGameData, onComplete]);
-
-  useEffect(() => {
-    if (!gameStarted) {
-      initGame();
-    }
-  }, [gameStarted, initGame]);
-
-  useEffect(() => {
-    if (!user) return;
-    const loadShootInterval = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('game_settings')
-          .select('intervalo_disparo_ms')
-          .eq('user_id', user.id)
-          .single();
-        if (data && !error) setShootInterval(data.intervalo_disparo_ms);
-      } catch (error) {
-        console.error('Error loading shoot interval:', error);
+      if (e.key === 'ArrowLeft') {
+        setPlayerX(prev => Math.max(0, prev - 20));
+      } else if (e.key === 'ArrowRight') {
+        setPlayerX(prev => Math.min(CANVAS_WIDTH - PLAYER_WIDTH, prev + 20));
+      } else if (e.key === ' ') {
+        setBullets(prev => [...prev, { x: playerX + PLAYER_WIDTH / 2 - 2, y: PLAYER_Y }]);
       }
     };
-    loadShootInterval();
-  }, [user]);
 
-  const activeEnemies = enemies.filter(e => !e.destroyed);
-  const progress = enemies.length > 0
-    ? ((enemies.length - activeEnemies.length) / enemies.length) * 100
-    : 0;
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [playerX, gameActive]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!gameActive) return;
+
+      // Actualizar posición de enemigos
+      setEnemies(prev =>
+        prev.map(enemy =>
+          enemy.destroyed ? enemy : { ...enemy, y: enemy.y + ENEMY_SPEED }
+        )
+      );
+
+      // Actualizar posición de balas
+      setBullets(prev => prev.map(b => ({ ...b, y: b.y - BULLET_SPEED })).filter(b => b.y > 0));
+
+      // Colisiones
+      setEnemies(prevEnemies => {
+        const updatedEnemies = prevEnemies.map(enemy => {
+          if (enemy.destroyed) return enemy;
+          let bulletHit = false;
+
+          for (const bullet of bullets) {
+            const hit =
+              bullet.x < enemy.x + ENEMY_WIDTH &&
+              bullet.x + BULLET_WIDTH > enemy.x &&
+              bullet.y < enemy.y + ENEMY_HEIGHT &&
+              bullet.y + BULLET_HEIGHT > enemy.y;
+
+            if (hit) {
+              bulletHit = true;
+              break;
+            }
+          }
+
+          if (bulletHit) {
+            setScore(prev => prev + 1);
+            return { ...enemy, destroyed: true };
+          }
+
+          return enemy;
+        });
+
+        // Eliminar balas que impactaron
+        setBullets(prevBullets =>
+          prevBullets.filter(bullet => {
+            return !updatedEnemies.some(enemy =>
+              !enemy.destroyed &&
+              bullet.x < enemy.x + ENEMY_WIDTH &&
+              bullet.x + BULLET_WIDTH > enemy.x &&
+              bullet.y < enemy.y + ENEMY_HEIGHT &&
+              bullet.y + BULLET_HEIGHT > enemy.y
+            );
+          })
+        );
+
+        return updatedEnemies;
+      });
+    }, 1000 / 60);
+
+    return () => clearInterval(interval);
+  }, [bullets, gameActive]);
+
+  useEffect(() => {
+    if (!gameActive) return;
+
+    const allDestroyed = enemies.every(e => e.destroyed);
+    if (allDestroyed) {
+      const newWave = wave + 1;
+      setWave(newWave);
+      setExtraWaves(prev => prev + 1);
+      setEnemies(generateEnemies(newWave));
+    }
+  }, [enemies, gameActive]);
+
+  useEffect(() => {
+    if (!gameActive) return;
+
+    const enemiesReachedPlayer = enemies.some(enemy => !enemy.destroyed && enemy.y >= PLAYER_Y);
+    if (enemiesReachedPlayer) {
+      const remainingEnemies = enemies.filter(e => !e.destroyed);
+      const penalty = remainingEnemies.length;
+
+      setScore(prev => Math.max(0, prev - penalty));
+      saveGameData(true);
+
+      const nextWave = wave + 1;
+      setWave(nextWave);
+      setEnemies(generateEnemies(nextWave));
+    }
+  }, [enemies, gameActive]);
+
+  useEffect(() => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Dibujar jugador
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(playerX, PLAYER_Y, PLAYER_WIDTH, PLAYER_HEIGHT);
+
+    // Dibujar balas
+    ctx.fillStyle = 'black';
+    bullets.forEach(b => ctx.fillRect(b.x, b.y, BULLET_WIDTH, BULLET_HEIGHT));
+
+    // Dibujar enemigos
+    enemies.forEach(enemy => {
+      if (!enemy.destroyed) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(enemy.x, enemy.y, ENEMY_WIDTH, ENEMY_HEIGHT);
+      }
+    });
+
+    // Dibujar puntaje
+    ctx.fillStyle = 'black';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Puntaje: ${score}`, 10, 30);
+    ctx.fillText(`Ronda: ${wave}`, 10, 60);
+  }, [playerX, bullets, enemies, score, wave]);
+
+  const startGame = () => {
+    setPlayerX(CANVAS_WIDTH / 2);
+    setBullets([]);
+    setEnemies(generateEnemies(1));
+    setScore(0);
+    setWave(1);
+    setExtraWaves(0);
+    setGameActive(true);
+    setGameStartTime(new Date());
+  };
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        {/* Encabezado */}
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-lg font-bold">Puntuación: {score}</div>
-          <div className="text-lg font-bold">
-            {wave <= 3 ? `Oleada: ${wave}/3` : `Extra: ${extraWaves}`}
-          </div>
-          <div className="text-lg font-bold">Eliminados: {enemiesDestroyed}</div>
-        </div>
-
-        {/* Progreso */}
-        <div className="mb-4">
-          <Progress value={progress} className="h-2" />
-          <div className="text-xs text-center mt-1">
-            {activeEnemies.length} objetivos restantes
-            {extraWaves > 0 && ` | Rondas Extra: ${extraWaves}`}
-          </div>
-        </div>
-
-        {/* Área de juego */}
-        <div
-          className="relative bg-gradient-to-b from-purple-900 via-blue-900 to-black rounded-lg overflow-hidden border-2 border-purple-400"
-          style={{ width: gameWidth, height: gameHeight, margin: '0 auto' }}
-        >
-          {/* Estrellas */}
-          <div className="absolute inset-0">
-            {[...Array(20)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Enemigos */}
-          {activeEnemies.map(enemy => (
-            <div
-              key={enemy.id}
-              className="absolute transition-all duration-100"
-              style={{
-                left: enemy.x - 20,
-                top: enemy.y - 20,
-                width: '40px',
-                height: '40px'
-              }}
-            >
-              <img
-                src={currentWaveEnemyImage}
-                alt="Enemigo"
-                className="w-full h-full object-contain"
-                style={{
-                  filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.3))',
-                  imageRendering: 'pixelated'
-                }}
-              />
-            </div>
-          ))}
-
-          {/* Balas */}
-          {bullets.map(bullet => (
-            <div
-              key={bullet.id}
-              className="absolute w-3 h-6 bg-blue-300 rounded-full animate-pulse shadow-md"
-              style={{ left: bullet.x - 1.5, top: bullet.y - 3 }}
-            />
-          ))}
-
-          {/* Explosiones */}
-          {explosions.map(explosion => (
-            <div
-              key={explosion.id}
-              className="absolute text-2xl animate-bounce"
-              style={{ left: explosion.x - 10, top: explosion.y - 10 }}
-            >
-              ⭐
-            </div>
-          ))}
-
-          {/* Jugador */}
-          <div
-            className="absolute transition-all duration-200 ease-out"
-            style={{
-              left: playerPosition - 32,
-              top: gameHeight - 70,
-              width: '64px',
-              height: '64px'
-            }}
-          >
-            <img
-              src={playerHandImage}
-              alt="Jugador"
-              className="w-full h-full object-contain select-none"
-              style={{
-                filter: 'drop-shadow(0 0 10px rgba(59,130,246,0.6))',
-                imageRendering: 'pixelated'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Mensaje de derrota */}
-        {gameLost && (
-          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-lg max-w-md">
-              <div className="text-lg font-bold mb-2">¡Ronda Perdida!</div>
-              <div className="text-sm">
-                Enemigos restantes: {activeEnemies.length} | Puntuación: {score}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Estadísticas */}
-        <div className="text-center mt-4 p-3 bg-blue-50 rounded-lg text-xs text-muted-foreground">
-          Precisión: {shotsFired > 0 ? Math.round((enemiesDestroyed / shotsFired) * 100) : 0}% |
-          Disparos: {shotsFired} | Posición: {Math.round(playerPosition)}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center gap-4">
+      <h2 className="text-2xl font-bold">Neuro Link</h2>
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        className="border border-black"
+      />
+      {!gameActive && (
+        <button onClick={startGame} className="bg-blue-500 text-white px-4 py-2 rounded">
+          Iniciar Juego
+        </button>
+      )}
+    </div>
   );
 };
 
 export default NeuroLinkGame;
-
