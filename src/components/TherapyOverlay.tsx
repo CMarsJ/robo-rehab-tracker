@@ -93,55 +93,35 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   // En modo terapia, solo mostrar temporizador
   if (mode === 'therapy') {
     return (
-      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div className="bg-background rounded-lg p-8 relative" style={{ width: '90vw', maxWidth: '500px' }}>
-          <Card className="w-full text-center">
-            <CardHeader>
-              <CardTitle>Sesión de Terapia</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-6xl font-bold text-primary">
+          <div className="h-full flex flex-col">
+            {/* Contenedor central - iframe de YouTube en modo terapia, mano en modo diversión */}
+            <div className="flex-1 flex justify-center mb-6">
+              <div className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ height: '80%' }}>
+                {mode === 'therapy' ? (
+                  <iframe
+                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                    className="w-full h-full border-0"
+                    allow="autoplay; encrypted-media; fullscreen"
+                    allowFullScreen
+                    title="Terapia de Rehabilitación"
+                  />
+                ) : (
+                  <div className="text-6xl">👋</div>
+                )}
+              </div>
+            </div>
+            
+            {/* Tiempo central */}
+            <div className="text-center mb-6">
+              <div className="text-4xl font-bold text-primary mb-2">
                 {formatTime(timeLeft)}
               </div>
-              <p className="text-muted-foreground">
-                {isPaused ? 'Sesión pausada' : 'Realizando ejercicios de rehabilitación'}
-              </p>
-              
-              {/* Controles */}
-              <div className="flex items-center justify-center gap-4 mt-6">
-                <Button
-                  onClick={onPause}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3"
-                  size="lg"
-                >
-                  {isPaused ? (
-                    <>
-                      <Play className="w-5 h-5 mr-2" />
-                      Reanudar
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="w-5 h-5 mr-2" />
-                      Pausar
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  onClick={onCancel}
-                  variant="destructive"
-                  className="px-6 py-3"
-                  size="lg"
-                >
-                  <X className="w-5 h-5 mr-2" />
-                  Cancelar
-                </Button>
+              <div className="text-sm text-muted-foreground">
+                {isPaused ? 'Terapia pausada' : 'Terapia en progreso'}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+            </div>
+          </div>
+        );
   }
 
   // En modo diversión, mostrar selección de juegos
