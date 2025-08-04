@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Pause, Play, X, Gamepad2 } from 'lucide-react';
 import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
-import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 
 interface TherapyOverlayProps {
@@ -17,7 +16,7 @@ interface TherapyOverlayProps {
   mode: 'therapy' | 'fun';
 }
 
-type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'flappy-bird';
+type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'regular';
 
 const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   timeLeft,
@@ -28,7 +27,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
-  const [gameMode, setGameMode] = useState<GameMode>('selection');
+  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'regular' : 'selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
 
@@ -54,7 +53,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           🍊 Exprimiendo Naranjas
           <div className="text-sm mt-1">Meta: {targetGlasses} vasos</div>
         </Button>
-
+        
         <Button
           onClick={() => setGameMode('neurolink')}
           className="w-full h-16 text-lg bg-purple-500 hover:bg-purple-600"
@@ -62,14 +61,13 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           🎯 NeuroLink
           <div className="text-sm mt-1">Dispara automáticamente a los objetivos</div>
         </Button>
-
+        
         <Button
-          onClick={() => setGameMode('flappy-bird')}
+          onClick={() => setGameMode('regular')}
           variant="outline"
           className="w-full"
         >
-          🐦 Flappy Bird Terapéutico
-          <div className="text-sm mt-1">Controla la altura con los ángulos de tu mano</div>
+          Modo Regular (Solo temporizador)
         </Button>
       </CardContent>
     </Card>
@@ -81,30 +79,24 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         return <OrangeSqueezeGame targetGlasses={targetGlasses} onComplete={handleGameComplete} />;
       case 'neurolink':
         return <NeuroLinkGame onComplete={handleGameComplete} />;
-      case 'flappy-bird':
-        return <FlappyBirdGame onComplete={handleGameComplete} />;
-      default:
-        return renderGameSelection();
-    }
-  };
-
-  if (mode === 'therapy') {
-    return (
-      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div className="bg-background rounded-lg p-8 relative" style={{ width: '700vw', maxWidth: '1000px' }}>
+      case 'regular':
+        return (
           <div className="h-full flex flex-col">
             <div className="flex-1 flex justify-center mb-6">
               <div className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ height: '80%' }}>
-                <iframe
-                  src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
-                  className="w-full h-full border-0"
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                  title="Terapia de Rehabilitación"
-                />
+                {mode === 'therapy' ? (
+                  <iframe
+                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                    className="w-full h-full border-0"
+                    allow="autoplay; encrypted-media; fullscreen"
+                    allowFullScreen
+                    title="Terapia de Rehabilitación"
+                  />
+                ) : (
+                  <div className="text-6xl">👋</div>
+                )}
               </div>
             </div>
-
             <div className="text-center mb-6">
               <div className="text-4xl font-bold text-primary mb-2">
                 {formatTime(timeLeft)}
@@ -114,15 +106,16 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        );
+      default:
+        return renderGameSelection();
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-8 relative overflow-y-auto" style={{ width: '90vw', height: '90vh' }}>
-        {gameMode === 'selection' ? (
+        {(gameMode === 'selection' && mode === 'fun') ? (
           <div className="flex items-center justify-center h-full">
             {renderGameSelection()}
           </div>
@@ -134,7 +127,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
             {gameCompleted && (
               <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg text-center">
-                <p className="text-green-800 font-semibold">🎉 ¡Juego completado! Continúa hasta que termine el tiempo</p>
+                <p className="text-green-800 font-semibold">🎉 ¡Juego completado! Continúa hasta que termine el tiempo
+                </p>
               </div>
             )}
 
@@ -157,7 +151,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 )}
               </Button>
 
-              {gameMode !== 'flappy-bird' && (
+              {gameMode !== 'regular' && (
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2">
                     {formatTime(timeLeft)}
