@@ -20,9 +20,17 @@ interface FruitZapRanking {
   duration: number;
 }
 
+interface FlappyBirdRanking {
+  date: string;
+  score: number;
+  pointsPerMinute: number;
+  duration: number;
+}
+
 const GameRankings = () => {
   const [orangeRankings, setOrangeRankings] = useState<Ranking[]>([]);
   const [fruitZapRankings, setFruitZapRankings] = useState<FruitZapRanking[]>([]);
+  const [flappyBirdRankings, setFlappyBirdRankings] = useState<FlappyBirdRanking[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -71,6 +79,46 @@ const GameRankings = () => {
     loadFruitZapRankings();
   }, [user]);
 
+  useEffect(() => {
+    const loadFlappyBirdRankings = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('game_records')
+          .select(`
+            *,
+            sessions!inner(fecha_inicio, duracion_minutos)
+          `)
+          .eq('user_id', user.id)
+          .eq('game_type', 'flappy_bird')
+          .order('created_at', { ascending: false })
+          .limit(5);
+          
+        if (!error && data) {
+          const rankings = data.map(record => {
+            const duration = record.sessions?.duracion_minutos || 1;
+            const score = record.total_oranges || 0;
+            const pointsPerMinute = duration > 0 ? score / duration : 0;
+            
+            return {
+              date: new Date(record.sessions.fecha_inicio).toLocaleDateString(),
+              score: score,
+              pointsPerMinute: pointsPerMinute,
+              duration: duration
+            };
+          });
+          
+          setFlappyBirdRankings(rankings);
+        }
+      } catch (error) {
+        console.error('Error loading Flappy Bird rankings:', error);
+      }
+    };
+    
+    loadFlappyBirdRankings();
+  }, [user]);
+
   const formatTime = (minutes: number) => {
     const mins = Math.floor(minutes);
     const secs = Math.round((minutes - mins) * 60);
@@ -78,7 +126,7 @@ const GameRankings = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
       {/* Ranking Naranjas */}
       <Card>
         <CardHeader>
@@ -152,6 +200,47 @@ const GameRankings = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    {user ? 'No hay registros aún' : 'Inicia sesión para ver rankings'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Ranking Flappy Bird */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            🐦 Ranking - Flappy Bird
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">Pos.</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-center">Puntaje</TableHead>
+                <TableHead className="text-center">Pts/Min</TableHead>
+                <TableHead className="text-right">Duración</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {flappyBirdRankings.length > 0 ? (
+                flappyBirdRankings.map((entry, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">#{index + 1}</TableCell>
+                    <TableCell>{entry.date}</TableCell>
+                    <TableCell className="text-center font-bold">{entry.score}</TableCell>
+                    <TableCell className="text-center">{entry.pointsPerMinute.toFixed(1)}</TableCell>
+                    <TableCell className="text-right">{entry.duration}min</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     {user ? 'No hay registros aún' : 'Inicia sesión para ver rankings'}
                   </TableCell>
                 </TableRow>

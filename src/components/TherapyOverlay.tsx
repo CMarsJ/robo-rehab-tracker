@@ -29,8 +29,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
-  // En modo terapia mostrar solo el temporizador, en modo diversión empezar con selección
-  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'selection' : 'selection');
+  // En modo terapia NO hay selección de juegos, solo temporizador
+  const [gameMode, setGameMode] = useState<GameMode>('selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
 
@@ -90,33 +90,71 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }
   };
 
+  // En modo terapia, solo mostrar temporizador
+  if (mode === 'therapy') {
+    return (
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div className="bg-background rounded-lg p-8 relative" style={{ width: '90vw', maxWidth: '500px' }}>
+          <Card className="w-full text-center">
+            <CardHeader>
+              <CardTitle>Sesión de Terapia</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-6xl font-bold text-primary">
+                {formatTime(timeLeft)}
+              </div>
+              <p className="text-muted-foreground">
+                {isPaused ? 'Sesión pausada' : 'Realizando ejercicios de rehabilitación'}
+              </p>
+              
+              {/* Controles */}
+              <div className="flex items-center justify-center gap-4 mt-6">
+                <Button
+                  onClick={onPause}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3"
+                  size="lg"
+                >
+                  {isPaused ? (
+                    <>
+                      <Play className="w-5 h-5 mr-2" />
+                      Reanudar
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="w-5 h-5 mr-2" />
+                      Pausar
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={onCancel}
+                  variant="destructive"
+                  className="px-6 py-3"
+                  size="lg"
+                >
+                  <X className="w-5 h-5 mr-2" />
+                  Cancelar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // En modo diversión, mostrar selección de juegos
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-8 relative overflow-y-auto" style={{ width: '90vw', height: '90vh' }}>
-        {/* Mostrar selección de juegos solo en modo diversión, en terapia mostrar temporizador */}
-        {(gameMode === 'selection' && mode === 'fun') ? (
+        {gameMode === 'selection' ? (
           <div className="flex items-center justify-center h-full">
             {renderGameSelection()}
           </div>
-        ) : gameMode === 'selection' && mode === 'therapy' ? (
-          <div className="flex items-center justify-center h-full">
-            <Card className="w-full max-w-md mx-auto text-center">
-              <CardHeader>
-                <CardTitle>Sesión de Terapia</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-6xl font-bold text-primary">
-                  {formatTime(timeLeft)}
-                </div>
-                <p className="text-muted-foreground">
-                  {isPaused ? 'Sesión pausada' : 'Realizando ejercicios de rehabilitación'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
         ) : (
           <div className="h-full flex flex-col">
-            {/* Contenido del juego o modo regular */}
+            {/* Contenido del juego */}
             <div className="flex-1">
               {renderGameContent()}
             </div>
@@ -130,7 +168,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
             {/* Controles inferiores */}
             <div className="flex items-center justify-center gap-8 mt-auto">
-              {/* Botón de pausar/reanudar */}
               <Button
                 onClick={onPause}
                 className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
@@ -149,7 +186,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 )}
               </Button>
 
-              {/* Tiempo central para juegos */}
               {gameMode !== 'flappy-bird' && (
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary mb-2">
@@ -161,7 +197,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 </div>
               )}
 
-              {/* Botón de cancelar */}
               <Button
                 onClick={onCancel}
                 variant="destructive"
