@@ -257,6 +257,43 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
       }, 500);
     });
   }, [explosions]);
+  
+  const saveGameData = useCallback(async (defeated: boolean = false) => {
+    if (!user || !gameStartTime) return;
+    const end = new Date();
+    const duration = (end.getTime() - gameStartTime.getTime()) / 1000;
+    const ppm = duration > 0 ? (score / duration) * 60 : 0;
+
+    try {
+      const { data: session, error: sessionError } = await supabase
+        .from('sessions')
+        .insert({
+          user_id: user.id,
+          duracion_minutos: Math.round(duration / 60),
+          tipo_actividad: 'neurolink',
+          estado: defeated ? 'failed' : 'completed'
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      const { error: gameError } = await supabase
+        .from('game_records')
+        .insert({
+          user_id: user.id,
+          session_id: session.id,
+          game_type: 'neurolink',
+          total_oranges: score,
+          total_glasses: wave + extraWaves,
+          average_oranges_per_minute: ppm
+        });
+
+      if (gameError) throw gameError;
+    } catch (error) {
+      console.error('Error saving game data:', error);
+    }
+  }, [user, gameStartTime, score, wave, extraWaves]);
 
   // Oleadas y derrota
   useEffect(() => {
@@ -314,43 +351,6 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     };
     loadShootInterval();
   }, [user]);
-
-  const saveGameData = useCallback(async (defeated: boolean = false) => {
-    if (!user || !gameStartTime) return;
-    const end = new Date();
-    const duration = (end.getTime() - gameStartTime.getTime()) / 1000;
-    const ppm = duration > 0 ? (score / duration) * 60 : 0;
-
-    try {
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .insert({
-          user_id: user.id,
-          duracion_minutos: Math.round(duration / 60),
-          tipo_actividad: 'neurolink',
-          estado: defeated ? 'failed' : 'completed'
-        })
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      const { error: gameError } = await supabase
-        .from('game_records')
-        .insert({
-          user_id: user.id,
-          session_id: session.id,
-          game_type: 'neurolink',
-          total_oranges: score,
-          total_glasses: wave + extraWaves,
-          average_oranges_per_minute: ppm
-        });
-
-      if (gameError) throw gameError;
-    } catch (error) {
-      console.error('Error saving game data:', error);
-    }
-  }, [user, gameStartTime, score, wave, extraWaves]);
 
   const activeEnemies = enemies.filter(e => !e.destroyed);
   const progress = enemies.length > 0
