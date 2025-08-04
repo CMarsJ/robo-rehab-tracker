@@ -29,8 +29,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   duration,
   mode
 }) => {
-  // En modo terapia siempre flappy bird, en modo diversión empezar con selección
-  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'flappy-bird' : 'selection');
+  // En modo terapia mostrar solo el temporizador, en modo diversión empezar con selección
+  const [gameMode, setGameMode] = useState<GameMode>(mode === 'therapy' ? 'selection' : 'selection');
   const [gameCompleted, setGameCompleted] = useState(false);
   const { calculateOrangeGoalForTime } = useGameConfig();
 
@@ -93,10 +93,26 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-8 relative overflow-y-auto" style={{ width: '90vw', height: '90vh' }}>
-        {/* Solo mostrar selección de juegos en modo diversión */}
+        {/* Mostrar selección de juegos solo en modo diversión, en terapia mostrar temporizador */}
         {(gameMode === 'selection' && mode === 'fun') ? (
           <div className="flex items-center justify-center h-full">
             {renderGameSelection()}
+          </div>
+        ) : gameMode === 'selection' && mode === 'therapy' ? (
+          <div className="flex items-center justify-center h-full">
+            <Card className="w-full max-w-md mx-auto text-center">
+              <CardHeader>
+                <CardTitle>Sesión de Terapia</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-6xl font-bold text-primary">
+                  {formatTime(timeLeft)}
+                </div>
+                <p className="text-muted-foreground">
+                  {isPaused ? 'Sesión pausada' : 'Realizando ejercicios de rehabilitación'}
+                </p>
+              </CardContent>
+            </Card>
           </div>
         ) : (
           <div className="h-full flex flex-col">

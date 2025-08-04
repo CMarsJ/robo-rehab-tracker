@@ -83,7 +83,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
         });
       }
     }
-  }, [onDayCompleted, monthlyCompletedDays]);
+  }, [onDayCompleted, weekDays, today, monthlyCompletedDays]);
 
   const completedDays = weekProgress.filter(Boolean).length;
   const dayNames = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
