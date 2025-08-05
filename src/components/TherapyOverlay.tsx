@@ -94,7 +94,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div
           className="bg-background rounded-lg p-8 relative"
-          style={{ width: '700vw', maxWidth: '1000px', height: '70%' }}
+          style={{ width: '700vw', maxWidth: '1000px', height: '90%' }}
         >
           <div className="h-full flex flex-col">
             {/* Video de terapia */}
