@@ -90,74 +90,67 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   // MODO TERAPIA
   if (mode === 'therapy') {
-    return (
-      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div
-          className="bg-background rounded-lg p-8 relative"
-          style={{ width: '700vw', maxWidth: '1000px' }}
-        >
-          <div className="h-full flex flex-col">
-            {/* Video de terapia */}
-            <div className="flex-1 flex justify-center mb-6">
-              <div
-                className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden"
-                style={{ height: '80%' }}
-              >
-                <iframe
-                  src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
-                  className="w-full h-full border-0"
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                  title="Terapia de Rehabilitación"
-                />
-              </div>
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl bg-background rounded-lg p-8 relative">
+        <div className="flex flex-col h-full">
+          {/* Video grande en la parte superior */}
+          <div className="flex justify-center items-center w-full h-[400px] mb-8">
+            <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden">
+              <iframe
+                src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                className="w-full h-full border-0"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+                title="Terapia de Rehabilitación"
+              />
             </div>
+          </div>
 
-            {/* Temporizador */}
-            <div className="text-center mb-6">
-              <div className="text-4xl font-bold text-primary mb-2">
-                {formatTime(timeLeft)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {isPaused ? 'Terapia pausada' : 'Terapia en progreso'}
-              </div>
+          {/* Temporizador */}
+          <div className="text-center mb-6">
+            <div className="text-4xl font-bold text-primary mb-2">
+              {formatTime(timeLeft)}
             </div>
-
-            {/* Botones de control */}
-            <div className="flex items-center justify-center gap-8 mt-auto">
-              <Button
-                onClick={onPause}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
-                size="lg"
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="w-6 h-6 mr-2" />
-                    Reanudar
-                  </>
-                ) : (
-                  <>
-                    <Pause className="w-6 h-6 mr-2" />
-                    Pausar
-                  </>
-                )}
-              </Button>
-
-              <Button
-                onClick={onCancel}
-                variant="destructive"
-                className="px-6 py-3 text-lg"
-                size="lg"
-              >
-                <X className="w-6 h-6 mr-2" />
-                Cancelar
-              </Button>
+            <div className="text-sm text-muted-foreground">
+              {isPaused ? 'Terapia pausada' : 'Terapia en progreso'}
             </div>
+          </div>
+
+          {/* Botones de control */}
+          <div className="flex items-center justify-center gap-8 mt-auto">
+            <Button
+              onClick={onPause}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
+              size="lg"
+            >
+              {isPaused ? (
+                <>
+                  <Play className="w-6 h-6 mr-2" />
+                  Reanudar
+                </>
+              ) : (
+                <>
+                  <Pause className="w-6 h-6 mr-2" />
+                  Pausar
+                </>
+              )}
+            </Button>
+
+            <Button
+              onClick={onCancel}
+              variant="destructive"
+              className="px-6 py-3 text-lg"
+              size="lg"
+            >
+              <X className="w-6 h-6 mr-2" />
+              Cancelar
+            </Button>
           </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   // MODO DIVERSIÓN
   return (
