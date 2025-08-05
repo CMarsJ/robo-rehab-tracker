@@ -306,10 +306,12 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     const reached = active.some(enemy => enemy.y >= playerY - 50);
 
     if (reached) {
-      const potentialPoints = active.length * 10; // 10 puntos por enemigo
-      const penalty = Math.floor(potentialPoints / 2); // La mitad de los puntos que se pudieron ganar
-      setScore(prev => Math.max(0, prev - penalty));
+      const remainingEnemies = active.length;
+      const possiblePoints = remainingEnemies * 10;
+      const penalty = Math.floor(possiblePoints / 2);
+      setScore(prev => prev - penalty);
       setGameLost(true);
+
       setTimeout(() => {
         setGameLost(false);
         setEnemies(createEnemies(wave <= 3 ? wave : 4 + extraWaves));
