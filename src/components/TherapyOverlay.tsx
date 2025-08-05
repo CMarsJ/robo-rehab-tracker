@@ -1,130 +1,230 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatTime } from '@/lib/utils';
-import OrangeSqueezeGame from './OrangeSqueezeGame';
-import NeuroLinkGame from './NeuroLinkGame';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Pause, Play, X, Gamepad2 } from 'lucide-react';
+import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
+import NeuroLinkGame from '@/components/NeuroLinkGame';
+import FlappyBirdGame from '@/components/FlappyBirdGame';
+import { useGameConfig } from '@/contexts/GameConfigContext';
 
 interface TherapyOverlayProps {
-  mode: 'therapy' | 'fun';
+  timeLeft: number;
+  isPaused: boolean;
+  onPause: () => void;
   onCancel: () => void;
-  onComplete: () => void;
+  formatTime: (seconds: number) => string;
+  duration: number;
+  mode: 'therapy' | 'fun';
 }
 
-const GAME_DURATION = 180; // duración en segundos
+type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'flappy-bird';
 
-const TherapyOverlay: React.FC<TherapyOverlayProps> = ({ mode, onCancel, onComplete }) => {
-  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
-  const [isPaused, setIsPaused] = useState(false);
-  const [gameMode, setGameMode] = useState<'menu' | 'orange-squeeze' | 'neurolink' | 'regular'>('menu');
+const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
+  timeLeft,
+  isPaused,
+  onPause,
+  onCancel,
+  formatTime,
+  duration,
+  mode
+}) => {
+  const [gameMode, setGameMode] = useState<GameMode>('selection');
+  const [gameCompleted, setGameCompleted] = useState(false);
+  const { calculateOrangeGoalForTime } = useGameConfig();
 
-  useEffect(() => {
-    if (isPaused || gameMode === 'menu') return;
-    if (timeLeft <= 0) {
-      onComplete();
-      return;
-    }
-    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    return () => clearInterval(timer);
-  }, [isPaused, timeLeft, gameMode]);
+  const targetGlasses = calculateOrangeGoalForTime(duration);
 
-  const handleCancel = useCallback(() => {
-    setIsPaused(true);
-    setGameMode('menu');
-    setTimeLeft(GAME_DURATION);
-    onCancel();
-  }, [onCancel]);
-
-  const handleGameComplete = useCallback(() => {
-    setGameMode('menu');
-    setTimeLeft(GAME_DURATION);
-    onComplete();
-  }, [onComplete]);
+  const handleGameComplete = () => {
+    setGameCompleted(true);
+  };
 
   const renderGameSelection = () => (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-      <Card onClick={() => setGameMode('orange-squeeze')} className="cursor-pointer hover:shadow-xl transition-shadow">
-        <CardContent className="p-6 text-center">
-          🍊
-          <div className="text-lg font-semibold mt-2">Orange Squeeze</div>
-        </CardContent>
-      </Card>
-      <Card onClick={() => setGameMode('neurolink')} className="cursor-pointer hover:shadow-xl transition-shadow">
-        <CardContent className="p-6 text-center">
-          🧠
-          <div className="text-lg font-semibold mt-2">Neuro Link</div>
-        </CardContent>
-      </Card>
-      <Card onClick={() => setGameMode('regular')} className="cursor-pointer hover:shadow-xl transition-shadow">
-        <CardContent className="p-6 text-center">
-          📺
-          <div className="text-lg font-semibold mt-2">Modo Regular</div>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle className="text-center flex items-center justify-center gap-2">
+          <Gamepad2 className="w-6 h-6" />
+          Selecciona un Juego
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Button
+          onClick={() => setGameMode('orange-squeeze')}
+          className="w-full h-16 text-lg bg-orange-500 hover:bg-orange-600"
+        >
+          🍊 Exprimiendo Naranjas
+          <div className="text-sm mt-1">Meta: {targetGlasses} vasos</div>
+        </Button>
+
+        <Button
+          onClick={() => setGameMode('neurolink')}
+          className="w-full h-16 text-lg bg-purple-500 hover:bg-purple-600"
+        >
+          🎯 NeuroLink
+          <div className="text-sm mt-1">Dispara automáticamente a los objetivos</div>
+        </Button>
+
+        <Button
+          onClick={() => setGameMode('flappy-bird')}
+          variant="outline"
+          className="w-full"
+        >
+          🐦 Flappy Bird Terapéutico
+          <div className="text-sm mt-1">Controla la altura con los ángulos de tu mano</div>
+        </Button>
+      </CardContent>
+    </Card>
   );
 
   const renderGameContent = () => {
     switch (gameMode) {
       case 'orange-squeeze':
-        return <OrangeSqueezeGame targetGlasses={10} onComplete={handleGameComplete} />;
+        return <OrangeSqueezeGame targetGlasses={targetGlasses} onComplete={handleGameComplete} />;
       case 'neurolink':
         return <NeuroLinkGame onComplete={handleGameComplete} />;
-      case 'regular':
-        return (
-          <div className="h-full flex flex-col">
-            {/* Contenido central diferente según el modo */}
-            <div className="flex-1 flex justify-center mb-6">
-              <div
-                className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden"
-                style={{ height: '80%' }}
-              >
-                {mode === 'therapy' ? (
-                  <iframe
-                    src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
-                    className="w-full h-full border-0"
-                    allow="autoplay; encrypted-media; fullscreen"
-                    allowFullScreen
-                    title="Terapia de Rehabilitación"
-                  />
-                ) : (
-                  <div className="text-6xl">🕹️ ¡Disfruta del modo libre!</div>
-                )}
-              </div>
-            </div>
-
-            {/* Tiempo central */}
-            <div className="text-center mb-6">
-              <div className="text-4xl font-bold text-primary mb-2">
-                {formatTime(timeLeft)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {isPaused ? 'Pausado' : 'Tiempo restante'}
-              </div>
-            </div>
-          </div>
-        );
+      case 'flappy-bird':
+        return <FlappyBirdGame onComplete={handleGameComplete} />;
       default:
         return renderGameSelection();
     }
   };
 
-  return (
-    <div className="p-6 space-y-6 h-full flex flex-col">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-primary">
-          {gameMode === 'menu' ? 'Selecciona una Actividad' : 'Terapia en Curso'}
-        </h2>
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={() => setIsPaused(!isPaused)}>
-            {isPaused ? 'Reanudar' : 'Pausar'}
-          </Button>
-          <Button variant="destructive" onClick={handleCancel}>
-            Cancelar
-          </Button>
+  // MODO TERAPIA
+  if (mode === 'therapy') {
+    return (
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div
+          className="bg-background rounded-lg p-8 relative"
+          style={{ width: '700vw', maxWidth: '1000px' }}
+        >
+          <div className="h-full flex flex-col">
+            {/* Video de terapia */}
+            <div className="flex-1 flex justify-center mb-6">
+              <div
+                className="w-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden"
+                style={{ height: '80%' }}
+              >
+                <iframe
+                  src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                  className="w-full h-full border-0"
+                  allow="autoplay; encrypted-media; fullscreen"
+                  allowFullScreen
+                  title="Terapia de Rehabilitación"
+                />
+              </div>
+            </div>
+
+            {/* Temporizador */}
+            <div className="text-center mb-6">
+              <div className="text-4xl font-bold text-primary mb-2">
+                {formatTime(timeLeft)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {isPaused ? 'Terapia pausada' : 'Terapia en progreso'}
+              </div>
+            </div>
+
+            {/* Botones de control */}
+            <div className="flex items-center justify-center gap-8 mt-auto">
+              <Button
+                onClick={onPause}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
+                size="lg"
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-6 h-6 mr-2" />
+                    Reanudar
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-6 h-6 mr-2" />
+                    Pausar
+                  </>
+                )}
+              </Button>
+
+              <Button
+                onClick={onCancel}
+                variant="destructive"
+                className="px-6 py-3 text-lg"
+                size="lg"
+              >
+                <X className="w-6 h-6 mr-2" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="flex-1">{renderGameContent()}</div>
+    );
+  }
+
+  // MODO DIVERSIÓN
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-background rounded-lg p-8 relative overflow-y-auto" style={{ width: '90vw', height: '90vh' }}>
+        {gameMode === 'selection' ? (
+          <div className="flex items-center justify-center h-full">
+            {renderGameSelection()}
+          </div>
+        ) : (
+          <div className="h-full flex flex-col">
+            {/* Contenido del juego */}
+            <div className="flex-1">
+              {renderGameContent()}
+            </div>
+
+            {/* Notificación de juego completado */}
+            {gameCompleted && (
+              <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg text-center">
+                <p className="text-green-800 font-semibold">🎉 ¡Juego completado! Continúa hasta que termine el tiempo</p>
+              </div>
+            )}
+
+            {/* Controles inferiores */}
+            <div className="flex items-center justify-center gap-8 mt-auto">
+              <Button
+                onClick={onPause}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
+                size="lg"
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-6 h-6 mr-2" />
+                    Reanudar
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-6 h-6 mr-2" />
+                    Pausar
+                  </>
+                )}
+              </Button>
+
+              {gameMode !== 'flappy-bird' && (
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    {formatTime(timeLeft)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {isPaused ? 'Pausado' : 'Tiempo restante'}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={onCancel}
+                variant="destructive"
+                className="px-6 py-3 text-lg"
+                size="lg"
+              >
+                <X className="w-6 h-6 mr-2" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
