@@ -59,6 +59,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
   const [gameLost, setGameLost] = useState(false);
   const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
   const [currentWaveEnemyImage, setCurrentWaveEnemyImage] = useState(enemigo1);
+  const [waveCompletedMessage, setWaveCompletedMessage] = useState<string | null>(null);
 
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
@@ -305,7 +306,8 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     const reached = active.some(enemy => enemy.y >= playerY - 50);
 
     if (reached) {
-      const penalty = active.length * 5;
+      const potentialPoints = active.length * 10; // 10 puntos por enemigo
+      const penalty = Math.floor(potentialPoints / 2); // La mitad de los puntos que se pudieron ganar
       setScore(prev => Math.max(0, prev - penalty));
       setGameLost(true);
       setTimeout(() => {
@@ -321,10 +323,12 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
           const next = wave + 1;
           setWave(next);
           setEnemies(createEnemies(next));
+          setWaveCompletedMessage(`¡Oleada ${wave} Completada!`);
         } else {
           const extras = extraWaves + 1;
           setExtraWaves(extras);
           setEnemies(createEnemies(4 + extras));
+          setWaveCompletedMessage(`¡Ronda Extra ${extraWaves + 1} Completada!`);
         }
       }, 1000);
     }
@@ -456,7 +460,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         </div>
 
         {gameLost && (
-          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-bounce">
             <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-lg max-w-md">
               <div className="text-lg font-bold mb-2">¡Ronda Perdida!</div>
               <div className="text-sm">
@@ -465,6 +469,16 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
             </div>
           </div>
         )}
+
+        {waveCompletedMessage && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-bounce">
+            <div className="bg-green-100 border border-green-400 text-green-800 px-6 py-4 rounded-lg shadow-lg max-w-md text-center">
+              <div className="text-lg font-bold mb-2">{waveCompletedMessage}</div>
+              <div className="text-sm">Prepárate para la siguiente ronda</div>
+            </div>
+          </div>
+        )}
+
 
         <div className="text-center mt-4 p-3 bg-blue-50 rounded-lg text-xs text-muted-foreground">
           Precisión: {shotsFired > 0 ? Math.round((enemiesDestroyed / shotsFired) * 100) : 0}% |
