@@ -339,6 +339,16 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
   }, [gameStarted, initGame]);
 
   useEffect(() => {
+  if (waveCompletedMessage) {
+    const timer = setTimeout(() => {
+      setWaveCompletedMessage(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+    }
+  }, [waveCompletedMessage]);
+
+
+  useEffect(() => {
     if (!user) return;
     const loadShootInterval = async () => {
       try {
@@ -354,6 +364,8 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     };
     loadShootInterval();
   }, [user]);
+
+  
 
   const activeEnemies = enemies.filter(e => !e.destroyed);
   const progress = enemies.length > 0
@@ -460,8 +472,8 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         </div>
 
         {gameLost && (
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-bounce">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-lg max-w-md">
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+            <div className="bg-green-100 border border-green-400 text-green-800 px-6 py-4 rounded-lg shadow-lg max-w-md text-center">
               <div className="text-lg font-bold mb-2">¡Ronda Perdida!</div>
               <div className="text-sm">
                 Enemigos restantes: {activeEnemies.length} | Puntuación: {score}
@@ -471,7 +483,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         )}
 
         {waveCompletedMessage && (
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-bounce">
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
             <div className="bg-green-100 border border-green-400 text-green-800 px-6 py-4 rounded-lg shadow-lg max-w-md text-center">
               <div className="text-lg font-bold mb-2">{waveCompletedMessage}</div>
               <div className="text-sm">Prepárate para la siguiente ronda</div>
