@@ -60,7 +60,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           className="w-full h-16 text-lg bg-purple-500 hover:bg-purple-600"
         >
           🎯 NeuroLink
-          <div className="text-sm mt-1">Dispara automáticamente a los objetivos</div>
         </Button>
 
         <Button
@@ -68,8 +67,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           variant="outline"
           className="w-full"
         >
-          🐦 Flappy Bird Terapéutico
-          <div className="text-sm mt-1">Controla la altura con los ángulos de tu mano</div>
+          🐦 Flappy Bird 
         </Button>
       </CardContent>
     </Card>
