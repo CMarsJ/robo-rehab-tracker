@@ -102,7 +102,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 style={{ height: '80%' }}
               >
                 <iframe
-                  src="https://www.youtube.com/embed/bZaKJr5XA2g?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                  src="https://www.youtube.com/shorts/ICJnPwLqVio?autoplay=1&loop=1&playlist=bZaKJr5XA2g&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
                   className="w-full h-full border-0"
                   allow="autoplay; encrypted-media; fullscreen"
                   allowFullScreen
