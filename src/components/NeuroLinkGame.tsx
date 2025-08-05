@@ -143,7 +143,6 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     setGameStartTime(new Date());
   }, [createEnemies]);
 
-    // Disparo automático
   useEffect(() => {
     if (!gameStarted || gameOver) return;
     const shoot = () => {
@@ -158,7 +157,6 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     return () => clearInterval(interval);
   }, [gameStarted, gameOver, playerPosition, gameHeight, shootInterval]);
 
-  // Movimiento del jugador (controlado por ángulos A4+A5+A6)
   useEffect(() => {
     if (!gameStarted) return;
     const interval = setInterval(() => {
@@ -174,7 +172,6 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     return () => clearInterval(interval);
   }, [gameStarted, leftHand, rightHand, gameWidth]);
 
-  // Movimiento de enemigos
   useEffect(() => {
     if (!gameStarted || enemies.length === 0) return;
     const interval = setInterval(() => {
@@ -206,50 +203,50 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     return () => clearInterval(interval);
   }, [gameStarted, enemies.length, enemyDirection, enemyMoveDown, enemySpeed, gameWidth]);
 
-  // Movimiento de balas
   useEffect(() => {
     if (!gameStarted) return;
     const interval = setInterval(() => {
-      setBullets(prev =>
-        prev.map(b => ({ ...b, y: b.y - shotSpeed * 2 }))
-           .filter(b => b.y > 0)
-      );
-    }, 50);
-    return () => clearInterval(interval);
-  }, [gameStarted, shotSpeed]);
+      setEnemies(prevEnemies => {
+        const updatedEnemies = [...prevEnemies];
 
-  // Colisiones
-  useEffect(() => {
-    if (!gameStarted) return;
-    const interval = setInterval(() => {
-      setBullets(prevBullets => {
-        const remaining: Bullet[] = [];
-        prevBullets.forEach(bullet => {
-          let hit = false;
-          setEnemies(prevEnemies => {
-            return prevEnemies.map(enemy => {
-              if (!enemy.destroyed &&
-                  Math.abs(bullet.x - enemy.x) < 30 &&
-                  Math.abs(bullet.y - enemy.y) < 30) {
-                hit = true;
+        setBullets(prevBullets => {
+          const newBullets: Bullet[] = [];
+
+          for (const bullet of prevBullets) {
+            let hit = false;
+
+            for (let i = 0; i < updatedEnemies.length; i++) {
+              const enemy = updatedEnemies[i];
+
+              if (
+                !enemy.destroyed &&
+                Math.abs(bullet.x - enemy.x) < 30 &&
+                Math.abs(bullet.y - enemy.y) < 30
+              ) {
+                updatedEnemies[i] = { ...enemy, destroyed: true };
                 setExplosions(prev => [...prev, { id: explosionIdRef.current++, x: enemy.x, y: enemy.y }]);
                 setScore(s => s + 10);
                 setEnemiesDestroyed(d => d + 1);
                 playHitSound();
-                return { ...enemy, destroyed: true };
+                hit = true;
+                break;
               }
-              return enemy;
-            });
-          });
-          if (!hit) remaining.push(bullet);
+            }
+
+            if (!hit) {
+              newBullets.push(bullet);
+            }
+          }
+
+          return newBullets;
         });
-        return remaining;
+
+        return updatedEnemies;
       });
     }, 50);
     return () => clearInterval(interval);
   }, [gameStarted, playHitSound]);
 
-  // Eliminar explosiones
   useEffect(() => {
     explosions.forEach(explosion => {
       setTimeout(() => {
@@ -257,7 +254,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
       }, 500);
     });
   }, [explosions]);
-  
+
   const saveGameData = useCallback(async (defeated: boolean = false) => {
     if (!user || !gameStartTime) return;
     const end = new Date();
@@ -295,7 +292,6 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
     }
   }, [user, gameStartTime, score, wave, extraWaves]);
 
-  // Oleadas y derrota
   useEffect(() => {
     if (!gameStarted || gameOver) return;
     const active = enemies.filter(e => !e.destroyed);
@@ -306,11 +302,12 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
       const penalty = active.length * 5;
       setScore(prev => Math.max(0, prev - penalty));
       setGameLost(true);
-      saveGameData(true);
+
       setTimeout(() => {
         setGameLost(false);
-        onComplete();
+        setEnemies(createEnemies(wave <= 3 ? wave : 4 + extraWaves));
       }, 3000);
+
       return;
     }
 
@@ -327,12 +324,10 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         }
       }, 1000);
     }
-  }, [enemies, wave, extraWaves, gameStarted, gameOver, gameHeight, createEnemies, saveGameData, onComplete]);
+  }, [enemies, wave, extraWaves, gameStarted, gameOver, gameHeight, createEnemies]);
 
   useEffect(() => {
-    if (!gameStarted) {
-      initGame();
-    }
+    if (!gameStarted) initGame();
   }, [gameStarted, initGame]);
 
   useEffect(() => {
