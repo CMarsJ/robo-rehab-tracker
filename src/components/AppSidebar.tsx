@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Home, FileText, Clock, Settings } from 'lucide-react';
 import {
   Sidebar,
@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConfig } from '@/contexts/ConfigContext';
-
+import { supabase } from '@/integrations/supabase/client';
 const AppSidebar = () => {
   const t = useTranslation();
   const location = useLocation();
@@ -50,10 +50,30 @@ const AppSidebar = () => {
     },
   ];
 
-  const avatarUrl =
-    (user as any)?.user_metadata?.avatar_url ||
-    (user as any)?.user_metadata?.picture ||
-    '/placeholder.svg';
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) { setAvatarUrl(null); return; }
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('avatar_url, display_name')
+          .eq('user_id', user.id)
+          .single();
+        if (data?.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        } else {
+          const metaUrl = (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || null;
+          setAvatarUrl(metaUrl);
+        }
+      } catch {
+        const metaUrl = (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || null;
+        setAvatarUrl(metaUrl);
+      }
+    };
+    loadProfile();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();

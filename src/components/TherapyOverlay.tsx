@@ -15,6 +15,8 @@ interface TherapyOverlayProps {
   onCancel: () => void;
   formatTime: (seconds: number) => string;
   duration: number;
+  onStartTimer: () => void;
+  isActive: boolean;
 }
 
 type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'flappy-bird';
@@ -25,7 +27,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   onPause,
   onCancel,
   formatTime,
-  duration
+  duration,
+  onStartTimer,
+  isActive
 }) => {
   const [gameMode, setGameMode] = useState<GameMode>('selection');
   const [gameCompleted, setGameCompleted] = useState(false);
@@ -46,6 +50,14 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-3">
+        <Button
+          onClick={onStartTimer}
+          className="w-full h-14 text-base bg-primary hover:bg-primary/90"
+          disabled={isPaused || isActive}
+        >
+          ⏱️ {isActive ? 'Temporizador en curso' : 'Iniciar Temporizador de Terapia'}
+        </Button>
+
         <Button
           onClick={() => setGameMode('orange-squeeze')}
           className="w-full h-14 text-base bg-orange-500 hover:bg-orange-600"
@@ -112,10 +124,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             {/* Timer y estado */}
             <div className="mt-4 text-center">
               <div className="text-3xl font-bold text-primary mb-1">
-                {formatTime(timeLeft)}
+                {isActive ? formatTime(timeLeft) : `${duration}:00`}
               </div>
               <div className="text-sm text-muted-foreground">
-                {isPaused ? 'Pausado' : 'Tiempo restante'}
+                {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo'}
               </div>
             </div>
           </div>
@@ -141,6 +153,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             onClick={onPause}
             className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
             size="lg"
+            disabled={!isActive}
           >
             {isPaused ? (
               <>

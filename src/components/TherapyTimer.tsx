@@ -188,6 +188,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   };
 
   const handleStart = async () => {
+    // Abrir overlay sin iniciar el temporizador aún
+    setShowOverlay(true);
+  };
+
+  const startTimerNow = async () => {
     if (!isActive && user) {
       // Crear sesión en Supabase
       const sessionId = await startSession();
@@ -341,6 +346,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           onCancel={handleCancel}
           formatTime={formatTime}
           duration={duration[0]}
+          onStartTimer={startTimerNow}
+          isActive={isActive}
         />
       )}
     </>

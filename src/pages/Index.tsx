@@ -8,8 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import HandMonitoring from '@/components/HandMonitoring';
 import TherapyTimer from '@/components/TherapyTimer';
 import ProgressTracker from '@/components/ProgressTracker';
-import EffortChart from '@/components/EffortChart';
-import PatientAnalysis from '@/components/PatientAnalysis';
 import GameRankings from '@/components/GameRankings';
 
 const Index = () => {
@@ -74,14 +72,8 @@ const Index = () => {
         <ProgressTracker onDayCompleted={dayCompleted} />
       </div>
 
-      {/* Gráfico de esfuerzo muscular */}
-      <EffortChart />
-
       {/* Rankings unificados (siempre visibles) */}
       <GameRankings />
-
-      {/* Análisis del paciente */}
-      <PatientAnalysis />
     </div>
   );
 };

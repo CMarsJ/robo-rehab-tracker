@@ -9,6 +9,9 @@ import { useTranslation } from '@/contexts/AppContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import ConfigAuth from '@/components/ConfigAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Configuration = () => {
   const t = useTranslation();
@@ -21,6 +24,10 @@ const Configuration = () => {
   const [localShotSpeed, setLocalShotSpeed] = useState(shotSpeed);
   const [localBaseEnemyCount, setLocalBaseEnemyCount] = useState(baseEnemyCount);
   const [authError, setAuthError] = useState<string>('');
+  const { user } = useAuth();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     setLocalOrangeGoal(orangeJuiceGoal.toString());
@@ -46,6 +53,19 @@ const Configuration = () => {
     setLocalBaseEnemyCount(baseEnemyCount);
   }, [baseEnemyCount]);
 
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single();
+      if (data?.avatar_url) setAvatarPreview(data.avatar_url);
+    };
+    loadAvatar();
+  }, [user]);
+
   const handleAuthenticate = (password: string) => {
     const success = authenticate(password);
     if (!success) {
@@ -62,6 +82,31 @@ const Configuration = () => {
   const handleSaveProfile = () => {
     setPatientName(localPatientName);
     setTherapistName(localTherapistName);
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!user || !avatarFile) return;
+    try {
+      setUploading(true);
+      const fileExt = avatarFile.name.split('.').pop();
+      const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, avatarFile, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = publicUrlData.publicUrl;
+
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+      setAvatarPreview(publicUrl);
+      setAvatarFile(null);
+    } catch (e) {
+      console.error('Error uploading avatar:', e);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSaveGameConfig = () => {
@@ -90,6 +135,24 @@ const Configuration = () => {
           <CardTitle className="text-xl">👤 Configuración de Perfil</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Avatar */}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={avatarPreview || undefined} alt={localPatientName} />
+              <AvatarFallback>{(localPatientName || 'P')[0]?.toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <Input type="file" accept="image/*" onChange={(e) => {
+                const f = e.target.files?.[0] || null;
+                setAvatarFile(f);
+                if (f) setAvatarPreview(URL.createObjectURL(f));
+              }} />
+              <Button onClick={handleUploadAvatar} disabled={!avatarFile || uploading}>
+                {uploading ? 'Subiendo...' : 'Subir foto'}
+              </Button>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <Label htmlFor="patient-name">Nombre del Paciente</Label>
             <Input

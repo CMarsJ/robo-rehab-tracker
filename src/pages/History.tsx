@@ -54,6 +54,7 @@ const History = () => {
           duracion_minutos,
           estado,
           game_records (
+            game_type,
             total_oranges,
             total_glasses,
             average_oranges_per_minute
@@ -84,14 +85,19 @@ const History = () => {
     });
   };
 
-  const getSessionIcon = (tipo: string) => {
-    return tipo === 'therapy' ? <Activity className="w-6 h-6 text-blue-600" /> : <Trophy className="w-6 h-6 text-orange-600" />;
+  const getSessionIcon = (tipo: string, gameType?: string) => {
+    if (gameType === 'orange_squeeze') return <Trophy className="w-6 h-6 text-orange-600" />;
+    if (gameType === 'neurolink') return <Trophy className="w-6 h-6 text-purple-600" />;
+    if (gameType === 'flappy_bird') return <Trophy className="w-6 h-6 text-green-600" />;
+    return <Activity className="w-6 h-6 text-blue-600" />;
   };
 
-  const getSessionType = (tipo: string) => {
-    return tipo === 'therapy' ? 'Terapia' : 'Entrenamiento';
+  const getSessionType = (tipo: string, gameType?: string) => {
+    if (gameType === 'orange_squeeze') return 'Juego: Naranjas';
+    if (gameType === 'neurolink') return 'Juego: NeuroLink';
+    if (gameType === 'flappy_bird') return 'Juego: Flappy Bird';
+    return 'Terapia';
   };
-  
   if (loading || loadingData) {
     return (
       <div className="space-y-6">
@@ -179,7 +185,7 @@ const History = () => {
                 </div>
                 
                 {/* Información de rendimiento según el tipo de sesión */}
-                {session.tipo_actividad === 'training' && session.game_records && session.game_records[0] && (
+                {session.game_records && session.game_records[0] && session.game_records[0].game_type === 'orange_squeeze' && (
                   <div className="mt-4 p-4 bg-orange-50 rounded-lg">
                     <h4 className="font-semibold mb-2 text-orange-800">🍊 Resumen del Juego de Naranjas</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -205,8 +211,7 @@ const History = () => {
                   </div>
                 )}
 
-                {/* Placeholder para sesiones de terapia */}
-                {session.tipo_actividad === 'therapy' && (
+                {session.tipo_actividad === 'therapy' && (!session.game_records || session.game_records.length === 0) && (
                   <div className="mt-4 p-6 bg-blue-50 rounded-lg border-2 border-dashed border-blue-200">
                     <div className="text-center">
                       <div className="text-4xl mb-3">🧠</div>

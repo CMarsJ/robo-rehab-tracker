@@ -126,9 +126,9 @@ const GameRankings = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <div className="grid grid-cols-1 gap-6 mt-6">
       {/* Ranking Naranjas */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             🍊 Ranking - Exprimiendo Naranjas
@@ -167,7 +167,7 @@ const GameRankings = () => {
       </Card>
 
       {/* Ranking NeuroLink */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             🎯 Ranking - NeuroLink
@@ -210,7 +210,7 @@ const GameRankings = () => {
       </Card>
 
       {/* Ranking Flappy Bird */}
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             🐦 Ranking - Flappy Bird
