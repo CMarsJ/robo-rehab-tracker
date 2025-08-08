@@ -17,25 +17,6 @@ const Index = () => {
   const { isTherapyActive } = useSimulation();
   const { user, loading, signOut } = useAuth();
   const [dayCompleted, setDayCompleted] = useState(false);
-  const [isTrainingMode, setIsTrainingMode] = useState(false);
-
-  // Escuchar cambios en el switch del sidebar - MOVED BEFORE EARLY RETURNS
-  React.useEffect(() => {
-    const handleStorageChange = () => {
-      const trainingMode = localStorage.getItem('isTrainingMode') === 'true';
-      setIsTrainingMode(trainingMode);
-    };
-
-    // Verificar al cargar
-    handleStorageChange();
-    
-    // Escuchar cambios en localStorage
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -89,15 +70,15 @@ const Index = () => {
 
       {/* Sección media: Temporizador y Progreso */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TherapyTimer onSessionComplete={handleSessionComplete} isTrainingMode={isTrainingMode} />
+        <TherapyTimer onSessionComplete={handleSessionComplete} />
         <ProgressTracker onDayCompleted={dayCompleted} />
       </div>
 
       {/* Gráfico de esfuerzo muscular */}
       <EffortChart />
 
-      {/* Rankings solo en modo diversión */}
-      {isTrainingMode && <GameRankings />}
+      {/* Rankings unificados (siempre visibles) */}
+      <GameRankings />
 
       {/* Análisis del paciente */}
       <PatientAnalysis />
@@ -106,3 +87,4 @@ const Index = () => {
 };
 
 export default Index;
+

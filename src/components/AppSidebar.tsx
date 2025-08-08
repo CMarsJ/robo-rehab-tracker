@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, FileText, Clock, Settings, Menu } from 'lucide-react';
+import { Home, FileText, Clock, Settings } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -11,34 +11,21 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useConfig } from '@/contexts/ConfigContext';
 
 const AppSidebar = () => {
   const t = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { language } = useApp();
-  const [isTrainingMode, setIsTrainingMode] = React.useState(false);
-
-  // Cargar el estado inicial desde localStorage
-  React.useEffect(() => {
-    const saved = localStorage.getItem('isTrainingMode');
-    if (saved !== null) {
-      setIsTrainingMode(saved === 'true');
-    }
-  }, []);
-
-  const handleTrainingModeChange = (checked: boolean) => {
-    setIsTrainingMode(checked);
-    localStorage.setItem('isTrainingMode', checked.toString());
-    // Disparar evento personalizado para notificar el cambio
-    window.dispatchEvent(new Event('storage'));
-  };
+  const { user, signOut } = useAuth();
+  const { patientName } = useConfig();
 
   const menuItems = [
     {
@@ -62,6 +49,15 @@ const AppSidebar = () => {
       icon: Settings,
     },
   ];
+
+  const avatarUrl =
+    (user as any)?.user_metadata?.avatar_url ||
+    (user as any)?.user_metadata?.picture ||
+    '/placeholder.svg';
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <Sidebar className="border-r border-border">
@@ -103,25 +99,27 @@ const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
 
+      {/* Mini perfil + Logout (reemplaza al toggle de modo) */}
       <SidebarFooter className="p-4 border-t border-border">
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">{t.trainingMode.split(' ')[0]}</Label>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              {isTrainingMode ? t.trainingMode : t.therapyMode}
-            </span>
-            <Switch
-              checked={isTrainingMode}
-              onCheckedChange={handleTrainingModeChange}
-            />
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={avatarUrl} alt={patientName} />
+            <AvatarFallback>{(patientName || 'P')[0]?.toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{patientName}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {(user && (user.email || (user as any)?.user_metadata?.name)) || 'Paciente'}
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {isTrainingMode ? 'Registro base y práctica' : 'Sesiones asistidas reales'}
-          </p>
         </div>
+        <Button onClick={handleLogout} variant="outline" className="mt-3 w-full">
+          Cerrar sesión
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
 };
 
 export default AppSidebar;
+

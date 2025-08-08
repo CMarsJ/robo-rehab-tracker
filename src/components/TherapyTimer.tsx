@@ -13,17 +13,15 @@ import TherapyOverlay from '@/components/TherapyOverlay';
 
 interface TherapyTimerProps {
   onSessionComplete?: () => void;
-  isTrainingMode?: boolean;
 }
 
-const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTrainingMode = false }) => {
+const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [duration, setDuration] = useState([15]); // en minutos
   const [timeLeft, setTimeLeft] = useState(0); // en segundos
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [sampleCounter, setSampleCounter] = useState(0); // Contador para muestreo
-  const [sessionMode, setSessionMode] = useState<'therapy' | 'fun'>('therapy');
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
@@ -145,7 +143,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
         .from('sessions')
         .insert({
           user_id: user.id,
-          tipo_actividad: isTrainingMode ? 'training' : 'therapy',
+          tipo_actividad: 'therapy', // unificado
           duracion_minutos: duration[0],
           estado: 'active'
         })
@@ -191,10 +189,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
 
   const handleStart = async () => {
     if (!isActive && user) {
-      // Determinar el modo basado en isTrainingMode
-      const mode = isTrainingMode ? 'fun' : 'therapy';
-      setSessionMode(mode);
-      
       // Crear sesión en Supabase
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
@@ -338,7 +332,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
         </CardContent>
       </Card>
 
-      {/* Overlay de terapia */}
+      {/* Overlay unificado */}
       {showOverlay && (
         <TherapyOverlay
           timeLeft={timeLeft}
@@ -347,7 +341,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
           onCancel={handleCancel}
           formatTime={formatTime}
           duration={duration[0]}
-          mode={sessionMode}
         />
       )}
     </>
@@ -355,3 +348,4 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete, isTraini
 };
 
 export default TherapyTimer;
+
