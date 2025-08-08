@@ -1,16 +1,20 @@
 
 import React from 'react';
-import { Home, FileText, Clock, Settings } from 'lucide-react';
+import { Home, FileText, Clock, Settings, Menu } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -19,6 +23,22 @@ const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { language } = useApp();
+  const [isTrainingMode, setIsTrainingMode] = React.useState(false);
+
+  // Cargar el estado inicial desde localStorage
+  React.useEffect(() => {
+    const saved = localStorage.getItem('isTrainingMode');
+    if (saved !== null) {
+      setIsTrainingMode(saved === 'true');
+    }
+  }, []);
+
+  const handleTrainingModeChange = (checked: boolean) => {
+    setIsTrainingMode(checked);
+    localStorage.setItem('isTrainingMode', checked.toString());
+    // Disparar evento personalizado para notificar el cambio
+    window.dispatchEvent(new Event('storage'));
+  };
 
   const menuItems = [
     {
@@ -83,6 +103,23 @@ const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
 
+      <SidebarFooter className="p-4 border-t border-border">
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">{t.trainingMode.split(' ')[0]}</Label>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {isTrainingMode ? t.trainingMode : t.therapyMode}
+            </span>
+            <Switch
+              checked={isTrainingMode}
+              onCheckedChange={handleTrainingModeChange}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {isTrainingMode ? 'Registro base y práctica' : 'Sesiones asistidas reales'}
+          </p>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 };
