@@ -39,13 +39,27 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const handleGameComplete = () => setGameCompleted(true);
 
   const handleStartTherapy = () => {
+    // Terapia Guiada: inicia el temporizador y muestra el modo timer
     onStartTimer();
     setGameMode('timer');
+    setGameCompleted(false);
   };
 
   const handleCancelTherapy = () => {
+    // Cancelar (detener temporizador en el parent) y volver al selector
     onCancel();
     setGameMode('selection');
+    setGameCompleted(false);
+  };
+
+  // Nuevo helper: al empezar un juego, abrir el juego y arrancar el timer si no está activo
+  const startGame = (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
+    setGameCompleted(false);
+    setGameMode(mode);
+    // Si el temporizador no está activo, arrancarlo
+    if (!isActive) {
+      onStartTimer();
+    }
   };
 
   const renderTimerControls = () => (
@@ -100,21 +114,25 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         >
           🧠 Terapia Guiada
         </Button>
+
+        {/* Ahora los botones de juego usan startGame(...) */}
         <Button
-          onClick={() => setGameMode('orange-squeeze')}
+          onClick={() => startGame('orange-squeeze')}
           className="w-full h-14 text-base bg-orange-500 hover:bg-orange-600"
         >
           🍊 Exprimiendo Naranjas
           <div className="text-xs mt-1">Meta: {targetGlasses} vasos</div>
         </Button>
+
         <Button
-          onClick={() => setGameMode('neurolink')}
+          onClick={() => startGame('neurolink')}
           className="w-full h-14 text-base bg-purple-500 hover:bg-purple-600"
         >
           🎯 NeuroLink
         </Button>
+
         <Button
-          onClick={() => setGameMode('flappy-bird')}
+          onClick={() => startGame('flappy-bird')}
           variant="outline"
           className="w-full h-14 text-base"
         >
@@ -164,7 +182,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           <div className="flex flex-col items-center">
             {/* Juego arriba */}
             <div className="flex-1 w-full max-w-4xl mb-6">{renderGameContent()}</div>
-            {/* Temporizador + botones */}
+            {/* Temporizador + botones debajo del juego */}
             {renderTimerControls()}
             {gameCompleted && (
               <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg text-center">
