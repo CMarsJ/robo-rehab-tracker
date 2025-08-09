@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,44 +8,42 @@ import HandMonitoring from '@/components/HandMonitoring';
 import TherapyTimer from '@/components/TherapyTimer';
 import ProgressTracker from '@/components/ProgressTracker';
 import GameRankings from '@/components/GameRankings';
-
 const Index = () => {
   const t = useTranslation();
-  const { isTherapyActive } = useSimulation();
-  const { user, loading } = useAuth();
+  const {
+    isTherapyActive
+  } = useSimulation();
+  const {
+    user,
+    loading
+  } = useAuth();
   const [dayCompleted, setDayCompleted] = useState(false);
 
   // Redirect if not authenticated
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
   }
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
+    return <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="text-2xl font-semibold mb-2">Cargando...</div>
           <div className="text-muted-foreground">Verificando autenticación</div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   const handleSessionComplete = () => {
     setDayCompleted(true);
     // Reset después de un breve delay para permitir que se procese la actualización
     setTimeout(() => setDayCompleted(false), 1000);
   };
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex justify-between items-center mb-4">
           <div></div>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t.monitoringSystem}</h1>
-            <p className="text-muted-foreground">{t.rehabilitation}</p>
+            <h1 className="text-slate-950 font-extrabold text-5xl text-left mx-[30px]">{t.monitoringSystem}</h1>
+            <p className="text-muted-foreground text-base mx-0 my-0 px-0">{t.rehabilitation}</p>
           </div>
         </div>
       </div>
@@ -67,9 +64,6 @@ const Index = () => {
 
       {/* Rankings unificados (siempre visibles) */}
       <GameRankings />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
-
