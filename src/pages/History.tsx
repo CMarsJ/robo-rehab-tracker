@@ -16,6 +16,7 @@ interface SessionData {
   duracion_minutos: number;
   estado: string;
   game_records?: {
+    game_type?: string;
     total_oranges: number;
     total_glasses: number;
     average_oranges_per_minute: number;
@@ -142,10 +143,10 @@ const History = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-primary/10 rounded-lg">
-                      {getSessionIcon(session.tipo_actividad)}
+                      {getSessionIcon(session.tipo_actividad, session.game_records && session.game_records[0]?.game_type)}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">{getSessionType(session.tipo_actividad)}</h3>
+                      <h3 className="font-semibold text-lg">{getSessionType(session.tipo_actividad, session.game_records && session.game_records[0]?.game_type)}</h3>
                       <p className="text-muted-foreground">
                         <Clock className="w-4 h-4 inline mr-1" />
                         {session.duracion_minutos} minutos

@@ -61,7 +61,7 @@ const Configuration = () => {
         .select('avatar_url')
         .eq('user_id', user.id)
         .single();
-      if (data?.avatar_url) setAvatarPreview(data.avatar_url);
+      if ((data as any)?.avatar_url) setAvatarPreview((data as any).avatar_url);
     };
     loadAvatar();
   }, [user]);
@@ -94,11 +94,11 @@ const Configuration = () => {
       if (uploadError) throw uploadError;
 
       const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const publicUrl = publicUrlData.publicUrl;
+      const publicUrl = (publicUrlData as any).publicUrl;
 
       await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: publicUrl } as any)
         .eq('user_id', user.id);
       setAvatarPreview(publicUrl);
       setAvatarFile(null);

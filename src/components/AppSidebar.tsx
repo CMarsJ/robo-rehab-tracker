@@ -61,8 +61,8 @@ const AppSidebar = () => {
           .select('avatar_url, display_name')
           .eq('user_id', user.id)
           .single();
-        if (data?.avatar_url) {
-          setAvatarUrl(data.avatar_url);
+        if ((data as any)?.avatar_url) {
+          setAvatarUrl((data as any).avatar_url);
         } else {
           const metaUrl = (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || null;
           setAvatarUrl(metaUrl);
