@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +41,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   };
 
   const renderGameSelection = () => (
-    <Card className="w-full">
+    <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-center flex items-center justify-center gap-2">
           <Gamepad2 className="w-6 h-6" />
@@ -55,7 +54,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           className="w-full h-14 text-base bg-primary hover:bg-primary/90"
           disabled={isPaused || isActive}
         >
-          ⏱️ {isActive ? 'Temporizador en curso' : 'Iniciar Temporizador de Terapia'}
+          ⏱️ {isActive ? 'Temporizador Guiada'}
         </Button>
 
         <Button
@@ -78,7 +77,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           variant="outline"
           className="w-full h-14 text-base"
         >
-          🐦 Flappy Bird 
+          🐦 Flappy Bird
         </Button>
       </CardContent>
     </Card>
@@ -93,95 +92,108 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       case 'flappy-bird':
         return <FlappyBirdGame onComplete={handleGameComplete} />;
       default:
-        return renderGameSelection();
+        return null;
     }
   };
 
-  // Interfaz unificada: Video de terapia + Juegos en una misma vista
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-background rounded-lg p-6 relative overflow-y-auto w-[95vw] h-[90vh]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-          {/* Columna izquierda: Video de terapia */}
-          <div className="flex flex-col">
-            <Card className="flex-1">
-              <CardHeader>
-                <CardTitle className="text-center">Sesión de Terapia</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden" style={{ minHeight: 260 }}>
-                  <iframe
-                    src="https://www.youtube.com/embed/QgBgP2c-3so?autoplay=1&loop=1&playlist=QgBgP2c-3so&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
-                    className="w-full h-[300px] lg:h-full border-0"
-                    allow="autoplay; encrypted-media; fullscreen"
-                    allowFullScreen
-                    title="Terapia de Rehabilitación"
-                  />
+        
+        {gameMode === 'selection' ? (
+          // Vista solo para seleccionar juego
+          <div className="flex items-center justify-center h-full">
+            {renderGameSelection()}
+          </div>
+        ) : (
+          // Vista con video + juego
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            {/* Columna izquierda: Video */}
+            <div className="flex flex-col">
+              <Card className="flex-1">
+                <CardHeader>
+                  <CardTitle className="text-center">Sesión de Terapia</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1">
+                  <div
+                    className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border-2 border-blue-300 overflow-hidden"
+                    style={{ minHeight: 260 }}
+                  >
+                    <iframe
+                      src="https://www.youtube.com/embed/QgBgP2c-3so?autoplay=1&loop=1&playlist=QgBgP2c-3so&controls=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+                      className="w-full h-[300px] lg:h-full border-0"
+                      allow="autoplay; encrypted-media; fullscreen"
+                      allowFullScreen
+                      title="Terapia de Rehabilitación"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Timer */}
+              <div className="mt-4 text-center">
+                <div className="text-3xl font-bold text-primary mb-1">
+                  {isActive ? formatTime(timeLeft) : `${duration}:00`}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Timer y estado */}
-            <div className="mt-4 text-center">
-              <div className="text-3xl font-bold text-primary mb-1">
-                {isActive ? formatTime(timeLeft) : `${duration}:00`}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo'}
+                <div className="text-sm text-muted-foreground">
+                  {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo'}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Columna derecha: Juegos */}
-          <div className="flex flex-col h-full">
-            <div className="flex-1 min-h-0">
-              {renderGameContent()}
-            </div>
-
-            {/* Notificación de juego completado */}
-            {gameCompleted && (
-              <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg text-center">
-                <p className="text-green-800 font-semibold">🎉 ¡Juego completado! Continúa hasta que termine el tiempo</p>
+            {/* Columna derecha: Juego */}
+            <div className="flex flex-col h-full">
+              <div className="flex-1 min-h-0">
+                {renderGameContent()}
               </div>
-            )}
+
+              {gameCompleted && (
+                <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg text-center">
+                  <p className="text-green-800 font-semibold">
+                    🎉 ¡Juego completado! Continúa hasta que termine el tiempo
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Controles inferiores */}
-        <div className="mt-6 flex items-center justify-center gap-8">
-          <Button
-            onClick={onPause}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
-            size="lg"
-            disabled={!isActive}
-          >
-            {isPaused ? (
-              <>
-                <Play className="w-6 h-6 mr-2" />
-                Reanudar
-              </>
-            ) : (
-              <>
-                <Pause className="w-6 h-6 mr-2" />
-                Pausar
-              </>
-            )}
-          </Button>
+        {gameMode !== 'selection' && (
+          <div className="mt-6 flex items-center justify-center gap-8">
+            <Button
+              onClick={onPause}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
+              size="lg"
+              disabled={!isActive}
+            >
+              {isPaused ? (
+                <>
+                  <Play className="w-6 h-6 mr-2" />
+                  Reanudar
+                </>
+              ) : (
+                <>
+                  <Pause className="w-6 h-6 mr-2" />
+                  Pausar
+                </>
+              )}
+            </Button>
 
-          <Button
-            onClick={onCancel}
-            variant="destructive"
-            className="px-6 py-3 text-lg"
-            size="lg"
-          >
-            <X className="w-6 h-6 mr-2" />
-            Cancelar
-          </Button>
-        </div>
+            <Button
+              onClick={onCancel}
+              variant="destructive"
+              className="px-6 py-3 text-lg"
+              size="lg"
+            >
+              <X className="w-6 h-6 mr-2" />
+              Cancelar
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default TherapyOverlay;
-
