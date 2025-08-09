@@ -18,7 +18,7 @@ interface TherapyOverlayProps {
   isActive: boolean;
 }
 
-type GameMode = 'selection' | 'orange-squeeze' | 'neurolink' | 'flappy-bird';
+type GameMode = 'selection' | 'timer' | 'orange-squeeze' | 'neurolink' | 'flappy-bird';
 
 const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   timeLeft,
@@ -40,21 +40,31 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setGameCompleted(true);
   };
 
+  const handleStartTherapy = () => {
+    onStartTimer();
+    setGameMode('timer');
+  };
+
+  const handleCancelTherapy = () => {
+    onCancel();
+    setGameMode('selection');
+  };
+
   const renderGameSelection = () => (
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-center flex items-center justify-center gap-2">
           <Gamepad2 className="w-6 h-6" />
-          Selecciona un Juego
+          Selecciona una opción
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-3">
         <Button
-          onClick={onStartTimer}
+          onClick={handleStartTherapy}
           className="w-full h-14 text-base bg-primary hover:bg-primary/90"
           disabled={isPaused || isActive}
         >
-          ⏱️ {isActive ? 'Temporizador Guiada'}
+          🧠 Terapia Guiada
         </Button>
 
         <Button
@@ -101,14 +111,56 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       <div className="bg-background rounded-lg p-6 relative overflow-y-auto w-[95vw] h-[90vh]">
         
         {gameMode === 'selection' ? (
-          // Vista solo para seleccionar juego
           <div className="flex items-center justify-center h-full">
             {renderGameSelection()}
           </div>
+        ) : gameMode === 'timer' ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <Card className="w-full max-w-lg">
+              <CardHeader>
+                <CardTitle className="text-center">Terapia Guiada</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center">
+                <div className="text-5xl font-bold text-primary mb-2">
+                  {isActive ? formatTime(timeLeft) : `${duration}:00`}
+                </div>
+                <div className="text-sm text-muted-foreground mb-6">
+                  {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
+                </div>
+                <div className="flex gap-4">
+                  <Button
+                    onClick={onPause}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
+                    size="lg"
+                    disabled={!isActive}
+                  >
+                    {isPaused ? (
+                      <>
+                        <Play className="w-6 h-6 mr-2" />
+                        Reanudar
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-6 h-6 mr-2" />
+                        Pausar
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleCancelTherapy}
+                    variant="destructive"
+                    className="px-6 py-3 text-lg"
+                    size="lg"
+                  >
+                    <X className="w-6 h-6 mr-2" />
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
-          // Vista con video + juego
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-            {/* Columna izquierda: Video */}
             <div className="flex flex-col">
               <Card className="flex-1">
                 <CardHeader>
@@ -129,8 +181,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Timer */}
               <div className="mt-4 text-center">
                 <div className="text-3xl font-bold text-primary mb-1">
                   {isActive ? formatTime(timeLeft) : `${duration}:00`}
@@ -140,13 +190,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Columna derecha: Juego */}
             <div className="flex flex-col h-full">
               <div className="flex-1 min-h-0">
                 {renderGameContent()}
               </div>
-
               {gameCompleted && (
                 <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg text-center">
                   <p className="text-green-800 font-semibold">
@@ -155,40 +202,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {/* Controles inferiores */}
-        {gameMode !== 'selection' && (
-          <div className="mt-6 flex items-center justify-center gap-8">
-            <Button
-              onClick={onPause}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
-              size="lg"
-              disabled={!isActive}
-            >
-              {isPaused ? (
-                <>
-                  <Play className="w-6 h-6 mr-2" />
-                  Reanudar
-                </>
-              ) : (
-                <>
-                  <Pause className="w-6 h-6 mr-2" />
-                  Pausar
-                </>
-              )}
-            </Button>
-
-            <Button
-              onClick={onCancel}
-              variant="destructive"
-              className="px-6 py-3 text-lg"
-              size="lg"
-            >
-              <X className="w-6 h-6 mr-2" />
-              Cancelar
-            </Button>
           </div>
         )}
       </div>
