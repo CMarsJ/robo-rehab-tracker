@@ -143,10 +143,10 @@ const History = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-primary/10 rounded-lg">
-                      {getSessionIcon(session.tipo_actividad, session.game_records && session.game_records[0]?.game_type)}
+                      {getSessionIcon(session.tipo_actividad, (session.game_records?.[0] as any)?.game_type)}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">{getSessionType(session.tipo_actividad, session.game_records && session.game_records[0]?.game_type)}</h3>
+                      <h3 className="font-semibold text-lg">{getSessionType(session.tipo_actividad, (session.game_records?.[0] as any)?.game_type)}</h3>
                       <p className="text-muted-foreground">
                         <Clock className="w-4 h-4 inline mr-1" />
                         {session.duracion_minutos} minutos
@@ -169,7 +169,7 @@ const History = () => {
                   </div>
                   
                   <div className="text-right space-y-2">
-                    {session.tipo_actividad === 'training' && session.game_records && session.game_records[0] && (
+                    {session.game_records && session.game_records[0] && (
                       <div className="text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <span>🍊 {session.game_records[0].total_oranges} naranjas</span>
@@ -186,7 +186,7 @@ const History = () => {
                 </div>
                 
                 {/* Información de rendimiento según el tipo de sesión */}
-                {session.game_records && session.game_records[0] && session.game_records[0].game_type === 'orange_squeeze' && (
+                {session.game_records && session.game_records[0] && ((session.game_records[0] as any).game_type === 'orange_squeeze') && (
                   <div className="mt-4 p-4 bg-orange-50 rounded-lg">
                     <h4 className="font-semibold mb-2 text-orange-800">🍊 Resumen del Juego de Naranjas</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

@@ -60,8 +60,9 @@ const Configuration = () => {
         .from('profiles')
         .select('avatar_url')
         .eq('user_id', user.id)
-        .single();
-      if ((data as any)?.avatar_url) setAvatarPreview((data as any).avatar_url);
+        .maybeSingle();
+      const url = (data as any)?.avatar_url;
+      if (url) setAvatarPreview(url as string);
     };
     loadAvatar();
   }, [user]);
