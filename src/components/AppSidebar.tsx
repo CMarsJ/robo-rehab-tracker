@@ -129,9 +129,6 @@ const AppSidebar = () => {
           </Avatar>
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">{patientName}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {(user && (user.email || (user as any)?.user_metadata?.name)) || 'Paciente'}
-            </p>
           </div>
         </div>
         <Button onClick={handleLogout} variant="outline" className="mt-3 w-full">

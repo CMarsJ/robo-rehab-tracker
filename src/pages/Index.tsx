@@ -13,12 +13,8 @@ import GameRankings from '@/components/GameRankings';
 const Index = () => {
   const t = useTranslation();
   const { isTherapyActive } = useSimulation();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const [dayCompleted, setDayCompleted] = useState(false);
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   // Redirect if not authenticated
   if (!loading && !user) {
@@ -52,9 +48,6 @@ const Index = () => {
             <h1 className="text-3xl font-bold text-foreground">{t.monitoringSystem}</h1>
             <p className="text-muted-foreground">{t.rehabilitation}</p>
           </div>
-          <Button variant="outline" onClick={handleSignOut}>
-            Cerrar Sesión
-          </Button>
         </div>
       </div>
 
