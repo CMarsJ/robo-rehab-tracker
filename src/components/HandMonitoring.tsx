@@ -92,9 +92,6 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             }`}>
               {leftHand.active ? t.active : t.inactive}
             </Badge>
-            <div className="text-xs text-muted-foreground">
-              Esfuerzo: {leftHand.effort}%
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -134,9 +131,6 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             }`}>
               {rightHand.active ? t.active : t.inactive}
             </Badge>
-            <div className="text-xs text-muted-foreground">
-              Esfuerzo: {rightHand.effort}%
-            </div>
           </div>
         </CardContent>
       </Card>
