@@ -12,7 +12,6 @@ interface HandMonitoringProps {
 interface HandAngles {
   thumb1: number;
   thumb2: number;
-  thumb3: number;
   finger1: number;
   finger2: number;
   finger3: number;
@@ -29,30 +28,26 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
         <div className="space-y-1">
           <div className="text-center font-medium">Pulgar</div>
           <div className="flex justify-between">
-            <span>A1:</span>
+            <span>IP:</span>
             <span>{angles.thumb1}°</span>
           </div>
           <div className="flex justify-between">
-            <span>A2:</span>
+            <span>MCP:</span>
             <span>{angles.thumb2}°</span>
-          </div>
-          <div className="flex justify-between">
-            <span>A3:</span>
-            <span>{angles.thumb3}°</span>
           </div>
         </div>
         <div className="space-y-1">
           <div className="text-center font-medium">Dedos</div>
           <div className="flex justify-between">
-            <span>A4:</span>
+            <span>DIP:</span>
             <span>{angles.finger1}°</span>
           </div>
           <div className="flex justify-between">
-            <span>A5:</span>
+            <span>PIP:</span>
             <span>{angles.finger2}°</span>
           </div>
           <div className="flex justify-between">
-            <span>A6:</span>
+            <span>MCP:</span>
             <span>{angles.finger3}°</span>
           </div>
         </div>
