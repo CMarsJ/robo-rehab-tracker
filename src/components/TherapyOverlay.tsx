@@ -155,6 +155,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         return null;
     }
   };
+   const {
+      isTherapyActive
+    } = useSimulation();
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
