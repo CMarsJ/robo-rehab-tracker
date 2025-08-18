@@ -25,14 +25,14 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const translations = {
   es: {
-    dashboard: 'Dashboard',
+    dashboard: 'Terapia Bilateral',
     reports: 'Reportes',
     history: 'Historial',
     configuration: 'Configuración',
     trainingMode: 'Entrenamiento',
     therapyMode: 'Terapia',
     systemTitle: 'Terapia Robótica Bilateral',
-    monitoringSystem: 'Sistema de Monitoreo y Control',
+    monitoringSystem: 'Sistema de Terapias',
     rehabilitation: 'Rehabilitación Robótica Bilateral Post-ACV',
     realTimeMonitoring: 'Monitoreo en Tiempo Real',
     nonPareticHand: 'Mano No Parética',
@@ -67,14 +67,14 @@ export const translations = {
     locale: 'es-ES'
   },
   en: {
-    dashboard: 'Dashboard',
+    dashboard: 'Bilateral Therapy',
     reports: 'Reports',
     history: 'History',
     configuration: 'Configuration',
     trainingMode: 'Training',
     therapyMode: 'Therapy',
     systemTitle: 'Bilateral Robotic Therapy',
-    monitoringSystem: 'Monitoring and Control System',
+    monitoringSystem: 'Therapy System',
     rehabilitation: 'Post-Stroke Bilateral Robotic Rehabilitation',
     realTimeMonitoring: 'Real-Time Monitoring',
     nonPareticHand: 'Non-Paretic Hand',
@@ -109,14 +109,14 @@ export const translations = {
     locale: 'en-US'
   },
   pt: {
-    dashboard: 'Dashboard',
+    dashboard: 'Terapia Bilateral',
     reports: 'Relatórios',
     history: 'Histórico',
     configuration: 'Configuração',
     trainingMode: 'Treinamento',
     therapyMode: 'Terapia',
     systemTitle: 'Terapia Robótica Bilateral',
-    monitoringSystem: 'Sistema de Monitoramento e Controle',
+    monitoringSystem: 'Sistema de Terapia',
     rehabilitation: 'Reabilitação Robótica Bilateral Pós-AVC',
     realTimeMonitoring: 'Monitoramento em Tempo Real',
     nonPareticHand: 'Mão Não Parética',
@@ -151,14 +151,14 @@ export const translations = {
     locale: 'pt-BR'
   },
   ru: {
-    dashboard: 'Панель управления',
+    dashboard: 'Двусторонняя терапия',
     reports: 'Отчеты',
     history: 'История',
     configuration: 'Настройки',
     trainingMode: 'Тренировка',
     therapyMode: 'Терапия',
     systemTitle: 'Двусторонняя роботизированная терапия',
-    monitoringSystem: 'Система мониторинга и управления',
+    monitoringSystem: 'Терапевтическая система',
     rehabilitation: 'Двусторонняя роботизированная реабилитация после инсульта',
     realTimeMonitoring: 'Мониторинг в реальном времени',
     nonPareticHand: 'Непаретичная рука',

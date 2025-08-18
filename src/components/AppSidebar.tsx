@@ -29,7 +29,7 @@ const AppSidebar = () => {
 
   const menuItems = [
     {
-      title: t.therapy,
+      title: t.dashboard,
       url: '/',
       icon: Home,
     },
