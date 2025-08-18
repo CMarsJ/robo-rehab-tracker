@@ -9,6 +9,8 @@ import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { DataService } from '@/services/dataService';
 
 interface TherapyOverlayProps {
   timeLeft: number;
@@ -35,8 +37,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 }) => {
   const [gameMode, setGameMode] = useState<GameMode>('selection');
   const [gameCompleted, setGameCompleted] = useState(false);
+  const [currentSession, setCurrentSession] = useState<string | null>(null);
   const { calculateOrangeGoalForTime } = useGameConfig();
   const { leftHand, rightHand, isTherapyActive } = useSimulation();
+  const { user } = useAuth();
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
@@ -46,36 +50,82 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [fastestClosing, setFastestClosing] = useState<number | null>(null);
   const [averageClosing, setAverageClosing] = useState<number | null>(null);
 
-  // NUEVO: Estado para registrar tiempos de apertura (cerrada -> abierta)
+  // Estado para registrar tiempos de apertura (cerrada -> abierta)
   const [openingTimes, setOpeningTimes] = useState<number[]>([]);
   const [fastestOpening, setFastestOpening] = useState<number | null>(null);
   const [averageOpening, setAverageOpening] = useState<number | null>(null);
 
-  // NUEVO: Historial de intentos (cierre + apertura = total)
+  // Historial de intentos (cierre + apertura = total)
   const [attempts, setAttempts] = useState<{ closingTime: number; openingTime: number; totalTime: number }[]>([]);
 
   // Referencias de tiempo para detectar transiciones
-  // Referencia para marcar el momento en que la mano estuvo abierta
   const openTimestamp = useRef<number | null>(null);
-  // NUEVO: referencia para marcar el momento en que la mano estuvo cerrada
   const closedTimestamp = useRef<number | null>(null);
-  // NUEVO: estado previo de la mano para detectar cambios (open/closed)
   const lastState = useRef<'open' | 'closed' | null>(null);
 
   const handleGameComplete = () => setGameCompleted(true);
 
-  const handleStartTherapy = () => {
+  const handleStartTherapy = async () => {
+    if (!user) return;
+    
+    try {
+      // Crear sesión de terapia en Supabase
+      const session = await DataService.createSession(
+        'terapia_guiada',
+        duration,
+        { targetDuration: duration }
+      );
+      
+      if (session) {
+        setCurrentSession(session.id);
+        console.log('Sesión de terapia creada:', session.id);
+      }
+    } catch (error) {
+      console.error('Error creando sesión de terapia:', error);
+    }
+    
     // Terapia Guiada: inicia el temporizador y muestra el modo timer
     onStartTimer();
     setGameMode('timer');
     setGameCompleted(false);
   };
 
-  const handleCancelTherapy = () => {
+  const handleCancelTherapy = async () => {
+    // Si hay una sesión activa, actualizarla antes de cancelar
+    if (currentSession && user) {
+      try {
+        const actualDuration = Math.round((duration * 60 - timeLeft) / 60); // minutos transcurridos
+        
+        await DataService.updateSession(currentSession, {
+          duracion_minutos: actualDuration,
+          estado: 'cancelled',
+          metrics: {
+            targetDuration: duration,
+            completedDuration: actualDuration,
+            cancelledAt: new Date().toISOString()
+          }
+        });
+
+        // Crear registro de terapia con los datos recopilados
+        if (closingTimes.length > 0 || openingTimes.length > 0) {
+          await saveTherapyData();
+        }
+        
+        console.log('Sesión cancelada y datos guardados');
+      } catch (error) {
+        console.error('Error al cancelar sesión:', error);
+      }
+    }
+    
     // Cancelar (detener temporizador en el parent) y volver al selector
     onCancel();
+    resetTherapyData();
+  };
+
+  const resetTherapyData = () => {
     setGameMode('selection');
     setGameCompleted(false);
+    setCurrentSession(null);
     // Reiniciar métricas (cierre y apertura)
     setClosingTimes([]);
     setOpeningTimes([]);
@@ -88,6 +138,65 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     closedTimestamp.current = null;
     lastState.current = null;
   };
+
+  // Función para guardar datos de terapia en Supabase
+  const saveTherapyData = async () => {
+    if (!currentSession || !user) return;
+
+    try {
+      const therapyRecord = await DataService.createTherapyRecord(
+        currentSession,
+        [], // effort_data - puede ser expandido más tarde
+        {
+          best_open_time: fastestOpening ? fastestOpening / 1000 : undefined,
+          best_close_time: fastestClosing ? fastestClosing / 1000 : undefined,
+          avg_open_time: averageOpening ? averageOpening / 1000 : undefined,
+          avg_close_time: averageClosing ? averageClosing / 1000 : undefined,
+          open_times: openingTimes.map(t => t / 1000), // convertir a segundos
+          close_times: closingTimes.map(t => t / 1000), // convertir a segundos
+          attempts_count: attempts.length
+        }
+      );
+
+      if (therapyRecord) {
+        console.log('Registro de terapia guardado:', therapyRecord);
+      }
+    } catch (error) {
+      console.error('Error guardando datos de terapia:', error);
+    }
+  };
+
+  // Efecto para guardar datos al completar la sesión
+  useEffect(() => {
+    const handleSessionComplete = async () => {
+      if (timeLeft === 0 && currentSession && user && isActive) {
+        try {
+          // Actualizar sesión como completada
+          await DataService.updateSession(currentSession, {
+            estado: 'completed',
+            metrics: {
+              targetDuration: duration,
+              completedDuration: duration,
+              totalClosingAttempts: closingTimes.length,
+              totalOpeningAttempts: openingTimes.length,
+              bestClosingTime: fastestClosing ? fastestClosing / 1000 : null,
+              bestOpeningTime: fastestOpening ? fastestOpening / 1000 : null,
+              completedAt: new Date().toISOString()
+            }
+          });
+
+          // Guardar registro de terapia
+          await saveTherapyData();
+          
+          console.log('Sesión completada y datos guardados exitosamente');
+        } catch (error) {
+          console.error('Error al completar sesión:', error);
+        }
+      }
+    };
+
+    handleSessionComplete();
+  }, [timeLeft, currentSession, user, isActive, duration, closingTimes.length, openingTimes.length, fastestClosing, fastestOpening]);
 
   // Nuevo helper: al empezar un juego, abrir el juego y arrancar el timer si no está activo
   const startGame = (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
@@ -199,6 +308,14 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       <div className="text-sm text-muted-foreground mb-4">
         {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
       </div>
+
+      {/* Indicador de conexión a Supabase */}
+      {user && currentSession && (
+        <div className="mb-4 text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
+          ✅ Conectado a Supabase - Sesión: {currentSession.slice(-8)}
+        </div>
+      )}
+
       <div className="flex gap-4">
         <Button
           onClick={onPause}

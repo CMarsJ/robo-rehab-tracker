@@ -1,7 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useSimulation } from '@/contexts/SimulationContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { DataService } from '@/services/dataService';
 
 interface OrangeSqueezeGameProps {
   targetGlasses: number;
@@ -16,7 +19,9 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   const [canSqueeze, setCanSqueeze] = useState(true);
   const [showOrangeMessage, setShowOrangeMessage] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [currentSession, setCurrentSession] = useState<string | null>(null);
   const { rightHand } = useSimulation();
+  const { user } = useAuth();
 
   // Función para reproducir sonido de exprimir naranja
   const playSqueezeSound = () => {
@@ -75,11 +80,33 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
     playBubble(400, now + 0.2, 0.3);
   };
 
+  // Crear sesión al iniciar el juego
   useEffect(() => {
+    const initializeSession = async () => {
+      if (!user || !startTime) return;
+      
+      try {
+        const session = await DataService.createSession(
+          'orange_squeeze',
+          targetGlasses * 2, // estimación de duración basada en vasos objetivo
+          { targetGlasses }
+        );
+        
+        if (session) {
+          setCurrentSession(session.id);
+          console.log('Sesión de Orange Squeeze creada:', session.id);
+        }
+      } catch (error) {
+        console.error('Error creando sesión:', error);
+      }
+    };
+
     if (startTime === null) {
       setStartTime(Date.now());
+    } else {
+      initializeSession();
     }
-  }, []);
+  }, [startTime, user, targetGlasses]);
 
   useEffect(() => {
     // Calcular porcentaje basado en la suma de A4, A5, A6 (target: 150 grados)
@@ -119,33 +146,95 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
           // Reproducir sonido de beber
           playDrinkSound();
           
-          if (newGlasses >= targetGlasses && startTime) {
-            const endTime = Date.now();
-            const totalTimeMinutes = (endTime - startTime) / 1000;
-            const timePerGlass = totalTimeMinutes / newGlasses;
-            const totalOranges = newCount + newGlasses*4; 
-            const timePerOrange = totalTimeMinutes / totalOranges; 
-            
-            const today = new Date().toLocaleDateString();
-            const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
-            rankings.push({ 
-              date: today, 
-              glasses: newGlasses,
-              totalOranges: totalOranges, // todas las naranjas exprimidas
-              timePerGlass: timePerGlass,
-              timePerOrange: timePerOrange,
-            });
-            rankings.sort((a: any, b: any) => a.timePerGlass - b.timePerGlass);
-            localStorage.setItem('orangeRankings', JSON.stringify(rankings.slice(0, 5)));
-            
-            onComplete();
+          if (newGlasses >= targetGlasses && startTime && currentSession) {
+            handleGameCompletion(newCount, newGlasses, currentTime);
           }
         }
         
         return newCount;
       });
     }
-  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, onComplete, canSqueeze, startTime]);
+  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, onComplete, canSqueeze, startTime, currentSession]);
+
+  const handleGameCompletion = async (totalOranges: number, glasses: number, endTime: number) => {
+    if (!startTime || !currentSession || !user) return;
+
+    try {
+      const totalTimeMinutes = (endTime - startTime) / (1000 * 60); // en minutos
+      const timePerGlass = totalTimeMinutes / glasses;
+      const timePerOrange = totalTimeMinutes / totalOranges;
+      const orangesPerMinute = totalOranges / totalTimeMinutes;
+
+      // Actualizar sesión con duración real
+      await DataService.updateSession(currentSession, {
+        duracion_minutos: Math.round(totalTimeMinutes),
+        estado: 'completed',
+        metrics: {
+          targetGlasses,
+          glassesCompleted: glasses,
+          totalOranges,
+          timePerGlass,
+          timePerOrange,
+          orangesPerMinute
+        }
+      });
+
+      // Crear registro del juego
+      const gameRecord = await DataService.createGameRecord(currentSession, 'orange_squeeze', {
+        total_oranges: totalOranges,
+        total_glasses: glasses,
+        average_oranges_per_minute: orangesPerMinute
+      });
+
+      if (gameRecord) {
+        console.log('Registro de juego creado:', gameRecord);
+      }
+
+      // Actualizar ranking si es mejor puntaje
+      await DataService.updateRanking('orange_squeeze', totalOranges, {
+        glasses,
+        timePerGlass,
+        timePerOrange,
+        totalTime: totalTimeMinutes,
+        date: new Date().toISOString()
+      });
+
+      console.log('Datos guardados en Supabase exitosamente');
+      
+      // También mantener compatibilidad con localStorage para migración gradual
+      const today = new Date().toLocaleDateString();
+      const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
+      rankings.push({ 
+        date: today, 
+        glasses,
+        totalOranges,
+        timePerGlass,
+        timePerOrange,
+        totalTime: totalTimeMinutes
+      });
+      rankings.sort((a: any, b: any) => a.timePerGlass - b.timePerGlass);
+      localStorage.setItem('orangeRankings', JSON.stringify(rankings.slice(0, 5)));
+      
+      onComplete();
+    } catch (error) {
+      console.error('Error guardando datos del juego:', error);
+      // Fallback a localStorage si falla Supabase
+      const today = new Date().toLocaleDateString();
+      const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
+      const totalTimeMinutes = (endTime - startTime) / (1000 * 60);
+      rankings.push({ 
+        date: today, 
+        glasses,
+        totalOranges,
+        timePerGlass: totalTimeMinutes / glasses,
+        timePerOrange: totalTimeMinutes / totalOranges,
+        totalTime: totalTimeMinutes
+      });
+      rankings.sort((a: any, b: any) => a.timePerGlass - b.timePerGlass);
+      localStorage.setItem('orangeRankings', JSON.stringify(rankings.slice(0, 5)));
+      onComplete();
+    }
+  };
 
   const currentOrangesInGlass = orangesSqueezed % 4;
   const progressPercent = (currentOrangesInGlass / 4) * 100;
@@ -177,6 +266,12 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             <div className="text-sm text-muted-foreground">
               Total de naranjas exprimidas: {orangesSqueezed}
             </div>
+
+            {user && currentSession && (
+              <div className="text-xs text-green-600">
+                ✅ Conectado a Supabase - Sesión: {currentSession.slice(-8)}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
