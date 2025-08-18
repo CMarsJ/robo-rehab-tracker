@@ -126,7 +126,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       } else if (currentState === 'closed') {
         closedTimestamp.current = now;
       }
-      lastState.current = currentState === 'neutral' ? null : currentState;
+      // currentState cannot be 'neutral' here due to early return above
+      lastState.current = currentState;
       return;
     }
 
