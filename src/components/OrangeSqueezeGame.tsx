@@ -82,24 +82,24 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   }, []);
 
   useEffect(() => {
-    // Calcular porcentaje basado en la suma de A4, A5, A6 (target: 230 grados)
+    // Calcular porcentaje basado en la suma de A4, A5, A6 (target: 150 grados)
     const fingerSum = rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3;
-    const percentage = Math.min((fingerSum / 230) * 100, 100);
+    const percentage = Math.min((fingerSum / 150) * 100, 100);
     setSqueezePercentage(percentage);
 
     const currentTime = Date.now();
     
     // Si el porcentaje baja de 80%, permite exprimir otra naranja
-    if (percentage < 80 && !canSqueeze) {
+    if (percentage < 30 && !canSqueeze) {
       setCanSqueeze(true);
       console.log('Puede exprimir otra naranja (bajó de 30%)');
     }
     
     // Si llega al 100% y puede exprimir, cuenta como naranja exprimida
-    if (percentage >= 100 && rightHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
+    if (percentage >= 90 && rightHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
       console.log('Naranja exprimida!');
       setLastSqueezeTime(currentTime);
-      setCanSqueeze(false); // No puede exprimir hasta que baje del 80%
+      setCanSqueeze(false); // No puede exprimir hasta que baje del 30%
       
       // Reproducir sonido de exprimir
       playSqueezeSound();
@@ -121,10 +121,10 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
           
           if (newGlasses >= targetGlasses && startTime) {
             const endTime = Date.now();
-            const totalTimeMinutes = (endTime - startTime) / (1000 * 60);
+            const totalTimeMinutes = (endTime - startTime) / 1000;
             const timePerGlass = totalTimeMinutes / newGlasses;
-            const timePerOrange = totalTimeMinutes / newCount; // corregido
-            const totalOranges = newCount; // corregido
+            const totalOranges = newCount + newGlasses*4; 
+            const timePerOrange = totalTimeMinutes / totalOranges; 
             
             const today = new Date().toLocaleDateString();
             const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
@@ -198,7 +198,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             />
             {/* Etiquetas de porcentaje separadas para evitar solapamiento */}
             <div className="absolute -top-4 -left-8 text-xs font-medium">100%</div>
-            <div className="absolute top-1/5 -right-8 text-xs font-medium">30%</div>
+            <div className="absolute top-1/5 -right-8 text-xs font-medium">80%</div>
             <div className="absolute -bottom-4 -left-6 text-xs font-medium">0%</div>
           </div>
           <div className="text-center mt-2">
