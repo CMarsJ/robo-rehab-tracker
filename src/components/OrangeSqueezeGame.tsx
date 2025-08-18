@@ -192,7 +192,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             <div 
               className={`absolute bottom-0 w-full rounded-full transition-all duration-300 ${
                 squeezePercentage >= 100 ? 'bg-green-500' : 
-                squeezePercentage >= 30 ? 'bg-yellow-500' : 'bg-blue-500'
+                squeezePercentage >= 0 ? 'bg-yellow-500' : 'bg-blue-500'
               }`}
               style={{ height: `${squeezePercentage}%` }}
             />
