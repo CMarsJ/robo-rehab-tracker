@@ -41,13 +41,26 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
 
-  // Estado para registrar tiempos de cierre de mano
-  const [reactionTimes, setReactionTimes] = useState<number[]>([]);
-  const [fastestTime, setFastestTime] = useState<number | null>(null);
-  const [averageTime, setAverageTime] = useState<number | null>(null);
+  // Estado para registrar tiempos de cierre de mano (abierta -> cerrada)
+  const [closingTimes, setClosingTimes] = useState<number[]>([]);
+  const [fastestClosing, setFastestClosing] = useState<number | null>(null);
+  const [averageClosing, setAverageClosing] = useState<number | null>(null);
 
+  // NUEVO: Estado para registrar tiempos de apertura (cerrada -> abierta)
+  const [openingTimes, setOpeningTimes] = useState<number[]>([]);
+  const [fastestOpening, setFastestOpening] = useState<number | null>(null);
+  const [averageOpening, setAverageOpening] = useState<number | null>(null);
+
+  // NUEVO: Historial de intentos (cierre + apertura = total)
+  const [attempts, setAttempts] = useState<{ closingTime: number; openingTime: number; totalTime: number }[]>([]);
+
+  // Referencias de tiempo para detectar transiciones
   // Referencia para marcar el momento en que la mano estuvo abierta
   const openTimestamp = useRef<number | null>(null);
+  // NUEVO: referencia para marcar el momento en que la mano estuvo cerrada
+  const closedTimestamp = useRef<number | null>(null);
+  // NUEVO: estado previo de la mano para detectar cambios (open/closed)
+  const lastState = useRef<'open' | 'closed' | null>(null);
 
   const handleGameComplete = () => setGameCompleted(true);
 
@@ -63,11 +76,17 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     onCancel();
     setGameMode('selection');
     setGameCompleted(false);
-    // Reiniciar métricas
-    setReactionTimes([]);
-    setFastestTime(null);
-    setAverageTime(null);
+    // Reiniciar métricas (cierre y apertura)
+    setClosingTimes([]);
+    setOpeningTimes([]);
+    setAttempts([]);
+    setFastestClosing(null);
+    setAverageClosing(null);
+    setFastestOpening(null);
+    setAverageOpening(null);
     openTimestamp.current = null;
+    closedTimestamp.current = null;
+    lastState.current = null;
   };
 
   // Nuevo helper: al empezar un juego, abrir el juego y arrancar el timer si no está activo
@@ -80,37 +99,96 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }
   };
 
-  // --- Lógica de registro de tiempos de cierre de mano ---
+  // --- Lógica de registro de tiempos de cierre y apertura de mano ---
   useEffect(() => {
     // Usamos la mano parética (rightHand) como referencia
     if (!isTherapyActive) return;
 
+    // Umbrales: mano casi abierta vs. cerrada
     const isOpen = rightHand.angles.finger2 < 20; // Mano casi abierta
     const isClosed = rightHand.angles.finger2 > 70; // Mano cerrada
 
+    // Si no estamos claramente en abierto ni cerrado, no registramos transición
     const now = performance.now();
 
-    if (isOpen && openTimestamp.current === null) {
-      // Mano detectada como abierta → empezamos a medir
-      openTimestamp.current = now;
-    } else if (isClosed && openTimestamp.current !== null) {
-      // Mano cerrada → registramos el tiempo
-      const reaction = now - openTimestamp.current;
-      setReactionTimes(prev => {
-        const updated = [...prev, reaction];
-        // Actualizar más rápido
-        if (fastestTime === null || reaction < fastestTime) {
-          setFastestTime(reaction);
-        }
-        // Actualizar promedio
-        const avg = updated.reduce((a, b) => a + b, 0) / updated.length;
-        setAverageTime(avg);
-        return updated;
-      });
-      // Reiniciamos para la próxima apertura
-      openTimestamp.current = null;
+    // Determinar estado actual (solo open/closed)
+    const currentState: 'open' | 'closed' | 'neutral' = isOpen ? 'open' : isClosed ? 'closed' : 'neutral';
+
+    // Solo actuamos cuando hay transición entre estados válidos (open <-> closed)
+    if (currentState === 'neutral') {
+      return;
+    }
+
+    if (lastState.current === null) {
+      // Primera detección: inicializamos marcas
+      if (currentState === 'open') {
+        openTimestamp.current = now;
+      } else if (currentState === 'closed') {
+        closedTimestamp.current = now;
+      }
+      lastState.current = currentState === 'neutral' ? null : currentState;
+      return;
+    }
+
+    if (lastState.current !== currentState) {
+      // --- Transición detectada ---
+      if (lastState.current === 'open' && currentState === 'closed' && openTimestamp.current !== null) {
+        // Transición: abierta -> cerrada (medimos TIEMPO DE CIERRE)
+        const closing = now - openTimestamp.current;
+
+        // Guardar en lista de cierres
+        setClosingTimes(prev => {
+          const updated = [...prev, closing];
+          // Actualizar más rápido y promedio
+          const fastest = updated.length ? Math.min(...updated) : null;
+          const avg = updated.length ? updated.reduce((a, b) => a + b, 0) / updated.length : null;
+          setFastestClosing(fastest);
+          setAverageClosing(avg);
+          return updated;
+        });
+
+        // Iniciar/actualizar intento pendiente (cierre medido, falta apertura)
+        setAttempts(prev => [...prev, { closingTime: closing, openingTime: 0, totalTime: closing }]);
+
+        // Ahora empezamos a medir apertura desde que queda cerrada
+        closedTimestamp.current = now;
+        openTimestamp.current = null;
+      }
+
+      if (lastState.current === 'closed' && currentState === 'open' && closedTimestamp.current !== null) {
+        // Transición: cerrada -> abierta (medimos TIEMPO DE APERTURA)
+        const opening = now - closedTimestamp.current;
+
+        // Guardar en lista de aperturas
+        setOpeningTimes(prev => {
+          const updated = [...prev, opening];
+          // Actualizar más rápido y promedio
+          const fastest = updated.length ? Math.min(...updated) : null;
+          const avg = updated.length ? updated.reduce((a, b) => a + b, 0) / updated.length : null;
+          setFastestOpening(fastest);
+          setAverageOpening(avg);
+          return updated;
+        });
+
+        // Completar el último intento con la apertura y total
+        setAttempts(prev => {
+          if (prev.length === 0) return prev;
+          const last = prev[prev.length - 1];
+          const completed = { ...last, openingTime: opening, totalTime: last.closingTime + opening };
+          return [...prev.slice(0, -1), completed];
+        });
+
+        // Ahora empezamos a medir el siguiente cierre desde que queda abierta
+        openTimestamp.current = now;
+        closedTimestamp.current = null;
+      }
+
+      // Actualizamos estado previo
+      lastState.current = currentState;
     }
   }, [rightHand, isTherapyActive]);
+
+  const formatMs = (ms: number | null) => (ms === null ? '-' : (ms / 1000).toFixed(2) + 's');
 
   const renderTimerControls = () => (
     <div className="flex flex-col items-center mt-4">
@@ -148,11 +226,57 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       </div>
 
       {/* Mostrar estadísticas de tiempos */}
-      {reactionTimes.length > 0 && (
-        <div className="mt-4 text-sm text-center bg-muted/20 p-3 rounded-lg">
-          <p>🔄 Intentos registrados: {reactionTimes.length}</p>
-          <p>⚡ Tiempo más rápido: {(fastestTime! / 1000).toFixed(2)}s</p>
-          <p>📊 Promedio: {(averageTime! / 1000).toFixed(2)}s</p>
+      {(closingTimes.length > 0 || openingTimes.length > 0) && (
+        <div className="mt-4 text-sm text-center bg-muted/20 p-3 rounded-lg space-y-2">
+          {/* Métricas de cierre */}
+          <div>
+            <p className="font-semibold">✊ Cierre (abierta → cerrada)</p>
+            <p>Intentos: {closingTimes.length}</p>
+            <p>⚡ Mejor: {formatMs(fastestClosing)}</p>
+            <p>📊 Promedio: {formatMs(averageClosing)}</p>
+          </div>
+          {/* Métricas de apertura */}
+          <div className="pt-2 border-t">
+            <p className="font-semibold">🖐️ Apertura (cerrada → abierta)</p>
+            <p>Intentos: {openingTimes.length}</p>
+            <p>⚡ Mejor: {formatMs(fastestOpening)}</p>
+            <p>📊 Promedio: {formatMs(averageOpening)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Historial de intentos (cierre + apertura + total) */}
+      {attempts.length > 0 && (
+        <div className="mt-4 w-full max-w-xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Historial de intentos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-muted/40">
+                      <th className="px-2 py-1 text-left">#</th>
+                      <th className="px-2 py-1 text-left">Cierre (s)</th>
+                      <th className="px-2 py-1 text-left">Apertura (s)</th>
+                      <th className="px-2 py-1 text-left">Total (s)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attempts.map((a, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1">{i + 1}</td>
+                        <td className="px-2 py-1">{(a.closingTime / 1000).toFixed(2)}</td>
+                        <td className="px-2 py-1">{a.openingTime ? (a.openingTime / 1000).toFixed(2) : '-'}</td>
+                        <td className="px-2 py-1">{(a.totalTime / 1000).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
