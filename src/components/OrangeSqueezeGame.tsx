@@ -84,13 +84,13 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   useEffect(() => {
     // Calcular porcentaje basado en la suma de A4, A5, A6 (target: 150 grados)
     const fingerSum = rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3;
-    const percentage = Math.min((fingerSum / 230) * 100, 100);
+    const percentage = Math.min((fingerSum / 150) * 100, 100);
     setSqueezePercentage(percentage);
 
     const currentTime = Date.now();
     
     // Si el porcentaje baja de 80%, permite exprimir otra naranja
-    if (percentage < 50 && !canSqueeze) {
+    if (percentage < 30 && !canSqueeze) {
       setCanSqueeze(true);
       console.log('Puede exprimir otra naranja (bajó de 30%)');
     }
