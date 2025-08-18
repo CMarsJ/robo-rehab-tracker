@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { TherapyRecord, GameRecord, Ranking, Session, EffortDataPoint } from '@/types/database';
 
 export class DataService {
+  private static async getUserId(): Promise<string | null> {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user) {
+      console.error('No authenticated user found:', error);
+      return null;
+    }
+    return data.user.id;
+  }
+
   // Session management
   static async createSession(
     tipo_actividad: string, 
@@ -10,19 +19,23 @@ export class DataService {
     metrics?: Record<string, any>
   ): Promise<Session | null> {
     try {
+      const userId = await this.getUserId();
+      if (!userId) return null;
+
       const { data, error } = await supabase
         .from('sessions')
         .insert({
+          user_id: userId,
           tipo_actividad,
           duracion_minutos,
           estado: 'active',
-          metrics: metrics || {}
-        })
+          metrics: (metrics || {}) as any
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as unknown as Session;
     } catch (error) {
       console.error('Error creating session:', error);
       return null;
@@ -33,7 +46,7 @@ export class DataService {
     try {
       const { error } = await supabase
         .from('sessions')
-        .update(updates)
+        .update(updates as any)
         .eq('id', sessionId);
 
       return !error;
@@ -52,7 +65,7 @@ export class DataService {
         .limit(limit);
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as Session[];
     } catch (error) {
       console.error('Error fetching sessions:', error);
       return [];
@@ -66,18 +79,22 @@ export class DataService {
     metrics?: Partial<TherapyRecord>
   ): Promise<TherapyRecord | null> {
     try {
+      const userId = await this.getUserId();
+      if (!userId) return null;
+
       const { data, error } = await supabase
         .from('therapy_records')
         .insert({
           session_id: sessionId,
-          effort_data: effortData,
+          user_id: userId,
+          effort_data: (effortData as unknown) as any,
           ...metrics
-        })
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as unknown as TherapyRecord;
     } catch (error) {
       console.error('Error creating therapy record:', error);
       return null;
@@ -91,18 +108,22 @@ export class DataService {
     gameData: Partial<GameRecord>
   ): Promise<GameRecord | null> {
     try {
+      const userId = await this.getUserId();
+      if (!userId) return null;
+
       const { data, error } = await supabase
         .from('game_records')
         .insert({
           session_id: sessionId,
+          user_id: userId,
           game_type: gameType,
           ...gameData
-        })
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as unknown as GameRecord;
     } catch (error) {
       console.error('Error creating game record:', error);
       return null;
@@ -126,7 +147,7 @@ export class DataService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as GameRecord[];
     } catch (error) {
       console.error('Error fetching game records:', error);
       return [];
@@ -140,22 +161,26 @@ export class DataService {
     details?: Record<string, any>
   ): Promise<boolean> {
     try {
-      // First try to update existing ranking
+      const userId = await this.getUserId();
+      if (!userId) return false;
+
+      // Get existing ranking for this user + game
       const { data: existing } = await supabase
         .from('rankings')
         .select('*')
         .eq('game_type', gameType)
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (existing && existing.score < score) {
+      if (existing && (existing as any).score < score) {
         const { error } = await supabase
           .from('rankings')
           .update({
             score,
             details: details || {},
             calculated_at: new Date().toISOString()
-          })
-          .eq('id', existing.id);
+          } as any)
+          .eq('id', (existing as any).id);
 
         return !error;
       } else if (!existing) {
@@ -163,9 +188,10 @@ export class DataService {
           .from('rankings')
           .insert({
             game_type: gameType,
+            user_id: userId,
             score,
             details: details || {}
-          });
+          } as any);
 
         return !error;
       }
@@ -189,10 +215,10 @@ export class DataService {
       if (error) throw error;
       
       // Add positions
-      return (data || []).map((ranking, index) => ({
-        ...ranking,
+      return ((data || []) as any[]).map((ranking, index) => ({
+        ...(ranking as any),
         position: index + 1
-      }));
+      })) as Ranking[];
     } catch (error) {
       console.error('Error fetching rankings:', error);
       return [];

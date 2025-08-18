@@ -10,7 +10,8 @@ export interface TherapyRecord {
   open_times?: number[];
   close_times?: number[];
   attempts_count?: number;
-  effort_data?: EffortDataPoint[];
+  // Relax to align with Supabase jsonb
+  effort_data?: any;
   created_at: string;
 }
 
@@ -56,7 +57,8 @@ export interface Session {
   duracion_minutos: number;
   tipo_actividad: string;
   estado: string;
-  metrics?: Record<string, any>;
+  // Relax to any to match Supabase Json typing
+  metrics?: any;
   notes?: string;
   created_at: string;
 }
