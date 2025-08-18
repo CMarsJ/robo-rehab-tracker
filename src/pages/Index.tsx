@@ -38,7 +38,7 @@ const Index = () => {
   };
   return <div className="space-y-8">
       {/* Header */}
-      <div className="text-center space-y-2">
+      <div className="text-center">
         <div className="flex justify-between items-center mb-4">
           <div></div>
           <div>
