@@ -90,13 +90,13 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
     const currentTime = Date.now();
     
     // Si el porcentaje baja de 80%, permite exprimir otra naranja
-    if (percentage < 30 && !canSqueeze) {
+    if (percentage < 50 && !canSqueeze) {
       setCanSqueeze(true);
       console.log('Puede exprimir otra naranja (bajó de 30%)');
     }
     
     // Si llega al 100% y puede exprimir, cuenta como naranja exprimida
-    if (percentage >= 90 && rightHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
+    if (percentage >= 100 && rightHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
       console.log('Naranja exprimida!');
       setLastSqueezeTime(currentTime);
       setCanSqueeze(false); // No puede exprimir hasta que baje del 30%
@@ -192,7 +192,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             <div 
               className={`absolute bottom-0 w-full rounded-full transition-all duration-300 ${
                 squeezePercentage >= 100 ? 'bg-green-500' : 
-                squeezePercentage >= 0 ? 'bg-yellow-500' : 'bg-blue-500'
+                squeezePercentage >= 30 ? 'bg-yellow-500' : 'bg-blue-500'
               }`}
               style={{ height: `${squeezePercentage}%` }}
             />
