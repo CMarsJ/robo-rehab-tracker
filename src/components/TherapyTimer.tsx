@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,8 @@ import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { DataService } from '@/services/dataService';
+import { EffortDataPoint } from '@/types/database';
 import TherapyOverlay from '@/components/TherapyOverlay';
 
 interface TherapyTimerProps {
@@ -16,23 +16,24 @@ interface TherapyTimerProps {
 }
 
 const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
-  const [duration, setDuration] = useState([15]); // en minutos
-  const [timeLeft, setTimeLeft] = useState(0); // en segundos
+  const [duration, setDuration] = useState([15]);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
-  const [sampleCounter, setSampleCounter] = useState(0); // Contador para muestreo
+  const [sampleCounter, setSampleCounter] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
   const [totalPausedTime, setTotalPausedTime] = useState(0);
+  const [sessionEffortData, setSessionEffortData] = useState<EffortDataPoint[]>([]);
+  
   const { addNotification } = useApp();
   const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
   const { patientName } = useConfig();
   const { user } = useAuth();
   const t = useTranslation();
 
-  // Función para reproducir sonido de victoria
   const playVictorySound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     
@@ -54,12 +55,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       oscillator.stop(startTime + duration);
     };
 
-    // Melodía de victoria (Do-Mi-Sol-Do octava alta)
     const now = audioContext.currentTime;
-    playNote(261.63, now, 0.3); // Do
-    playNote(329.63, now + 0.3, 0.3); // Mi
-    playNote(392.00, now + 0.6, 0.3); // Sol
-    playNote(523.25, now + 0.9, 0.5); // Do octava alta
+    playNote(261.63, now, 0.3);
+    playNote(329.63, now + 0.3, 0.3);
+    playNote(392.00, now + 0.6, 0.3);
+    playNote(523.25, now + 0.9, 0.5);
   };
 
   useEffect(() => {
@@ -75,7 +75,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
         setTimeLeft(newTimeLeft);
 
         if (newTimeLeft <= 0) {
-          // Sesión completada
           setIsActive(false);
           setIsPaused(false);
           setIsTherapyActive(false);
@@ -85,10 +84,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           setPauseStartTime(null);
           setTotalPausedTime(0);
           
-          // Reproducir sonido de victoria
           playVictorySound();
           
-          // Finalizar sesión en Supabase
           if (currentSessionId && user) {
             finishSession();
           }
@@ -103,16 +100,21 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
             onSessionComplete();
           }
         }
-      }, 1000); // 1 segundo real
+      }, 1000);
 
-      // Intervalo separado para muestreo de datos cada 100ms
       const sampleInterval = setInterval(() => {
         setSampleCounter(prev => {
           const newCounter = prev + 1;
-          // Agregar datos de esfuerzo cada 60 muestras (6 segundos a 0.1s por muestra)
           if (newCounter >= 60 && (leftHand.active || rightHand.active)) {
+            const effortPoint: EffortDataPoint = {
+              time: new Date().toISOString(),
+              paretica: rightHand.effort,
+              noParetica: leftHand.effort
+            };
+            
+            setSessionEffortData(prevData => [...prevData, effortPoint]);
             addEffortData(rightHand.effort, leftHand.effort);
-            return 0; // Reset counter
+            return 0;
           }
           return newCounter;
         });
@@ -122,12 +124,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
         if (interval) clearInterval(interval);
         clearInterval(sampleInterval);
       };
-    } else if (!isActive) {
-      setTimeLeft(0);
-      setSampleCounter(0);
-      setStartTime(null);
-      setPauseStartTime(null);
-      setTotalPausedTime(0);
     }
 
     return () => {
@@ -139,19 +135,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     if (!user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          user_id: user.id,
-          tipo_actividad: 'therapy', // unificado
-          duracion_minutos: duration[0],
-          estado: 'active'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data.id;
+      const session = await DataService.createSession('therapy', duration[0]);
+      return session?.id || null;
     } catch (error) {
       console.error('Error creating session:', error);
       return null;
@@ -162,39 +147,25 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     if (!currentSessionId || !user) return;
 
     try {
-      await supabase
-        .from('sessions')
-        .update({ estado: 'completed' })
-        .eq('id', currentSessionId);
-
-      // Si hay datos de juego de naranjas en localStorage, guardarlos
-      const orangeRankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
-      if (orangeRankings.length > 0) {
-        const latestGame = orangeRankings[orangeRankings.length - 1];
-        await supabase
-          .from('game_records')
-          .insert({
-            session_id: currentSessionId,
-            user_id: user.id,
-            game_type: 'orange_squeeze',
-            total_oranges: latestGame.glasses * 4,
-            total_glasses: latestGame.glasses,
-            average_oranges_per_minute: latestGame.glasses * 4 / latestGame.totalTime
-          });
-      }
+      // Update session status
+      await DataService.updateSession(currentSessionId, { estado: 'completed' });
+      
+      // Save therapy record with effort data
+      await DataService.createTherapyRecord(currentSessionId, sessionEffortData);
+      
+      // Clear session data
+      setSessionEffortData([]);
     } catch (error) {
       console.error('Error finishing session:', error);
     }
   };
 
   const handleStart = async () => {
-    // Abrir overlay sin iniciar el temporizador aún
     setShowOverlay(true);
   };
 
   const startTimerNow = async () => {
     if (!isActive && user) {
-      // Crear sesión en Supabase
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
       
@@ -207,33 +178,28 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       setIsPaused(false);
       setIsTherapyActive(true);
       setShowOverlay(true);
-      clearEffortHistory(); // Limpiar historial anterior
+      clearEffortHistory();
       setSampleCounter(0);
+      setSessionEffortData([]);
     }
   };
 
   const handlePause = () => {
     if (isPaused) {
-      // Reanudar: agregar el tiempo que estuvo pausado
       if (pauseStartTime) {
         setTotalPausedTime(prev => prev + (Date.now() - pauseStartTime));
         setPauseStartTime(null);
       }
     } else {
-      // Pausar: registrar el momento de la pausa
       setPauseStartTime(Date.now());
     }
     setIsPaused(!isPaused);
   };
 
   const handleCancel = async () => {
-    // Cancelar sesión en Supabase si existe
     if (currentSessionId && user) {
       try {
-        await supabase
-          .from('sessions')
-          .update({ estado: 'cancelled' })
-          .eq('id', currentSessionId);
+        await DataService.updateSession(currentSessionId, { estado: 'cancelled' });
       } catch (error) {
         console.error('Error cancelling session:', error);
       }
@@ -250,6 +216,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     setTotalPausedTime(0);
     clearEffortHistory();
     setSampleCounter(0);
+    setSessionEffortData([]);
   };
 
   const formatTime = (seconds: number) => {
@@ -267,7 +234,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           <CardTitle className="text-lg font-semibold">{t.therapyTimer}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Selector de duración */}
           <div className="space-y-3">
             <label className="text-sm font-medium">{t.duration}</label>
             <Slider
@@ -286,7 +252,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
             </div>
           </div>
 
-          {/* Timer circular */}
           <div className="flex justify-center">
             <div className="relative w-32 h-32">
               <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
@@ -323,7 +288,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
             </div>
           </div>
 
-          {/* Control único */}
           <div className="flex justify-center">
             <Button
               onClick={handleStart}
@@ -337,7 +301,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
         </CardContent>
       </Card>
 
-      {/* Overlay unificado */}
       {showOverlay && (
         <TherapyOverlay
           timeLeft={timeLeft}
@@ -355,4 +318,3 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 };
 
 export default TherapyTimer;
-

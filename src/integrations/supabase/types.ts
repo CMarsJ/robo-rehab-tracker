@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -16,30 +16,51 @@ export type Database = {
     Tables: {
       game_records: {
         Row: {
+          attempts_count: number | null
           average_oranges_per_minute: number | null
+          avg_close_time: number | null
+          avg_open_time: number | null
+          best_close_time: number | null
+          best_open_time: number | null
+          close_times: number[] | null
           created_at: string
           game_type: string
           id: string
+          open_times: number[] | null
           session_id: string
           total_glasses: number | null
           total_oranges: number | null
           user_id: string
         }
         Insert: {
+          attempts_count?: number | null
           average_oranges_per_minute?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          close_times?: number[] | null
           created_at?: string
           game_type: string
           id?: string
+          open_times?: number[] | null
           session_id: string
           total_glasses?: number | null
           total_oranges?: number | null
           user_id: string
         }
         Update: {
+          attempts_count?: number | null
           average_oranges_per_minute?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          close_times?: number[] | null
           created_at?: string
           game_type?: string
           id?: string
+          open_times?: number[] | null
           session_id?: string
           total_glasses?: number | null
           total_oranges?: number | null
@@ -124,6 +145,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rankings: {
+        Row: {
+          calculated_at: string
+          created_at: string
+          details: Json | null
+          game_type: string
+          id: string
+          position: number | null
+          score: number
+          user_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          created_at?: string
+          details?: Json | null
+          game_type: string
+          id?: string
+          position?: number | null
+          score: number
+          user_id: string
+        }
+        Update: {
+          calculated_at?: string
+          created_at?: string
+          details?: Json | null
+          game_type?: string
+          id?: string
+          position?: number | null
+          score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           created_at: string
@@ -131,6 +185,8 @@ export type Database = {
           estado: string
           fecha_inicio: string
           id: string
+          metrics: Json | null
+          notes: string | null
           tipo_actividad: string
           user_id: string
         }
@@ -140,6 +196,8 @@ export type Database = {
           estado?: string
           fecha_inicio?: string
           id?: string
+          metrics?: Json | null
+          notes?: string | null
           tipo_actividad: string
           user_id: string
         }
@@ -149,10 +207,65 @@ export type Database = {
           estado?: string
           fecha_inicio?: string
           id?: string
+          metrics?: Json | null
+          notes?: string | null
           tipo_actividad?: string
           user_id?: string
         }
         Relationships: []
+      }
+      therapy_records: {
+        Row: {
+          attempts_count: number | null
+          avg_close_time: number | null
+          avg_open_time: number | null
+          best_close_time: number | null
+          best_open_time: number | null
+          close_times: number[] | null
+          created_at: string
+          effort_data: Json | null
+          id: string
+          open_times: number[] | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts_count?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          close_times?: number[] | null
+          created_at?: string
+          effort_data?: Json | null
+          id?: string
+          open_times?: number[] | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts_count?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          close_times?: number[] | null
+          created_at?: string
+          effort_data?: Json | null
+          id?: string
+          open_times?: number[] | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapy_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

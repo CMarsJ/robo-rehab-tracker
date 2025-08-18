@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { DataService } from '@/services/dataService';
+import { Ranking, GameRecord } from '@/types/database';
 
-interface Ranking {
+interface LegacyOrangeRanking {
   date: string;
   glasses: number;
   totalOranges: number;
@@ -13,111 +15,48 @@ interface Ranking {
   totalTime: number;
 }
 
-interface FruitZapRanking {
-  date: string;
-  totalScore: number;
-  pointsPerSecond: number;
-  totalRounds: number;
-  duration: number;
-}
-
-interface FlappyBirdRanking {
-  date: string;
-  score: number;
-  pointsPerMinute: number;
-  duration: number;
-}
-
 const GameRankings = () => {
-  const [orangeRankings, setOrangeRankings] = useState<Ranking[]>([]);
-  const [fruitZapRankings, setFruitZapRankings] = useState<FruitZapRanking[]>([]);
-  const [flappyBirdRankings, setFlappyBirdRankings] = useState<FlappyBirdRanking[]>([]);
+  const [orangeRankings, setOrangeRankings] = useState<LegacyOrangeRanking[]>([]);
+  const [neurolinkRankings, setNeurolinkRankings] = useState<Ranking[]>([]);
+  const [flappyBirdRankings, setFlappyBirdRankings] = useState<Ranking[]>([]);
+  const [neurolinkRecords, setNeurolinkRecords] = useState<GameRecord[]>([]);
+  const [flappyBirdRecords, setFlappyBirdRecords] = useState<GameRecord[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
+    // Load legacy orange rankings from localStorage
     const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
-    setOrangeRankings(rankings.slice(0, 5)); // Top 5
+    setOrangeRankings(rankings.slice(0, 5));
   }, []);
 
   useEffect(() => {
-    const loadFruitZapRankings = async () => {
+    const loadData = async () => {
       if (!user) return;
       
       try {
-        const { data, error } = await supabase
-          .from('game_records')
-          .select(`
-            *,
-            sessions!inner(fecha_inicio, duracion_minutos)
-          `)
-          .eq('user_id', user.id)
-          .eq('game_type', 'neurolink')
-          .order('created_at', { ascending: false })
-          .limit(5);
-          
-        if (!error && data) {
-          const rankings = data.map(record => {
-            const duration = record.sessions?.duracion_minutos || 1;
-            const totalScore = record.total_oranges || 0;
-            const pointsPerSecond = duration > 0 ? totalScore / (duration * 60) : 0;
-            
-            return {
-              date: new Date(record.sessions.fecha_inicio).toLocaleDateString(),
-              totalScore: totalScore,
-              pointsPerSecond: pointsPerSecond,
-              totalRounds: record.total_glasses || 0,
-              duration: duration
-            };
-          });
-          
-          setFruitZapRankings(rankings);
-        }
+        // Migrate data first
+        await DataService.migrateLocalStorageData();
+        
+        // Load NeuroLink data
+        const neurolinkGameRecords = await DataService.getGameRecords('neurolink', 5);
+        setNeurolinkRecords(neurolinkGameRecords);
+        
+        const neurolinkRankingData = await DataService.getRankings('neurolink', 5);
+        setNeurolinkRankings(neurolinkRankingData);
+        
+        // Load Flappy Bird data
+        const flappyGameRecords = await DataService.getGameRecords('flappy_bird', 5);
+        setFlappyBirdRecords(flappyGameRecords);
+        
+        const flappyRankingData = await DataService.getRankings('flappy_bird', 5);
+        setFlappyBirdRankings(flappyRankingData);
+        
       } catch (error) {
-        console.error('Error loading NeuroLink rankings:', error);
+        console.error('Error loading rankings:', error);
       }
     };
     
-    loadFruitZapRankings();
-  }, [user]);
-
-  useEffect(() => {
-    const loadFlappyBirdRankings = async () => {
-      if (!user) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('game_records')
-          .select(`
-            *,
-            sessions!inner(fecha_inicio, duracion_minutos)
-          `)
-          .eq('user_id', user.id)
-          .eq('game_type', 'flappy_bird')
-          .order('created_at', { ascending: false })
-          .limit(5);
-          
-        if (!error && data) {
-          const rankings = data.map(record => {
-            const duration = record.sessions?.duracion_minutos || 1;
-            const score = record.total_oranges || 0;
-            const pointsPerMinute = duration > 0 ? score / duration : 0;
-            
-            return {
-              date: new Date(record.sessions.fecha_inicio).toLocaleDateString(),
-              score: score,
-              pointsPerMinute: pointsPerMinute,
-              duration: duration
-            };
-          });
-          
-          setFlappyBirdRankings(rankings);
-        }
-      } catch (error) {
-        console.error('Error loading Flappy Bird rankings:', error);
-      }
-    };
-    
-    loadFlappyBirdRankings();
+    loadData();
   }, [user]);
 
   const formatTime = (minutes: number) => {
@@ -125,6 +64,26 @@ const GameRankings = () => {
     const secs = Math.round((minutes - mins) * 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const formatRankingData = (records: GameRecord[]) => {
+    return records.map(record => {
+      const sessions = (record as any).sessions;
+      const duration = sessions?.duracion_minutos || 1;
+      const totalScore = record.total_oranges || 0;
+      const pointsPerSecond = duration > 0 ? totalScore / (duration * 60) : 0;
+      
+      return {
+        date: new Date(sessions?.fecha_inicio || record.created_at).toLocaleDateString(),
+        totalScore: totalScore,
+        pointsPerSecond: pointsPerSecond,
+        totalRounds: record.total_glasses || 0,
+        duration: duration
+      };
+    });
+  };
+
+  const neurolinkFormattedData = formatRankingData(neurolinkRecords);
+  const flappyBirdFormattedData = formatRankingData(flappyBirdRecords);
 
   return (
     <div className="grid grid-cols-1 gap-6 mt-6">
@@ -161,7 +120,7 @@ const GameRankings = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No hay registros aún
                   </TableCell>
                 </TableRow>
@@ -191,8 +150,8 @@ const GameRankings = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {fruitZapRankings.length > 0 ? (
-                fruitZapRankings.map((entry, index) => (
+              {neurolinkFormattedData.length > 0 ? (
+                neurolinkFormattedData.map((entry, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>{entry.date}</TableCell>
@@ -233,13 +192,13 @@ const GameRankings = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {flappyBirdRankings.length > 0 ? (
-                flappyBirdRankings.map((entry, index) => (
+              {flappyBirdFormattedData.length > 0 ? (
+                flappyBirdFormattedData.map((entry, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>{entry.date}</TableCell>
-                    <TableCell className="text-center font-bold">{entry.score}</TableCell>
-                    <TableCell className="text-center">{entry.pointsPerMinute.toFixed(1)}</TableCell>
+                    <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
+                    <TableCell className="text-center">{(entry.totalScore / entry.duration).toFixed(1)}</TableCell>
                     <TableCell className="text-right">{entry.duration}min</TableCell>
                   </TableRow>
                 ))
