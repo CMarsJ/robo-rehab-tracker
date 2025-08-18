@@ -6,6 +6,7 @@ import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
 import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
+import HandMonitoring from '@/components/HandMonitoring';
 
 interface TherapyOverlayProps {
   timeLeft: number;
@@ -176,6 +177,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                   title="Terapia de Rehabilitación"
                 />
               </div>
+            {/* Monitoreo de manos */}
+            <HandMonitoring isTherapyActive={isTherapyActive} />
             </div>
           </div>
         ) : (
