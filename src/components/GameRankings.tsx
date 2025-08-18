@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 interface Ranking {
   date: string;
   glasses: number;
+  totalOranges: number;
   timePerGlass: number;
+  timePerOrange: number;
   totalTime: number;
 }
 
@@ -141,7 +142,9 @@ const GameRankings = () => {
                 <TableHead className="w-16">Pos.</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead className="text-center">Vasos</TableHead>
-                <TableHead className="text-right">Tiempo/Vaso</TableHead>
+                <TableHead className="text-center">Naranjas</TableHead>
+                <TableHead className="text-center">Tiempo/Vaso</TableHead>
+                <TableHead className="text-center">Tiempo/Naranja</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -151,12 +154,14 @@ const GameRankings = () => {
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>{entry.date}</TableCell>
                     <TableCell className="text-center">{entry.glasses}</TableCell>
-                    <TableCell className="text-right">{formatTime(entry.timePerGlass)}</TableCell>
+                    <TableCell className="text-center">{entry.totalOranges}</TableCell>
+                    <TableCell className="text-center">{formatTime(entry.timePerGlass)}</TableCell>
+                    <TableCell className="text-center">{formatTime(entry.timePerOrange)}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No hay registros aún
                   </TableCell>
                 </TableRow>

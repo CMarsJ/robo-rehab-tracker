@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,6 @@ import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
 import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
-import HandMonitoring from '@/components/HandMonitoring';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
 
@@ -42,6 +41,14 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
 
+  // Estado para registrar tiempos de cierre de mano
+  const [reactionTimes, setReactionTimes] = useState<number[]>([]);
+  const [fastestTime, setFastestTime] = useState<number | null>(null);
+  const [averageTime, setAverageTime] = useState<number | null>(null);
+
+  // Referencia para marcar el momento en que la mano estuvo abierta
+  const openTimestamp = useRef<number | null>(null);
+
   const handleGameComplete = () => setGameCompleted(true);
 
   const handleStartTherapy = () => {
@@ -56,6 +63,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     onCancel();
     setGameMode('selection');
     setGameCompleted(false);
+    // Reiniciar métricas
+    setReactionTimes([]);
+    setFastestTime(null);
+    setAverageTime(null);
+    openTimestamp.current = null;
   };
 
   // Nuevo helper: al empezar un juego, abrir el juego y arrancar el timer si no está activo
@@ -67,6 +79,38 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       onStartTimer();
     }
   };
+
+  // --- Lógica de registro de tiempos de cierre de mano ---
+  useEffect(() => {
+    // Usamos la mano parética (rightHand) como referencia
+    if (!isTherapyActive) return;
+
+    const isOpen = rightHand.angles.finger2 < 20; // Mano casi abierta
+    const isClosed = rightHand.angles.finger2 > 70; // Mano cerrada
+
+    const now = performance.now();
+
+    if (isOpen && openTimestamp.current === null) {
+      // Mano detectada como abierta → empezamos a medir
+      openTimestamp.current = now;
+    } else if (isClosed && openTimestamp.current !== null) {
+      // Mano cerrada → registramos el tiempo
+      const reaction = now - openTimestamp.current;
+      setReactionTimes(prev => {
+        const updated = [...prev, reaction];
+        // Actualizar más rápido
+        if (fastestTime === null || reaction < fastestTime) {
+          setFastestTime(reaction);
+        }
+        // Actualizar promedio
+        const avg = updated.reduce((a, b) => a + b, 0) / updated.length;
+        setAverageTime(avg);
+        return updated;
+      });
+      // Reiniciamos para la próxima apertura
+      openTimestamp.current = null;
+    }
+  }, [rightHand, isTherapyActive]);
 
   const renderTimerControls = () => (
     <div className="flex flex-col items-center mt-4">
@@ -102,6 +146,15 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           <X className="w-6 h-6 mr-2" /> Cancelar
         </Button>
       </div>
+
+      {/* Mostrar estadísticas de tiempos */}
+      {reactionTimes.length > 0 && (
+        <div className="mt-4 text-sm text-center bg-muted/20 p-3 rounded-lg">
+          <p>🔄 Intentos registrados: {reactionTimes.length}</p>
+          <p>⚡ Tiempo más rápido: {(fastestTime! / 1000).toFixed(2)}s</p>
+          <p>📊 Promedio: {(averageTime! / 1000).toFixed(2)}s</p>
+        </div>
+      )}
     </div>
   );
 

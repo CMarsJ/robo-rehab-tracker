@@ -92,7 +92,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
     // Si el porcentaje baja de 80%, permite exprimir otra naranja
     if (percentage < 80 && !canSqueeze) {
       setCanSqueeze(true);
-      console.log('Puede exprimir otra naranja (bajó de 80%)');
+      console.log('Puede exprimir otra naranja (bajó de 30%)');
     }
     
     // Si llega al 100% y puede exprimir, cuenta como naranja exprimida
@@ -123,14 +123,17 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             const endTime = Date.now();
             const totalTimeMinutes = (endTime - startTime) / (1000 * 60);
             const timePerGlass = totalTimeMinutes / newGlasses;
+            const timePerOrange = totalTimeMinutes / newCount; // corregido
+            const totalOranges = newCount; // corregido
             
             const today = new Date().toLocaleDateString();
             const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
             rankings.push({ 
               date: today, 
               glasses: newGlasses,
+              totalOranges: totalOranges, // todas las naranjas exprimidas
               timePerGlass: timePerGlass,
-              totalTime: totalTimeMinutes
+              timePerOrange: timePerOrange,
             });
             rankings.sort((a: any, b: any) => a.timePerGlass - b.timePerGlass);
             localStorage.setItem('orangeRankings', JSON.stringify(rankings.slice(0, 5)));
@@ -189,13 +192,13 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
             <div 
               className={`absolute bottom-0 w-full rounded-full transition-all duration-300 ${
                 squeezePercentage >= 100 ? 'bg-green-500' : 
-                squeezePercentage >= 80 ? 'bg-yellow-500' : 'bg-blue-500'
+                squeezePercentage >= 30 ? 'bg-yellow-500' : 'bg-blue-500'
               }`}
               style={{ height: `${squeezePercentage}%` }}
             />
             {/* Etiquetas de porcentaje separadas para evitar solapamiento */}
             <div className="absolute -top-4 -left-8 text-xs font-medium">100%</div>
-            <div className="absolute top-1/5 -right-8 text-xs font-medium">80%</div>
+            <div className="absolute top-1/5 -right-8 text-xs font-medium">30%</div>
             <div className="absolute -bottom-4 -left-6 text-xs font-medium">0%</div>
           </div>
           <div className="text-center mt-2">
