@@ -162,21 +162,21 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           <div className="flex items-center justify-center h-full">{renderGameSelection()}</div>
         ) : gameMode === 'timer' ? (
           <div className="flex flex-col items-center">
+            {/* Temporizador + botones */}
+            {renderTimerControls()}
             {/* Video arriba */}
             <div className="w-full max-w-3xl p-4 border rounded-lg shadow mb-6">
               <h2 className="text-center font-bold text-xl mb-4">Sesión de Terapia</h2>
               <div className="bg-blue-100 p-2 rounded-lg">
                 <iframe
                   src="https://www.youtube.com/embed/QgBgP2c-3so?autoplay=1&loop=1&playlist=QgBgP2c-3so"
-                  className="w-full h-[300px] rounded-lg border-0"
+                  className="w-full h-[500px] rounded-lg border-0"
                   allow="autoplay; encrypted-media; fullscreen"
                   allowFullScreen
                   title="Terapia de Rehabilitación"
                 />
               </div>
             </div>
-            {/* Temporizador + botones */}
-            {renderTimerControls()}
           </div>
         ) : (
           <div className="flex flex-col items-center">

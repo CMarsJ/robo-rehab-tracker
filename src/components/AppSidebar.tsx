@@ -29,22 +29,22 @@ const AppSidebar = () => {
 
   const menuItems = [
     {
-      title: t.dashboard,
+      title: t.Bilateral_Therapy,
       url: '/',
       icon: Home,
     },
     {
-      title: t.reports,
-      url: '/reports',
-      icon: FileText,
-    },
-    {
-      title: t.history,
+      title: t.History,
       url: '/history',
       icon: Clock,
     },
     {
-      title: t.configuration,
+      title: t.Reports,
+      url: '/reports',
+      icon: FileText,
+    },
+    {
+      title: t.Configuration,
       url: '/configuration',
       icon: Settings,
     },
