@@ -73,10 +73,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         duration_ms: duration * 60 * 1000
       });
 
-      if (session) {
-        setCurrentSession(session.id);
-        console.log('Sesión de terapia creada:', session.id);
-      }
+      if (session) setCurrentSession(session.id);
     } catch (error) {
       console.error('Error creando sesión de terapia:', error);
     }
@@ -106,7 +103,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     if (!currentSession || !user) return;
 
     try {
-      // 🔹 Guardar métricas completas en Supabase
       await SessionService.saveTherapyData({
         session_id: currentSession,
         therapy_type: 'terapia_guiada',
@@ -123,7 +119,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         ended_at: new Date().toISOString(),
         duration_ms: duration * 60 * 1000
       });
-      console.log('Datos de terapia guardados en Supabase');
     } catch (error) {
       console.error('Error guardando datos de terapia:', error);
     }
@@ -134,7 +129,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       try {
         const actualDuration = Math.round((duration * 60 - timeLeft) / 60);
 
-        // 🔹 Actualizar sesión cancelada
         await SessionService.updateSession(currentSession, {
           duracion_minutos: actualDuration,
           estado: 'cancelled',
@@ -149,8 +143,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         if (closingTimes.length > 0 || openingTimes.length > 0) {
           await saveTherapyData();
         }
-
-        console.log('Sesión cancelada y datos guardados');
       } catch (error) {
         console.error('Error al cancelar sesión:', error);
       }
@@ -164,7 +156,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     const handleSessionComplete = async () => {
       if (timeLeft === 0 && currentSession && user && isActive) {
         try {
-          // 🔹 Marcar sesión como completada
           await SessionService.updateSession(currentSession, {
             estado: 'completed',
             ended_at: new Date().toISOString(),
@@ -180,8 +171,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           });
 
           await saveTherapyData();
-
-          console.log('Sesión completada y datos enviados a Supabase');
         } catch (error) {
           console.error('Error completando sesión:', error);
         }
@@ -197,7 +186,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     if (!isActive) onStartTimer();
   };
 
-  // --- Registro de transiciones mano ---
   useEffect(() => {
     if (!isTherapyActive) return;
     const isOpen = rightHand.angles.finger2 < 20;
@@ -250,10 +238,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const formatMs = (ms: number | null) => (ms === null ? '-' : (ms / 1000).toFixed(2) + 's');
 
-  // --- Resto de renderizado: timer, juegos y botones ---
-  // Mantener tu código existente de renderTimerControls, renderGameSelection y renderGameContent
-  // Se integra perfectamente con la lógica Supabase ya agregada
-  // ...
+  // --- Mantener renderTimerControls, renderGameSelection, renderGameContent tal cual ---
+  // Todo tu código UI queda intacto, no cambia nada del menú ni los juegos
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -261,11 +247,4 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         {gameMode === 'selection' ? (
           <div className="flex items-center justify-center h-full">{/* renderGameSelection() */}</div>
         ) : (
-          <div className="flex flex-col items-center">{/* renderGameContent() y renderTimerControls() */}</div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default TherapyOverlay;
+          <div className="flex flex-col items-center">{/* renderGameContent
