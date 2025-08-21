@@ -10,9 +10,7 @@ import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Nuevo import del servicio externo de Supabase que vamos a crear
-import { TherapySessionService } from '@/components/TherapySessionService';
+import { SessionService } from '@/services/sessionService';
 
 interface TherapyOverlayProps {
   timeLeft: number;
@@ -67,18 +65,18 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const handleGameComplete = () => setGameCompleted(true);
 
-  // --- Inicio de terapia guiada ---
   const handleStartTherapy = async () => {
     if (!user) return;
     
     try {
-      // Crear sesión de terapia con el servicio externo
-      const session = await TherapySessionService.createSession({
+      // Crear sesión de terapia con SessionService
+      const session = await SessionService.saveTherapyData({
         therapy_type: 'terapia_guiada',
+        timer: {},
         started_at: new Date().toISOString(),
         duration_ms: duration * 60 * 1000
       });
-
+      
       if (session) {
         setCurrentSession(session.id);
         console.log('Sesión de terapia creada:', session.id);
@@ -93,38 +91,35 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setGameCompleted(false);
   };
 
-  // --- Cancelar terapia ---
   const handleCancelTherapy = async () => {
+    // Si hay una sesión activa, actualizarla antes de cancelar
     if (currentSession && user) {
       try {
         const actualDuration = Math.round((duration * 60 - timeLeft) / 60); // minutos transcurridos
         
-        // Actualizar sesión como cancelada
-        await TherapySessionService.updateSession(currentSession, {
+        await SessionService.updateSession(currentSession, {
+          duracion_minutos: actualDuration,
           estado: 'cancelled',
           ended_at: new Date().toISOString(),
-          completedDuration: actualDuration
+          metrics: {
+            targetDuration: duration,
+            completedDuration: actualDuration,
+            cancelledAt: new Date().toISOString()
+          }
         });
 
-        // Guardar los datos de la sesión (cerradas, abiertas, intentos)
+        // Crear registro de terapia con los datos recopilados
         if (closingTimes.length > 0 || openingTimes.length > 0) {
-          await TherapySessionService.saveTherapyMetrics(currentSession, {
-            closingTimes,
-            openingTimes,
-            fastestClosing,
-            fastestOpening,
-            averageClosing,
-            averageOpening,
-            attempts
-          });
+          await saveTherapyData();
         }
-
+        
         console.log('Sesión cancelada y datos guardados');
       } catch (error) {
         console.error('Error al cancelar sesión:', error);
       }
     }
-
+    
+    // Cancelar (detener temporizador en el parent) y volver al selector
     onCancel();
     resetTherapyData();
   };
@@ -133,6 +128,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setGameMode('selection');
     setGameCompleted(false);
     setCurrentSession(null);
+    // Reiniciar métricas (cierre y apertura)
     setClosingTimes([]);
     setOpeningTimes([]);
     setAttempts([]);
@@ -145,27 +141,56 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     lastState.current = null;
   };
 
-  // --- Guardar automáticamente al completar ---
+  // Función para guardar datos de terapia en Supabase
+  const saveTherapyData = async () => {
+    if (!currentSession || !user) return;
+
+    try {
+      // Save complete therapy data with SessionService
+      await SessionService.saveTherapyData({
+        therapy_type: 'terapia_guiada',
+        timer: {
+          best_open_time: fastestOpening ? fastestOpening / 1000 : undefined,
+          best_close_time: fastestClosing ? fastestClosing / 1000 : undefined,
+          avg_open_time: averageOpening ? averageOpening / 1000 : undefined,
+          avg_close_time: averageClosing ? averageClosing / 1000 : undefined,
+          opening_times: openingTimes.map(t => t / 1000),
+          closing_times: closingTimes.map(t => t / 1000),
+          attempts_count: attempts.length
+        },
+        started_at: new Date(Date.now() - (duration * 60 * 1000)).toISOString(),
+        ended_at: new Date().toISOString(),
+        duration_ms: duration * 60 * 1000
+      });
+      console.log('Therapy data saved successfully');
+    } catch (error) {
+      console.error('Error guardando datos de terapia:', error);
+    }
+  };
+
+  // Efecto para guardar datos al completar la sesión
   useEffect(() => {
     const handleSessionComplete = async () => {
       if (timeLeft === 0 && currentSession && user && isActive) {
         try {
-          await TherapySessionService.updateSession(currentSession, {
+          // Actualizar sesión como completada con SessionService
+          await SessionService.updateSession(currentSession, {
             estado: 'completed',
             ended_at: new Date().toISOString(),
-            completedDuration: duration
+            metrics: {
+              targetDuration: duration,
+              completedDuration: duration,
+              totalClosingAttempts: closingTimes.length,
+              totalOpeningAttempts: openingTimes.length,
+              bestClosingTime: fastestClosing ? fastestClosing / 1000 : null,
+              bestOpeningTime: fastestOpening ? fastestOpening / 1000 : null,
+              completedAt: new Date().toISOString()
+            }
           });
 
-          await TherapySessionService.saveTherapyMetrics(currentSession, {
-            closingTimes,
-            openingTimes,
-            fastestClosing,
-            fastestOpening,
-            averageClosing,
-            averageOpening,
-            attempts
-          });
-
+          // Guardar registro de terapia
+          await saveTherapyData();
+          
           console.log('Sesión completada y datos guardados exitosamente');
         } catch (error) {
           console.error('Error al completar sesión:', error);
@@ -174,67 +199,265 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     };
 
     handleSessionComplete();
-  }, [timeLeft, currentSession, user, isActive, duration, closingTimes, openingTimes, fastestClosing, fastestOpening]);
+  }, [timeLeft, currentSession, user, isActive, duration, closingTimes.length, openingTimes.length, fastestClosing, fastestOpening]);
 
+  // Nuevo helper: al empezar un juego, abrir el juego y arrancar el timer si no está activo
   const startGame = (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
     setGameCompleted(false);
     setGameMode(mode);
-    if (!isActive) onStartTimer();
+    // Si el temporizador no está activo, arrancarlo
+    if (!isActive) {
+      onStartTimer();
+    }
   };
 
-  // --- Registro de transiciones de mano ---
+  // --- Lógica de registro de tiempos de cierre y apertura de mano ---
   useEffect(() => {
+    // Usamos la mano parética (rightHand) como referencia
     if (!isTherapyActive) return;
-    const isOpen = rightHand.angles.finger2 < 20;
-    const isClosed = rightHand.angles.finger2 > 70;
+
+    // Umbrales: mano casi abierta vs. cerrada
+    const isOpen = rightHand.angles.finger2 < 20; // Mano casi abierta
+    const isClosed = rightHand.angles.finger2 > 70; // Mano cerrada
+
+    // Si no estamos claramente en abierto ni cerrado, no registramos transición
     const now = performance.now();
+
+    // Determinar estado actual (solo open/closed)
     const currentState: 'open' | 'closed' | 'neutral' = isOpen ? 'open' : isClosed ? 'closed' : 'neutral';
-    if (currentState === 'neutral') return;
+
+    // Solo actuamos cuando hay transición entre estados válidos (open <-> closed)
+    if (currentState === 'neutral') {
+      return;
+    }
 
     if (lastState.current === null) {
-      if (currentState === 'open') openTimestamp.current = now;
-      if (currentState === 'closed') closedTimestamp.current = now;
+      // Primera detección: inicializamos marcas
+      if (currentState === 'open') {
+        openTimestamp.current = now;
+      } else if (currentState === 'closed') {
+        closedTimestamp.current = now;
+      }
+      // currentState cannot be 'neutral' here due to early return above
       lastState.current = currentState;
       return;
     }
 
     if (lastState.current !== currentState) {
-      // Cierre
+      // --- Transición detectada ---
       if (lastState.current === 'open' && currentState === 'closed' && openTimestamp.current !== null) {
+        // Transición: abierta -> cerrada (medimos TIEMPO DE CIERRE)
         const closing = now - openTimestamp.current;
+
+        // Guardar en lista de cierres
         setClosingTimes(prev => {
           const updated = [...prev, closing];
-          setFastestClosing(updated.length ? Math.min(...updated) : null);
-          setAverageClosing(updated.length ? updated.reduce((a, b) => a + b, 0) / updated.length : null);
+          // Actualizar más rápido y promedio
+          const fastest = updated.length ? Math.min(...updated) : null;
+          const avg = updated.length ? updated.reduce((a, b) => a + b, 0) / updated.length : null;
+          setFastestClosing(fastest);
+          setAverageClosing(avg);
           return updated;
         });
+
+        // Iniciar/actualizar intento pendiente (cierre medido, falta apertura)
         setAttempts(prev => [...prev, { closingTime: closing, openingTime: 0, totalTime: closing }]);
+
+        // Ahora empezamos a medir apertura desde que queda cerrada
         closedTimestamp.current = now;
         openTimestamp.current = null;
       }
-      // Apertura
+
       if (lastState.current === 'closed' && currentState === 'open' && closedTimestamp.current !== null) {
+        // Transición: cerrada -> abierta (medimos TIEMPO DE APERTURA)
         const opening = now - closedTimestamp.current;
+
+        // Guardar en lista de aperturas
         setOpeningTimes(prev => {
           const updated = [...prev, opening];
-          setFastestOpening(updated.length ? Math.min(...updated) : null);
-          setAverageOpening(updated.length ? updated.reduce((a, b) => a + b, 0) / updated.length : null);
+          // Actualizar más rápido y promedio
+          const fastest = updated.length ? Math.min(...updated) : null;
+          const avg = updated.length ? updated.reduce((a, b) => a + b, 0) / updated.length : null;
+          setFastestOpening(fastest);
+          setAverageOpening(avg);
           return updated;
         });
+
+        // Completar el último intento con la apertura y total
         setAttempts(prev => {
           if (prev.length === 0) return prev;
           const last = prev[prev.length - 1];
           const completed = { ...last, openingTime: opening, totalTime: last.closingTime + opening };
           return [...prev.slice(0, -1), completed];
         });
+
+        // Ahora empezamos a medir el siguiente cierre desde que queda abierta
         openTimestamp.current = now;
         closedTimestamp.current = null;
       }
+
+      // Actualizamos estado previo
       lastState.current = currentState;
     }
   }, [rightHand, isTherapyActive]);
 
   const formatMs = (ms: number | null) => (ms === null ? '-' : (ms / 1000).toFixed(2) + 's');
+
+  const renderTimerControls = () => (
+    <div className="flex flex-col items-center mt-4">
+      <div className="text-3xl font-bold text-primary mb-1">
+        {isActive ? formatTime(timeLeft) : `${duration}:00`}
+      </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
+      </div>
+
+      {/* Indicador de conexión a Supabase */}
+      {user && currentSession && (
+        <div className="mb-4 text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
+          ✅ Conectado a Supabase - Sesión: {currentSession.slice(-8)}
+        </div>
+      )}
+
+      <div className="flex gap-4">
+        <Button
+          onClick={onPause}
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg"
+          size="lg"
+          disabled={!isActive}
+        >
+          {isPaused ? (
+            <>
+              <Play className="w-6 h-6 mr-2" /> Reanudar
+            </>
+          ) : (
+            <>
+              <Pause className="w-6 h-6 mr-2" /> Pausar
+            </>
+          )}
+        </Button>
+        <Button
+          onClick={handleCancelTherapy}
+          variant="destructive"
+          className="px-6 py-3 text-lg"
+          size="lg"
+        >
+          <X className="w-6 h-6 mr-2" /> Cancelar
+        </Button>
+      </div>
+
+      {/* Mostrar estadísticas de tiempos */}
+      {(closingTimes.length > 0 || openingTimes.length > 0) && (
+        <div className="mt-4 text-sm text-center bg-muted/20 p-3 rounded-lg space-y-2">
+          {/* Métricas de cierre */}
+          <div>
+            <p className="font-semibold">✊ Cierre (abierta → cerrada)</p>
+            <p>Intentos: {closingTimes.length}</p>
+            <p>⚡ Mejor: {formatMs(fastestClosing)}</p>
+            <p>📊 Promedio: {formatMs(averageClosing)}</p>
+          </div>
+          {/* Métricas de apertura */}
+          <div className="pt-2 border-t">
+            <p className="font-semibold">🖐️ Apertura (cerrada → abierta)</p>
+            <p>Intentos: {openingTimes.length}</p>
+            <p>⚡ Mejor: {formatMs(fastestOpening)}</p>
+            <p>📊 Promedio: {formatMs(averageOpening)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Historial de intentos (cierre + apertura + total) */}
+      {attempts.length > 0 && (
+        <div className="mt-4 w-full max-w-xl">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Historial de intentos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-muted/40">
+                      <th className="px-2 py-1 text-left">#</th>
+                      <th className="px-2 py-1 text-left">Cierre (s)</th>
+                      <th className="px-2 py-1 text-left">Apertura (s)</th>
+                      <th className="px-2 py-1 text-left">Total (s)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attempts.map((a, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1">{i + 1}</td>
+                        <td className="px-2 py-1">{(a.closingTime / 1000).toFixed(2)}</td>
+                        <td className="px-2 py-1">{a.openingTime ? (a.openingTime / 1000).toFixed(2) : '-'}</td>
+                        <td className="px-2 py-1">{(a.totalTime / 1000).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderGameSelection = () => (
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle className="text-center flex items-center justify-center gap-2">
+          <Gamepad2 className="w-6 h-6" /> Selecciona una opción
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 gap-3">
+        <Button
+          onClick={handleStartTherapy}
+          className="w-full h-14 text-base bg-primary hover:bg-primary/90"
+          disabled={isPaused || isActive}
+        >
+          🧠 Terapia Guiada
+        </Button>
+
+        {/* Ahora los botones de juego usan startGame(...) */}
+        <Button
+          onClick={() => startGame('orange-squeeze')}
+          className="w-full h-14 text-base bg-orange-500 hover:bg-orange-600"
+        >
+          🍊 Exprimiendo Naranjas
+          <div className="text-xs mt-1">Meta: {targetGlasses} vasos</div>
+        </Button>
+
+        <Button
+          onClick={() => startGame('neurolink')}
+          className="w-full h-14 text-base bg-purple-500 hover:bg-purple-600"
+        >
+          🎯 NeuroLink
+        </Button>
+
+        <Button
+          onClick={() => startGame('flappy-bird')}
+          variant="outline"
+          className="w-full h-14 text-base"
+        >
+          🐦 Flappy Bird
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  const renderGameContent = () => {
+    switch (gameMode) {
+      case 'orange-squeeze':
+        return <OrangeSqueezeGame targetGlasses={targetGlasses} onComplete={handleGameComplete} />;
+      case 'neurolink':
+        return <NeuroLinkGame onComplete={handleGameComplete} />;
+      case 'flappy-bird':
+        return <FlappyBirdGame onComplete={handleGameComplete} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
