@@ -74,41 +74,25 @@ const History = () => {
         .from('sessions')
         .select(`
           id,
-          tipo_actividad,
-          fecha_inicio,
-          duracion_minutos,
-          estado,
-          game_records (
-            game_type,
-            total_oranges,
-            total_glasses,
-            average_oranges_per_minute,
-            best_open_time,
-            best_close_time,
-            avg_open_time,
-            avg_close_time,
-            open_times,
-            close_times,
-            attempts_count
-          ),
-          therapy_records (
-            best_open_time,
-            best_close_time,
-            avg_open_time,
-            avg_close_time,
-            open_times,
-            close_times,
-            attempts_count
-          )
+          therapy_type,
+          start_time,
+          duration,
+          state
         `)
         .eq('user_id', user!.id)
-        .order('fecha_inicio', { ascending: false });
+        .order('start_time', { ascending: false });
 
       if (sessionsError) {
         throw sessionsError;
       }
 
-      setSessions(sessionsData || []);
+      setSessions(sessionsData?.map(session => ({
+        id: session.id,
+        tipo_actividad: session.therapy_type,
+        fecha_inicio: session.start_time,
+        duracion_minutos: session.duration,
+        estado: session.state
+      })) || []);
     } catch (err: any) {
       setError(err.message || 'Error al cargar las sesiones');
     } finally {

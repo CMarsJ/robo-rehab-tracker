@@ -11,18 +11,6 @@ import { useSimulation } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
 import { SessionService } from '@/services/sessionService';
 
-// Función de prueba para insertar sesión en Supabase
-const testInsertSession = async () => {
-  return await SessionService.saveTherapyData({
-    therapy_type: 'prueba_terapia',
-    duration_ms: 1 * 60 * 1000, // 1 minuto de prueba
-    started_at: new Date().toISOString(),
-    ended_at: new Date().toISOString(),
-    timer: {} // vacio para simplificar la prueba
-  });
-};
-
-
 interface TherapyOverlayProps {
   timeLeft: number;
   isPaused: boolean;
@@ -49,7 +37,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [gameMode, setGameMode] = useState<GameMode>('selection');
   const [gameCompleted, setGameCompleted] = useState(false);
 
-  const { calculateOrangeGoalForTime } = useGameConfig();
+  const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap } = useGameConfig();
   const { leftHand, rightHand, isTherapyActive } = useSimulation();
   const t = useTranslation();
 
@@ -65,6 +53,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [averageOpening, setAverageOpening] = useState<number | null>(null);
 
   const [attempts, setAttempts] = useState<{ closingTime: number; openingTime: number; totalTime: number }[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [orangesUsed, setOrangesUsed] = useState(0);
+  const [juiceUsed, setJuiceUsed] = useState(0);
 
   const openTimestamp = useRef<number | null>(null);
   const closedTimestamp = useRef<number | null>(null);
@@ -72,20 +63,34 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const handleGameComplete = () => setGameCompleted(true);
 
-  // --- Lógica de inicio de terapia sin Supabase ---
-  const handleStartTherapy = () => {
+  // Función para actualizar datos de juegos desde componentes hijos
+  const updateGameStats = (gameType: string, stats: any) => {
+    if (gameType === 'orange-squeeze') {
+      setOrangesUsed(stats.orangesUsed || 0);
+      setJuiceUsed(stats.juiceUsed || 0);
+    }
+  };
+
+  // --- Lógica de inicio de terapia ---
+  const handleStartTherapy = async () => {
     onStartTimer();
     setGameMode('timer');
     setGameCompleted(false);
-    // Ejecutar prueba de inserción en Supabase
-    (async () => {
-      const session = await testInsertSession();
-      // opcional: puedes guardar el ID si quieres usarlo más adelante
-      // setCurrentSession(session?.id);
-    })();
+    
+    // Crear sesión en Supabase
+    const session = await SessionService.createSession({
+      tipo_actividad: 'terapia_guiada',
+      duracion_minutos: duration,
+      estado: 'active'
+    });
+    
+    if (session) {
+      setCurrentSessionId(session.id);
+    }
   };
 
-  const handleCancelTherapy = () => {
+  const handleCancelTherapy = async () => {
+    await saveTherapyData('cancelled');
     onCancel();
     resetTherapyData();
   };
@@ -100,16 +105,92 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setAverageClosing(null);
     setFastestOpening(null);
     setAverageOpening(null);
+    setCurrentSessionId(null);
+    setOrangesUsed(0);
+    setJuiceUsed(0);
     openTimestamp.current = null;
     closedTimestamp.current = null;
     lastState.current = null;
   };
 
-  const startGame = (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
+  // --- Función para guardar datos de terapia en Supabase ---
+  const saveTherapyData = async (state: 'completed' | 'cancelled') => {
+    if (!currentSessionId) return;
+
+    // Recopilar todos los datos según la estructura de la tabla
+    const therapyData = {
+      state: state,
+      duration: duration,
+      score: attempts.length, // Número de intentos como score
+      orange_used: orangesUsed,
+      juice_used: juiceUsed,
+      stats: {
+        // Stats: datos de apertura y cierre con promedios
+        closing_stats: {
+          attempts: closingTimes.length,
+          fastest: fastestClosing,
+          average: averageClosing,
+          times: closingTimes
+        },
+        opening_stats: {
+          attempts: openingTimes.length,
+          fastest: fastestOpening,
+          average: averageOpening,
+          times: openingTimes
+        },
+        combined_stats: {
+          total_attempts: attempts.length,
+          best_closing: fastestClosing,
+          best_opening: fastestOpening,
+          avg_closing: averageClosing,
+          avg_opening: averageOpening
+        }
+      },
+      details: attempts, // Historial completo de aperturas y cierres
+      extra_data: {
+        // Configuración de juegos
+        game_config: {
+          orange_juice_goal: targetGlasses,
+          enemy_speed: enemySpeed,
+          shot_speed: shotSpeed,
+          base_enemy_count: baseEnemyCount,
+          flappy_pipe_gap: flappyPipeGap
+        },
+        therapy_settings: {
+          duration_minutes: duration,
+          therapy_type: gameMode === 'timer' ? 'terapia_guiada' : gameMode,
+          start_time: new Date().toISOString()
+        }
+      }
+    };
+
+    await SessionService.updateSessionWithTherapyData(currentSessionId, therapyData);
+  };
+
+  const startGame = async (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
     setGameCompleted(false);
     setGameMode(mode);
+    
+    // Crear sesión para juegos
+    const session = await SessionService.createSession({
+      tipo_actividad: mode,
+      duracion_minutos: duration,
+      estado: 'active'
+    });
+    
+    if (session) {
+      setCurrentSessionId(session.id);
+    }
+    
     if (!isActive) onStartTimer();
   };
+
+  // --- Completar terapia cuando se acaba el tiempo ---
+  useEffect(() => {
+    if (timeLeft === 0 && isActive && currentSessionId) {
+      saveTherapyData('completed');
+    }
+  }, [timeLeft, isActive, currentSessionId]);
 
   // --- Registro de tiempos de mano ---
   useEffect(() => {
@@ -268,7 +349,13 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   const renderGameContent = () => {
     switch (gameMode) {
-      case 'orange-squeeze': return <OrangeSqueezeGame targetGlasses={targetGlasses} onComplete={handleGameComplete} />;
+      case 'orange-squeeze': return (
+        <OrangeSqueezeGame 
+          targetGlasses={targetGlasses} 
+          onComplete={handleGameComplete}
+          onStatsUpdate={(stats) => updateGameStats('orange-squeeze', stats)}
+        />
+      );
       case 'neurolink': return <NeuroLinkGame onComplete={handleGameComplete} />;
       case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} />;
       default: return null;

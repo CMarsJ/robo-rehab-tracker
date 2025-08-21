@@ -169,28 +169,28 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
         .from('sessions')
         .insert({
           user_id: user.id,
-          duracion_minutos: Math.round(gameDurationSeconds / 60),
-          tipo_actividad: 'flappy_bird',
-          estado: 'completed'
+          duration: Math.round(gameDurationSeconds / 60),
+          therapy_type: 'flappy_bird',
+          state: 'completed'
         })
         .select()
         .single();
         
       if (sessionError) throw sessionError;
       
-      // Crear registro del juego
-      const { error: gameError } = await supabase
-        .from('game_records')
-        .insert({
-          user_id: user.id,
-          session_id: session.id,
-          game_type: 'flappy_bird',
-          total_oranges: score, // Usar score como puntaje total
-          total_glasses: 1, // Una sola partida
-          average_oranges_per_minute: pointsPerSecond * 60 // Convertir a puntos por minuto para compatibilidad
-        });
+      // Update session with game stats  
+      const { error: gameRecordError } = await supabase
+        .from('sessions')
+        .update({
+          stats: {
+            score: score,
+            gameTime: gameDurationSeconds,
+            attempts: 1
+          }
+        })
+        .eq('id', session.id);
         
-      if (gameError) throw gameError;
+      if (gameRecordError) throw gameRecordError;
       
     } catch (error) {
       console.error('Error saving game data:', error);

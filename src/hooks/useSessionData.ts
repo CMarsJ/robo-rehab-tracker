@@ -27,16 +27,17 @@ export const useSessionData = () => {
 
     setLoading(true);
     try {
-      const result = await SessionService.getUserSessions({ pageSize, page, filters });
+      const sessionsResult = await SessionService.getUserSessions(pageSize);
+      const sessions = sessionsResult || [];
       
       if (append) {
-        setSessions(prev => [...prev, ...result.sessions]);
+        setSessions(prev => [...prev, ...sessions]);
       } else {
-        setSessions(result.sessions);
+        setSessions(sessions);
       }
       
-      setTotalCount(result.totalCount);
-      setHasMore(result.hasMore);
+      setTotalCount(sessions.length);
+      setHasMore(sessions.length >= pageSize);
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {

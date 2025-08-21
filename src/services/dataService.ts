@@ -14,8 +14,8 @@ export class DataService {
 
   // Session management
   static async createSession(
-    tipo_actividad: string, 
-    duracion_minutos: number, 
+    therapy_type: string, 
+    duration: number, 
     metrics?: Record<string, any>
   ): Promise<Session | null> {
     try {
@@ -26,16 +26,24 @@ export class DataService {
         .from('sessions')
         .insert({
           user_id: userId,
-          tipo_actividad,
-          duracion_minutos,
-          estado: 'active',
-          metrics: (metrics || {}) as any
-        } as any)
+          therapy_type,
+          duration,
+          state: 'active',
+          stats: (metrics || {}) as any
+        })
         .select()
         .single();
 
       if (error) throw error;
-      return data as unknown as Session;
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        fecha_inicio: data.start_time,
+        duracion_minutos: data.duration,
+        tipo_actividad: data.therapy_type,
+        estado: data.state,
+        created_at: data.start_time
+      } as Session;
     } catch (error) {
       console.error('Error creating session:', error);
       return null;
@@ -44,9 +52,16 @@ export class DataService {
 
   static async updateSession(sessionId: string, updates: Partial<Session>): Promise<boolean> {
     try {
+      const supabaseUpdates: any = {};
+      
+      if (updates.estado) supabaseUpdates.state = updates.estado;
+      if (updates.duracion_minutos) supabaseUpdates.duration = updates.duracion_minutos;
+      if (updates.tipo_actividad) supabaseUpdates.therapy_type = updates.tipo_actividad;
+      if (updates.metrics) supabaseUpdates.stats = updates.metrics;
+
       const { error } = await supabase
         .from('sessions')
-        .update(updates as any)
+        .update(supabaseUpdates)
         .eq('id', sessionId);
 
       return !error;
@@ -61,69 +76,81 @@ export class DataService {
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('start_time', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as unknown as Session[];
+      return ((data || []) as any[]).map(session => ({
+        id: session.id,
+        user_id: session.user_id,
+        fecha_inicio: session.start_time,
+        duracion_minutos: session.duration,
+        tipo_actividad: session.therapy_type,
+        estado: session.state,
+        created_at: session.start_time
+      })) as Session[];
     } catch (error) {
       console.error('Error fetching sessions:', error);
       return [];
     }
   }
 
-  // Therapy records
+  // Therapy records - Store in sessions table with extra_data
   static async createTherapyRecord(
     sessionId: string,
     effortData: EffortDataPoint[],
     metrics?: Partial<TherapyRecord>
   ): Promise<TherapyRecord | null> {
     try {
-      const userId = await this.getUserId();
-      if (!userId) return null;
-
-      const { data, error } = await supabase
-        .from('therapy_records')
-        .insert({
-          session_id: sessionId,
-          user_id: userId,
-          effort_data: (effortData as unknown) as any,
-          ...metrics
-        } as any)
-        .select()
-        .single();
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          extra_data: {
+            effort_data: effortData,
+            ...metrics
+          }
+        })
+        .eq('id', sessionId);
 
       if (error) throw error;
-      return data as unknown as TherapyRecord;
+      return {
+        id: sessionId,
+        session_id: sessionId,
+        user_id: '',
+        effort_data: effortData,
+        created_at: new Date().toISOString(),
+        ...metrics
+      } as TherapyRecord;
     } catch (error) {
       console.error('Error creating therapy record:', error);
       return null;
     }
   }
 
-  // Game records
+  // Game records - Store in sessions table
   static async createGameRecord(
     sessionId: string,
     gameType: string,
     gameData: Partial<GameRecord>
   ): Promise<GameRecord | null> {
     try {
-      const userId = await this.getUserId();
-      if (!userId) return null;
-
-      const { data, error } = await supabase
-        .from('game_records')
-        .insert({
-          session_id: sessionId,
-          user_id: userId,
-          game_type: gameType,
-          ...gameData
-        } as any)
-        .select()
-        .single();
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          stats: gameData,
+          therapy_type: gameType
+        })
+        .eq('id', sessionId);
 
       if (error) throw error;
-      return data as unknown as GameRecord;
+      return {
+        id: sessionId,
+        session_id: sessionId,
+        user_id: '',
+        game_type: gameType,
+        created_at: new Date().toISOString(),
+        ...gameData
+      } as GameRecord;
     } catch (error) {
       console.error('Error creating game record:', error);
       return null;
@@ -133,21 +160,25 @@ export class DataService {
   static async getGameRecords(gameType?: string, limit = 10): Promise<GameRecord[]> {
     try {
       let query = supabase
-        .from('game_records')
-        .select(`
-          *,
-          sessions!inner(fecha_inicio, duracion_minutos)
-        `)
-        .order('created_at', { ascending: false })
+        .from('sessions')
+        .select('*')
+        .order('start_time', { ascending: false })
         .limit(limit);
 
       if (gameType) {
-        query = query.eq('game_type', gameType);
+        query = query.eq('therapy_type', gameType);
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as GameRecord[];
+      return ((data || []) as any[]).map(session => ({
+        id: session.id,
+        session_id: session.id,
+        user_id: session.user_id,
+        game_type: session.therapy_type,
+        created_at: session.start_time,
+        ...(session.stats || {})
+      })) as GameRecord[];
     } catch (error) {
       console.error('Error fetching game records:', error);
       return [];

@@ -13,9 +13,10 @@ interface OrangeSqueezeGameProps {
     orangesPerMinute: number;
     averageFingerClosure: number;
   }) => void;
+  onStatsUpdate?: (stats: { orangesUsed: number; juiceUsed: number }) => void;
 }
 
-const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, onComplete }) => {
+const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, onComplete, onStatsUpdate }) => {
   const [orangesSqueezed, setOrangesSqueezed] = useState(0);
   const [glassesCompleted, setGlassesCompleted] = useState(0);
   const [lastSqueezeTime, setLastSqueezeTime] = useState(0);
@@ -60,6 +61,9 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
           setGlassesCompleted(newGlasses);
           playDrinkSound();
 
+          // Actualizar estadísticas en tiempo real
+          onStatsUpdate?.({ orangesUsed: newCount, juiceUsed: newGlasses });
+
           if (newGlasses >= targetGlasses && startTime) {
             const totalTimeMinutes = (currentTime - startTime) / (1000 * 60);
             const timePerGlass = totalTimeMinutes / newGlasses;
@@ -76,12 +80,15 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
               averageFingerClosure
             });
           }
+        } else {
+          // Actualizar estadísticas aunque no se complete un vaso
+          onStatsUpdate?.({ orangesUsed: newCount, juiceUsed: glassesCompleted });
         }
 
         return newCount;
       });
     }
-  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, canSqueeze, startTime, onComplete]);
+  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, canSqueeze, startTime, onComplete, onStatsUpdate]);
 
   const currentOrangesInGlass = orangesSqueezed % 4;
   const progressPercent = (currentOrangesInGlass / 4) * 100;

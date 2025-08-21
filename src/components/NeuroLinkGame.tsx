@@ -272,27 +272,27 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete }) => {
         .from('sessions')
         .insert({
           user_id: user.id,
-          duracion_minutos: Math.round(duration / 60),
-          tipo_actividad: 'neurolink',
-          estado: defeated ? 'failed' : 'completed'
+          duration: Math.round(duration / 60),
+          therapy_type: 'neurolink',
+          state: defeated ? 'failed' : 'completed'
         })
         .select()
         .single();
 
       if (sessionError) throw sessionError;
 
-      const { error: gameError } = await supabase
-        .from('game_records')
-        .insert({
-          user_id: user.id,
-          session_id: session.id,
-          game_type: 'neurolink',
-          total_oranges: score,
-          total_glasses: wave + extraWaves,
-          average_oranges_per_minute: ppm
-        });
+      const { error: gameRecordError } = await supabase
+        .from('sessions')
+        .update({
+          stats: {
+            enemies_defeated: score,
+            duration: Math.round(duration),
+            therapy_type: 'neurolink'
+          }
+        })
+        .eq('id', session.id);
 
-      if (gameError) throw gameError;
+      if (gameRecordError) throw gameRecordError;
     } catch (error) {
       console.error('Error saving game data:', error);
     }
