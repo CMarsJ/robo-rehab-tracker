@@ -4,605 +4,177 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
-  }
   public: {
     Tables: {
-      game_records: {
-        Row: {
-          attempts_count: number | null
-          average_oranges_per_minute: number | null
-          avg_close_time: number | null
-          avg_open_time: number | null
-          best_close_time: number | null
-          best_open_time: number | null
-          close_times: number[] | null
-          created_at: string
-          game_type: string
-          id: string
-          open_times: number[] | null
-          session_id: string
-          total_glasses: number | null
-          total_oranges: number | null
-          user_id: string
-        }
-        Insert: {
-          attempts_count?: number | null
-          average_oranges_per_minute?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          close_times?: number[] | null
-          created_at?: string
-          game_type: string
-          id?: string
-          open_times?: number[] | null
-          session_id: string
-          total_glasses?: number | null
-          total_oranges?: number | null
-          user_id: string
-        }
-        Update: {
-          attempts_count?: number | null
-          average_oranges_per_minute?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          close_times?: number[] | null
-          created_at?: string
-          game_type?: string
-          id?: string
-          open_times?: number[] | null
-          session_id?: string
-          total_glasses?: number | null
-          total_oranges?: number | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "v_game_scores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "v_top5_rankings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      game_settings: {
-        Row: {
-          configuracion_inicio: Json | null
-          created_at: string
-          enemy_speed: number
-          espacio_pilares_flappy: number
-          id: string
-          intervalo_disparo_ms: number
-          modo_oscuro: boolean
-          numero_base_enemigos: number
-          player_shot_speed: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          configuracion_inicio?: Json | null
-          created_at?: string
-          enemy_speed?: number
-          espacio_pilares_flappy?: number
-          id?: string
-          intervalo_disparo_ms?: number
-          modo_oscuro?: boolean
-          numero_base_enemigos?: number
-          player_shot_speed?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          configuracion_inicio?: Json | null
-          created_at?: string
-          enemy_speed?: number
-          espacio_pilares_flappy?: number
-          id?: string
-          intervalo_disparo_ms?: number
-          modo_oscuro?: boolean
-          numero_base_enemigos?: number
-          player_shot_speed?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          display_name: string | null
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      rankings: {
-        Row: {
-          calculated_at: string
-          created_at: string
-          details: Json | null
-          game_type: string
-          id: string
-          position: number | null
-          score: number
-          user_id: string
-        }
-        Insert: {
-          calculated_at?: string
-          created_at?: string
-          details?: Json | null
-          game_type: string
-          id?: string
-          position?: number | null
-          score: number
-          user_id: string
-        }
-        Update: {
-          calculated_at?: string
-          created_at?: string
-          details?: Json | null
-          game_type?: string
-          id?: string
-          position?: number | null
-          score?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
+      /** Tabla de sesiones / actividades de terapia */
       sessions: {
         Row: {
-          attempts_count: number | null
-          average_closing: number | null
-          average_opening: number | null
-          avg_close_time: number | null
-          avg_open_time: number | null
-          best_close_time: number | null
-          best_open_time: number | null
-          closing_times: number[] | null
-          created_at: string
-          duracion_minutos: number
-          duration_ms: number | null
-          ended_at: string | null
-          estado: string
-          fastest_closing: number | null
-          fastest_opening: number | null
-          fecha_inicio: string
-          game_type: string | null
-          id: string
-          metrics: Json | null
-          mode: string | null
-          notes: string | null
-          opening_times: number[] | null
-          started_at: string | null
-          therapy_type: string | null
-          tipo_actividad: string
-          user_id: string
-        }
+          id: string;
+          user_id: string;
+          therapy_type: string;
+          start_time: string;
+          duration: number;
+          state: string;
+          score: number;
+          orange_used: number;
+          juice_used: number;
+          stats: Json;
+          details: Json;
+          extra_data: Json;
+        };
         Insert: {
-          attempts_count?: number | null
-          average_closing?: number | null
-          average_opening?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          closing_times?: number[] | null
-          created_at?: string
-          duracion_minutos: number
-          duration_ms?: number | null
-          ended_at?: string | null
-          estado?: string
-          fastest_closing?: number | null
-          fastest_opening?: number | null
-          fecha_inicio?: string
-          game_type?: string | null
-          id?: string
-          metrics?: Json | null
-          mode?: string | null
-          notes?: string | null
-          opening_times?: number[] | null
-          started_at?: string | null
-          therapy_type?: string | null
-          tipo_actividad: string
-          user_id: string
-        }
-        Update: {
-          attempts_count?: number | null
-          average_closing?: number | null
-          average_opening?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          closing_times?: number[] | null
-          created_at?: string
-          duracion_minutos?: number
-          duration_ms?: number | null
-          ended_at?: string | null
-          estado?: string
-          fastest_closing?: number | null
-          fastest_opening?: number | null
-          fecha_inicio?: string
-          game_type?: string | null
-          id?: string
-          metrics?: Json | null
-          mode?: string | null
-          notes?: string | null
-          opening_times?: number[] | null
-          started_at?: string | null
-          therapy_type?: string | null
-          tipo_actividad?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      therapy_records: {
-        Row: {
-          attempts_count: number | null
-          avg_close_time: number | null
-          avg_open_time: number | null
-          best_close_time: number | null
-          best_open_time: number | null
-          close_times: number[] | null
-          created_at: string
-          effort_data: Json | null
-          id: string
-          open_times: number[] | null
-          session_id: string | null
-          user_id: string
-        }
-        Insert: {
-          attempts_count?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          close_times?: number[] | null
-          created_at?: string
-          effort_data?: Json | null
-          id?: string
-          open_times?: number[] | null
-          session_id?: string | null
-          user_id: string
-        }
-        Update: {
-          attempts_count?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          close_times?: number[] | null
-          created_at?: string
-          effort_data?: Json | null
-          id?: string
-          open_times?: number[] | null
-          session_id?: string | null
-          user_id?: string
-        }
+          id?: string;
+          user_id: string;
+          therapy_type: string;
+          start_time?: string;
+          duration: number;
+          state?: string;
+          score?: number;
+          orange_used?: number;
+          juice_used?: number;
+          stats?: Json;
+          details?: Json;
+          extra_data?: Json;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          therapy_type: string;
+          start_time: string;
+          duration: number;
+          state: string;
+          score: number;
+          orange_used: number;
+          juice_used: number;
+          stats: Json;
+          details: Json;
+          extra_data: Json;
+        }>;
         Relationships: [
           {
-            foreignKeyName: "therapy_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "therapy_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "v_game_scores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "therapy_records_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "v_top5_rankings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      v_game_scores: {
+            foreignKeyName: "sessions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      /** Tabla de ranking de juegos */
+      rankings: {
         Row: {
-          attempts_count: number | null
-          average_closing: number | null
-          average_opening: number | null
-          avg_close_time: number | null
-          avg_open_time: number | null
-          best_close_time: number | null
-          best_open_time: number | null
-          closing_times: number[] | null
-          created_at: string | null
-          duracion_minutos: number | null
-          duration_ms: number | null
-          ended_at: string | null
-          estado: string | null
-          fastest_closing: number | null
-          fastest_opening: number | null
-          fecha_inicio: string | null
-          game_type: string | null
-          id: string | null
-          metrics: Json | null
-          mode: string | null
-          notes: string | null
-          opening_times: number[] | null
-          rank_score: number | null
-          started_at: string | null
-          therapy_type: string | null
-          tipo_actividad: string | null
-          user_id: string | null
-        }
+          id: string;
+          user_id: string;
+          game_type: string;
+          score: number;
+          position: number | null;
+          details: Json | null;
+          created_at: string;
+          calculated_at: string;
+        };
         Insert: {
-          attempts_count?: number | null
-          average_closing?: number | null
-          average_opening?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          closing_times?: number[] | null
-          created_at?: string | null
-          duracion_minutos?: number | null
-          duration_ms?: number | null
-          ended_at?: string | null
-          estado?: string | null
-          fastest_closing?: number | null
-          fastest_opening?: number | null
-          fecha_inicio?: string | null
-          game_type?: string | null
-          id?: string | null
-          metrics?: Json | null
-          mode?: string | null
-          notes?: string | null
-          opening_times?: number[] | null
-          rank_score?: never
-          started_at?: string | null
-          therapy_type?: string | null
-          tipo_actividad?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          attempts_count?: number | null
-          average_closing?: number | null
-          average_opening?: number | null
-          avg_close_time?: number | null
-          avg_open_time?: number | null
-          best_close_time?: number | null
-          best_open_time?: number | null
-          closing_times?: number[] | null
-          created_at?: string | null
-          duracion_minutos?: number | null
-          duration_ms?: number | null
-          ended_at?: string | null
-          estado?: string | null
-          fastest_closing?: number | null
-          fastest_opening?: number | null
-          fecha_inicio?: string | null
-          game_type?: string | null
-          id?: string | null
-          metrics?: Json | null
-          mode?: string | null
-          notes?: string | null
-          opening_times?: number[] | null
-          rank_score?: never
-          started_at?: string | null
-          therapy_type?: string | null
-          tipo_actividad?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      v_top5_rankings: {
+          id?: string;
+          user_id: string;
+          game_type: string;
+          score: number;
+          position?: number | null;
+          details?: Json | null;
+          created_at?: string;
+          calculated_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          game_type: string;
+          score: number;
+          position: number | null;
+          details: Json | null;
+          created_at: string;
+          calculated_at: string;
+        }>;
+        Relationships: [];
+      };
+
+      /** Tabla de perfiles de usuario */
+      profiles: {
         Row: {
-          attempts_count: number | null
-          average_closing: number | null
-          average_opening: number | null
-          avg_close_time: number | null
-          avg_open_time: number | null
-          best_close_time: number | null
-          best_open_time: number | null
-          closing_times: number[] | null
-          created_at: string | null
-          duracion_minutos: number | null
-          duration_ms: number | null
-          ended_at: string | null
-          estado: string | null
-          fastest_closing: number | null
-          fastest_opening: number | null
-          fecha_inicio: string | null
-          game_type: string | null
-          id: string | null
-          metrics: Json | null
-          mode: string | null
-          notes: string | null
-          opening_times: number[] | null
-          rank_score: number | null
-          rn: number | null
-          started_at: string | null
-          therapy_type: string | null
-          tipo_actividad: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+          id: string;
+          user_id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const
+      /** Tabla de configuraciones de juego */
+      game_settings: {
+        Row: {
+          id: string;
+          user_id: string;
+          configuracion_inicio: Json | null;
+          enemy_speed: number;
+          espacio_pilares_flappy: number;
+          intervalo_disparo_ms: number;
+          modo_oscuro: boolean;
+          numero_base_enemigos: number;
+          player_shot_speed: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          configuracion_inicio?: Json | null;
+          enemy_speed: number;
+          espacio_pilares_flappy: number;
+          intervalo_disparo_ms: number;
+          modo_oscuro: boolean;
+          numero_base_enemigos: number;
+          player_shot_speed: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          user_id: string;
+          configuracion_inicio: Json | null;
+          enemy_speed: number;
+          espacio_pilares_flappy: number;
+          intervalo_disparo_ms: number;
+          modo_oscuro: boolean;
+          numero_base_enemigos: number;
+          player_shot_speed: number;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+    };
+    Views: {};
+    Functions: {};
+    Enums: {};
+    CompositeTypes: {};
+  };
+};
