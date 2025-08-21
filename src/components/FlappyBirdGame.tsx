@@ -33,7 +33,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const pipeIdRef = useRef(0);
 
-  // Inicializar juego
+  // Inicializar juego f
   const initGame = useCallback(() => {
     setScore(0);
     setBirdY(250);
