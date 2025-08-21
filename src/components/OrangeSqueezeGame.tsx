@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { DataService } from '@/services/dataService';
+import { SessionService } from '@/services/sessionService';
 
 interface OrangeSqueezeGameProps {
   targetGlasses: number;
@@ -86,11 +86,12 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
       if (!user || !startTime) return;
       
       try {
-        const session = await DataService.createSession(
-          'orange_squeeze',
-          targetGlasses * 2, // estimación de duración basada en vasos objetivo
-          { targetGlasses }
-        );
+        const session = await SessionService.saveGameSession({
+          game_type: 'orange_squeeze',
+          metrics: { targetGlasses },
+          started_at: new Date().toISOString(),
+          duration_ms: targetGlasses * 2 * 60 * 1000 // estimación
+        });
         
         if (session) {
           setCurrentSession(session.id);
@@ -165,10 +166,12 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
       const timePerOrange = totalTimeMinutes / totalOranges;
       const orangesPerMinute = totalOranges / totalTimeMinutes;
 
-      // Actualizar sesión con duración real
-      await DataService.updateSession(currentSession, {
+      // Actualizar sesión final con SessionService
+      await SessionService.updateSession(currentSession, {
         duracion_minutos: Math.round(totalTimeMinutes),
         estado: 'completed',
+        ended_at: new Date(endTime).toISOString(),
+        duration_ms: endTime - startTime,
         metrics: {
           targetGlasses,
           glassesCompleted: glasses,
@@ -179,27 +182,8 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
         }
       });
 
-      // Crear registro del juego
-      const gameRecord = await DataService.createGameRecord(currentSession, 'orange_squeeze', {
-        total_oranges: totalOranges,
-        total_glasses: glasses,
-        average_oranges_per_minute: orangesPerMinute
-      });
-
-      if (gameRecord) {
-        console.log('Registro de juego creado:', gameRecord);
-      }
-
-      // Actualizar ranking si es mejor puntaje
-      await DataService.updateRanking('orange_squeeze', totalOranges, {
-        glasses,
-        timePerGlass,
-        timePerOrange,
-        totalTime: totalTimeMinutes,
-        date: new Date().toISOString()
-      });
-
-      console.log('Datos guardados en Supabase exitosamente');
+      // Los rankings se manejan automáticamente por la vista v_top5_rankings
+      console.log('Orange Squeeze game completed and saved');
       
       // También mantener compatibilidad con localStorage para migración gradual
       const today = new Date().toLocaleDateString();

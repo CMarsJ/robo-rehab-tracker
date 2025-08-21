@@ -10,7 +10,7 @@ import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { DataService } from '@/services/dataService';
+import { SessionService } from '@/services/sessionService';
 
 interface TherapyOverlayProps {
   timeLeft: number;
@@ -69,12 +69,13 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     if (!user) return;
     
     try {
-      // Crear sesión de terapia en Supabase
-      const session = await DataService.createSession(
-        'terapia_guiada',
-        duration,
-        { targetDuration: duration }
-      );
+      // Crear sesión de terapia con SessionService
+      const session = await SessionService.saveTherapyData({
+        therapy_type: 'terapia_guiada',
+        timer: {},
+        started_at: new Date().toISOString(),
+        duration_ms: duration * 60 * 1000
+      });
       
       if (session) {
         setCurrentSession(session.id);
@@ -96,9 +97,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       try {
         const actualDuration = Math.round((duration * 60 - timeLeft) / 60); // minutos transcurridos
         
-        await DataService.updateSession(currentSession, {
+        await SessionService.updateSession(currentSession, {
           duracion_minutos: actualDuration,
           estado: 'cancelled',
+          ended_at: new Date().toISOString(),
           metrics: {
             targetDuration: duration,
             completedDuration: actualDuration,
@@ -144,23 +146,23 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     if (!currentSession || !user) return;
 
     try {
-      const therapyRecord = await DataService.createTherapyRecord(
-        currentSession,
-        [], // effort_data - puede ser expandido más tarde
-        {
+      // Save complete therapy data with SessionService
+      await SessionService.saveTherapyData({
+        therapy_type: 'terapia_guiada',
+        timer: {
           best_open_time: fastestOpening ? fastestOpening / 1000 : undefined,
           best_close_time: fastestClosing ? fastestClosing / 1000 : undefined,
           avg_open_time: averageOpening ? averageOpening / 1000 : undefined,
           avg_close_time: averageClosing ? averageClosing / 1000 : undefined,
-          open_times: openingTimes.map(t => t / 1000), // convertir a segundos
-          close_times: closingTimes.map(t => t / 1000), // convertir a segundos
+          opening_times: openingTimes.map(t => t / 1000),
+          closing_times: closingTimes.map(t => t / 1000),
           attempts_count: attempts.length
-        }
-      );
-
-      if (therapyRecord) {
-        console.log('Registro de terapia guardado:', therapyRecord);
-      }
+        },
+        started_at: new Date(Date.now() - (duration * 60 * 1000)).toISOString(),
+        ended_at: new Date().toISOString(),
+        duration_ms: duration * 60 * 1000
+      });
+      console.log('Therapy data saved successfully');
     } catch (error) {
       console.error('Error guardando datos de terapia:', error);
     }
@@ -171,9 +173,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     const handleSessionComplete = async () => {
       if (timeLeft === 0 && currentSession && user && isActive) {
         try {
-          // Actualizar sesión como completada
-          await DataService.updateSession(currentSession, {
+          // Actualizar sesión como completada con SessionService
+          await SessionService.updateSession(currentSession, {
             estado: 'completed',
+            ended_at: new Date().toISOString(),
             metrics: {
               targetDuration: duration,
               completedDuration: duration,

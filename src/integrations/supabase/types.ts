@@ -74,6 +74,20 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_game_scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_top5_rankings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       game_settings: {
@@ -180,35 +194,86 @@ export type Database = {
       }
       sessions: {
         Row: {
+          attempts_count: number | null
+          average_closing: number | null
+          average_opening: number | null
+          avg_close_time: number | null
+          avg_open_time: number | null
+          best_close_time: number | null
+          best_open_time: number | null
+          closing_times: number[] | null
           created_at: string
           duracion_minutos: number
+          duration_ms: number | null
+          ended_at: string | null
           estado: string
+          fastest_closing: number | null
+          fastest_opening: number | null
           fecha_inicio: string
+          game_type: string | null
           id: string
           metrics: Json | null
+          mode: string | null
           notes: string | null
+          opening_times: number[] | null
+          started_at: string | null
+          therapy_type: string | null
           tipo_actividad: string
           user_id: string
         }
         Insert: {
+          attempts_count?: number | null
+          average_closing?: number | null
+          average_opening?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          closing_times?: number[] | null
           created_at?: string
           duracion_minutos: number
+          duration_ms?: number | null
+          ended_at?: string | null
           estado?: string
+          fastest_closing?: number | null
+          fastest_opening?: number | null
           fecha_inicio?: string
+          game_type?: string | null
           id?: string
           metrics?: Json | null
+          mode?: string | null
           notes?: string | null
+          opening_times?: number[] | null
+          started_at?: string | null
+          therapy_type?: string | null
           tipo_actividad: string
           user_id: string
         }
         Update: {
+          attempts_count?: number | null
+          average_closing?: number | null
+          average_opening?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          closing_times?: number[] | null
           created_at?: string
           duracion_minutos?: number
+          duration_ms?: number | null
+          ended_at?: string | null
           estado?: string
+          fastest_closing?: number | null
+          fastest_opening?: number | null
           fecha_inicio?: string
+          game_type?: string | null
           id?: string
           metrics?: Json | null
+          mode?: string | null
           notes?: string | null
+          opening_times?: number[] | null
+          started_at?: string | null
+          therapy_type?: string | null
           tipo_actividad?: string
           user_id?: string
         }
@@ -265,11 +330,147 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "therapy_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_game_scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapy_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_top5_rankings"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      v_game_scores: {
+        Row: {
+          attempts_count: number | null
+          average_closing: number | null
+          average_opening: number | null
+          avg_close_time: number | null
+          avg_open_time: number | null
+          best_close_time: number | null
+          best_open_time: number | null
+          closing_times: number[] | null
+          created_at: string | null
+          duracion_minutos: number | null
+          duration_ms: number | null
+          ended_at: string | null
+          estado: string | null
+          fastest_closing: number | null
+          fastest_opening: number | null
+          fecha_inicio: string | null
+          game_type: string | null
+          id: string | null
+          metrics: Json | null
+          mode: string | null
+          notes: string | null
+          opening_times: number[] | null
+          rank_score: number | null
+          started_at: string | null
+          therapy_type: string | null
+          tipo_actividad: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attempts_count?: number | null
+          average_closing?: number | null
+          average_opening?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          closing_times?: number[] | null
+          created_at?: string | null
+          duracion_minutos?: number | null
+          duration_ms?: number | null
+          ended_at?: string | null
+          estado?: string | null
+          fastest_closing?: number | null
+          fastest_opening?: number | null
+          fecha_inicio?: string | null
+          game_type?: string | null
+          id?: string | null
+          metrics?: Json | null
+          mode?: string | null
+          notes?: string | null
+          opening_times?: number[] | null
+          rank_score?: never
+          started_at?: string | null
+          therapy_type?: string | null
+          tipo_actividad?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attempts_count?: number | null
+          average_closing?: number | null
+          average_opening?: number | null
+          avg_close_time?: number | null
+          avg_open_time?: number | null
+          best_close_time?: number | null
+          best_open_time?: number | null
+          closing_times?: number[] | null
+          created_at?: string | null
+          duracion_minutos?: number | null
+          duration_ms?: number | null
+          ended_at?: string | null
+          estado?: string | null
+          fastest_closing?: number | null
+          fastest_opening?: number | null
+          fecha_inicio?: string | null
+          game_type?: string | null
+          id?: string | null
+          metrics?: Json | null
+          mode?: string | null
+          notes?: string | null
+          opening_times?: number[] | null
+          rank_score?: never
+          started_at?: string | null
+          therapy_type?: string | null
+          tipo_actividad?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_top5_rankings: {
+        Row: {
+          attempts_count: number | null
+          average_closing: number | null
+          average_opening: number | null
+          avg_close_time: number | null
+          avg_open_time: number | null
+          best_close_time: number | null
+          best_open_time: number | null
+          closing_times: number[] | null
+          created_at: string | null
+          duracion_minutos: number | null
+          duration_ms: number | null
+          ended_at: string | null
+          estado: string | null
+          fastest_closing: number | null
+          fastest_opening: number | null
+          fecha_inicio: string | null
+          game_type: string | null
+          id: string | null
+          metrics: Json | null
+          mode: string | null
+          notes: string | null
+          opening_times: number[] | null
+          rank_score: number | null
+          rn: number | null
+          started_at: string | null
+          therapy_type: string | null
+          tipo_actividad: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
