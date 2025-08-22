@@ -89,10 +89,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     
     // Crear sesión en Supabase
     const session = await SessionService.createSession({
-      tipo_actividad: 'terapia_guiada',
-      duracion_minutos: duration,
-      estado: 'active'
+      therapy_type: 'terapia_guiada',
+      duration: duration,
+      state: 'active'
     });
+
     
     if (session) {
       setCurrentSessionId(session.id);
@@ -215,9 +216,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     
     // Crear sesión para juegos
     const session = await SessionService.createSession({
-      tipo_actividad: mode,
-      duracion_minutos: duration,
-      estado: 'active'
+      therapy_type: mode,
+      duration: duration,
+      state: 'active'
     });
     
     if (session) {
