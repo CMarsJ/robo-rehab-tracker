@@ -61,7 +61,17 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const closedTimestamp = useRef<number | null>(null);
   const lastState = useRef<'open' | 'closed' | null>(null);
 
-  const handleGameComplete = () => setGameCompleted(true);
+  const handleGameComplete = (gameData?: any) => {
+    setGameCompleted(true);
+    
+    // Si hay datos de juego, actualizar estadísticas
+    if (gameData) {
+      if (gameMode === 'orange-squeeze') {
+        setOrangesUsed(gameData.orange_used || 0);
+        setJuiceUsed(gameData.juice_used || 0);
+      }
+    }
+  };
 
   // Función para actualizar datos de juegos desde componentes hijos
   const updateGameStats = (gameType: string, stats: any) => {
@@ -125,41 +135,73 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       orange_used: orangesUsed,
       juice_used: juiceUsed,
       stats: {
-        // Stats: datos de apertura y cierre con promedios
-        closing_stats: {
-          attempts: closingTimes.length,
-          fastest: fastestClosing,
-          average: averageClosing,
-          times: closingTimes
+        // Stats: datos de apertura y cierre con promedios y mejores tiempos
+        hand_metrics: {
+          closing: {
+            attempts: closingTimes.length,
+            fastest_time_ms: fastestClosing,
+            average_time_ms: averageClosing,
+            all_times: closingTimes
+          },
+          opening: {
+            attempts: openingTimes.length,
+            fastest_time_ms: fastestOpening,
+            average_time_ms: averageOpening,
+            all_times: openingTimes
+          }
         },
-        opening_stats: {
-          attempts: openingTimes.length,
-          fastest: fastestOpening,
-          average: averageOpening,
-          times: openingTimes
-        },
-        combined_stats: {
-          total_attempts: attempts.length,
-          best_closing: fastestClosing,
-          best_opening: fastestOpening,
-          avg_closing: averageClosing,
-          avg_opening: averageOpening
+        game_metrics: {
+          total_oranges: orangesUsed,
+          total_glasses: juiceUsed,
+          completion_rate: gameMode === 'orange-squeeze' ? (juiceUsed / targetGlasses) * 100 : 0
         }
       },
-      details: attempts, // Historial completo de aperturas y cierres
+      details: {
+        // Historial completo de aperturas y cierres de la mano
+        attempts_history: attempts.map((attempt, index) => ({
+          attempt_number: index + 1,
+          closing_time_ms: attempt.closingTime,
+          opening_time_ms: attempt.openingTime,
+          total_time_ms: attempt.totalTime,
+          timestamp: new Date().toISOString()
+        })),
+        raw_data: {
+          all_closing_times: closingTimes,
+          all_opening_times: openingTimes,
+          total_attempts: attempts.length
+        }
+      },
       extra_data: {
-        // Configuración de juegos
-        game_config: {
-          orange_juice_goal: targetGlasses,
-          enemy_speed: enemySpeed,
-          shot_speed: shotSpeed,
-          base_enemy_count: baseEnemyCount,
-          flappy_pipe_gap: flappyPipeGap
+        // Vector con datos de configuración de los juegos
+        game_configurations: {
+          orange_squeeze: {
+            target_glasses: targetGlasses,
+            oranges_per_glass: 4
+          },
+          neurolink: {
+            enemy_speed: enemySpeed,
+            shot_speed: shotSpeed,
+            base_enemy_count: baseEnemyCount
+          },
+          flappy_bird: {
+            pipe_gap: flappyPipeGap
+          }
         },
-        therapy_settings: {
+        therapy_session: {
+          mode: gameMode,
           duration_minutes: duration,
           therapy_type: gameMode === 'timer' ? 'terapia_guiada' : gameMode,
-          start_time: new Date().toISOString()
+          start_time: new Date().toISOString(),
+          therapy_active: isTherapyActive,
+          hands_active: {
+            left_hand: leftHand.active,
+            right_hand: rightHand.active
+          }
+        },
+        performance_summary: {
+          completion_status: state,
+          total_session_time: duration * 60 * 1000, // en ms
+          effective_therapy_time: (duration * 60 * 1000) - (timeLeft * 1000) // tiempo realmente usado
         }
       }
     };
@@ -352,7 +394,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       case 'orange-squeeze': return (
         <OrangeSqueezeGame 
           targetGlasses={targetGlasses} 
-          onComplete={handleGameComplete}
+          onComplete={(data) => handleGameComplete(data)}
           onStatsUpdate={(stats) => updateGameStats('orange-squeeze', stats)}
         />
       );
