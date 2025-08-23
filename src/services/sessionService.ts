@@ -1,93 +1,172 @@
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from '@/integrations/supabase/client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY
-);
+export interface SessionData {
+  therapy_type: string;
+  duration: number;
+  state: 'completed' | 'cancelled' | 'active';
+  score?: number;
+  orange_used?: number;
+  juice_used?: number;
+  stats?: {
+    openingData: number[];
+    closingData: number[];
+    averageOpening: number;
+    averageClosing: number;
+    bestAverageOpening: number;
+    bestAverageClosing: number;
+  };
+  details?: {
+    openingHistory: number[];
+    closingHistory: number[];
+    timestamps: string[];
+  };
+  extra_date?: any; // Configuración de juegos o null para terapia guiada
+}
 
-export default function SessionManager({ userId }) {
-  const [sessions, setSessions] = useState([]);
+export interface SessionResponse {
+  id: string;
+  user_id: string;
+  therapy_type: string;
+  start_time: string;
+  duration: number;
+  state: string;
+  score: number;
+  orange_used: number;
+  juice_used: number;
+  stats: any;
+  details: any;
+  extra_data: any;
+}
 
-  // Guardar nueva sesión
-  const saveSession = async (sessionData) => {
-    const { error } = await supabase.from("sessions").insert([
-      {
+export class SessionService {
+  private static async getUserId(): Promise<string | null> {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user) {
+      console.error('No authenticated user found:', error);
+      return null;
+    }
+    return data.user.id;
+  }
+
+  static async createSession(sessionData: SessionData): Promise<SessionResponse | null> {
+    try {
+      const userId = await this.getUserId();
+      if (!userId) {
+        console.error('Usuario no autenticado');
+        return null;
+      }
+
+      const { data, error } = await supabase.from('sessions').insert({
         user_id: userId,
         therapy_type: sessionData.therapy_type,
-        start_time: sessionData.start_time,
+        start_time: new Date().toISOString(),
         duration: sessionData.duration,
         state: sessionData.state,
-        score: sessionData.score,
-        orange_used: sessionData.orange_used,
-        juice_used: sessionData.juice_used,
-        stats: sessionData.stats,     // JSON
-        details: sessionData.details, // JSON
-        extra_date: sessionData.extra_date,
-      },
-    ]);
+        score: sessionData.score || 0,
+        orange_used: sessionData.orange_used || 0,
+        juice_used: sessionData.juice_used || 0,
+        stats: sessionData.stats || {},
+        details: sessionData.details || {},
+        extra_data: sessionData.extra_date || null
+      }).select().single();
 
-    if (error) {
-      console.error("Error al guardar la sesión:", error);
-    } else {
-      console.log("Sesión guardada correctamente ✅");
-      fetchSessions(); // recargar historial
+      if (error) {
+        console.error('Error al guardar la sesión:', error);
+        return null;
+      }
+
+      console.log('Sesión guardada correctamente ✅');
+      return data as SessionResponse;
+    } catch (error) {
+      console.error('Error en createSession:', error);
+      return null;
     }
-  };
+  }
 
-  // Consultar últimas 6 sesiones
-  const fetchSessions = async () => {
-    const { data, error } = await supabase
-      .from("sessions")
-      .select("*")
-      .eq("user_id", userId)
-      .order("start_time", { ascending: false })
-      .limit(6);
+  static async getUserSessions(limit = 6): Promise<SessionResponse[]> {
+    try {
+      const userId = await this.getUserId();
+      if (!userId) return [];
 
-    if (error) {
-      console.error("Error al cargar sesiones:", error);
-    } else {
-      setSessions(data);
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('start_time', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error al cargar sesiones:', error);
+        return [];
+      }
+
+      return (data || []) as SessionResponse[];
+    } catch (error) {
+      console.error('Error en getUserSessions:', error);
+      return [];
     }
-  };
+  }
 
-  useEffect(() => {
-    if (userId) {
-      fetchSessions();
+  static async updateSessionState(sessionId: string, state: 'completed' | 'cancelled'): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({ state })
+        .eq('id', sessionId);
+
+      return !error;
+    } catch (error) {
+      console.error('Error al actualizar estado de sesión:', error);
+      return false;
     }
-  }, [userId]);
+  }
 
-  return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Historial de Sesiones</h2>
-      <ul>
-        {sessions.map((s) => (
-          <li key={s.id} className="border-b py-2">
-            <strong>{s.therapy_type}</strong> - {s.duration} min - Score: {s.score}
-          </li>
-        ))}
-      </ul>
+  static async updateSessionWithTherapyData(sessionId: string, therapyData: any): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          state: therapyData.state,
+          score: therapyData.score,
+          orange_used: therapyData.orange_used,
+          juice_used: therapyData.juice_used,
+          stats: therapyData.stats,
+          details: therapyData.details,
+          extra_data: therapyData.extra_data
+        })
+        .eq('id', sessionId);
 
-      {/* Ejemplo para guardar una sesión */}
-      <button
-        className="bg-green-500 text-white px-4 py-2 mt-4 rounded"
-        onClick={() =>
-          saveSession({
-            therapy_type: "OrangeSqueeze",
-            start_time: new Date().toISOString(),
-            duration: 15,
-            state: "completed",
-            score: 120,
-            orange_used: 5,
-            juice_used: 3,
-            stats: { presses: 50, accuracy: 92 }, // JSON
-            details: { notes: "Sesión de prueba" }, // JSON
-            extra_date: new Date().toISOString(),
-          })
-        }
-      >
-        Guardar Sesión de Prueba
-      </button>
-    </div>
-  );
+      if (error) {
+        console.error('Error al actualizar datos de terapia:', error);
+        return false;
+      }
+
+      console.log('Datos de terapia actualizados correctamente ✅');
+      return true;
+    } catch (error) {
+      console.error('Error en updateSessionWithTherapyData:', error);
+      return false;
+    }
+  }
+
+  static async getTop5ByGame(gameType: string): Promise<SessionResponse[]> {
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('therapy_type', gameType)
+        .order('score', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error('Error al obtener rankings:', error);
+        return [];
+      }
+
+      return (data || []) as SessionResponse[];
+    } catch (error) {
+      console.error('Error en getTop5ByGame:', error);
+      return [];
+    }
+  }
 }

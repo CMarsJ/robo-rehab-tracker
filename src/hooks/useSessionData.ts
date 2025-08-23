@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { SessionService } from '@/services/sessionService';
+import { SessionService, SessionResponse } from '@/services/sessionService';
 import { Session, GameScore } from '@/types/database';
 
 export const useSessionData = () => {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -72,7 +72,15 @@ export const useRankings = (gameType?: string) => {
     setLoading(true);
     try {
       const result = await SessionService.getTop5ByGame(gameType);
-      setRankings(result);
+      // Mapear SessionResponse a GameScore
+      const mappedRankings: GameScore[] = result.map(session => ({
+        id: session.id,
+        user_id: session.user_id,
+        game_type: session.therapy_type,
+        score: session.score || 0,
+        created_at: session.start_time
+      }));
+      setRankings(mappedRankings);
     } catch (error) {
       console.error('Error loading rankings:', error);
     } finally {

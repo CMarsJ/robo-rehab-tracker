@@ -107,9 +107,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           const newCounter = prev + 1;
           if (newCounter >= 60 && (leftHand.active || rightHand.active)) {
             const effortPoint: EffortDataPoint = {
-              time: new Date().toISOString(),
-              paretica: rightHand.effort,
-              noParetica: leftHand.effort
+              timestamp: Date.now(),
+              value: rightHand.effort,
+              hand: 'right'
             };
             
             setSessionEffortData(prevData => [...prevData, effortPoint]);
@@ -148,7 +148,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 
     try {
       // Update session status
-      await DataService.updateSession(currentSessionId, { estado: 'completed' });
+      await DataService.updateSession(currentSessionId, { state: 'completed' });
       
       // Save therapy record with effort data
       await DataService.createTherapyRecord(currentSessionId, sessionEffortData);
@@ -199,7 +199,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const handleCancel = async () => {
     if (currentSessionId && user) {
       try {
-        await DataService.updateSession(currentSessionId, { estado: 'cancelled' });
+        await DataService.updateSession(currentSessionId, { state: 'cancelled' });
       } catch (error) {
         console.error('Error cancelling session:', error);
       }
