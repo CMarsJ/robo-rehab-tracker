@@ -149,6 +149,31 @@ export class SessionService {
     }
   }
 
+  // 👉 Método específico para actualizar terapia guiada
+  static async updateGuidedTherapy(sessionId: string, state: 'active' | 'completed' | 'cancelled', duration?: number): Promise<boolean> {
+    try {
+      const updateFields: any = { state };
+      if (duration) updateFields.duration = duration;
+
+      const { error } = await supabase
+        .from('sessions')
+        .update(updateFields)
+        .eq('id', sessionId)
+        .eq('therapy_type', 'therapy'); // aseguramos que solo aplica a terapia guiada
+
+      if (error) {
+        console.error('Error al actualizar terapia guiada:', error);
+        return false;
+      }
+
+      console.log(`Terapia guiada actualizada correctamente ✅ (${state})`);
+      return true;
+    } catch (error) {
+      console.error('Error en updateGuidedTherapy:', error);
+      return false;
+    }
+  }
+
   static async getTop5ByGame(gameType: string): Promise<SessionResponse[]> {
     try {
       const { data, error } = await supabase
