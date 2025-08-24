@@ -20,7 +20,7 @@ export interface SessionData {
     closingHistory: number[];
     timestamps: string[];
   };
-  extra_data?: any; // Configuración de juegos o null para terapia guiada
+  extra_date?: any; // Configuración de juegos o null para terapia guiada
 }
 
 export interface SessionResponse {
@@ -35,7 +35,7 @@ export interface SessionResponse {
   juice_used: number;
   stats: any;
   details: any;
-  extra_data: any;
+  extra_date: any;
 }
 
 export class SessionService {
@@ -67,7 +67,7 @@ export class SessionService {
         juice_used: sessionData.juice_used || 0,
         stats: sessionData.stats as any || {},
         details: sessionData.details || {},
-        extra_data: sessionData.extra_data || null
+        extra_date: sessionData.extra_date || null
       }).select().single();
 
       if (error) {
@@ -132,7 +132,7 @@ export class SessionService {
           juice_used: therapyData.juice_used,
           stats: therapyData.stats,
           details: therapyData.details,
-          extra_data: therapyData.extra_data
+          extra_date: therapyData.extra_date
         })
         .eq('id', sessionId);
 
