@@ -75,11 +75,6 @@ const DataSimulator = () => {
 
     updateSimulationData(newLeftHand, newRightHand);
     
-    console.log('Datos simulados enviados:', {
-      leftHand: newLeftHand,
-      rightHand: newRightHand
-    });
-    
     // Restaurar posición de scroll después de un breve delay
     setTimeout(() => {
       if (scrollRef.current) {
