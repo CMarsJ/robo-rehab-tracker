@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { DataService } from '@/services/dataService';
-import { GameRecord, Ranking } from '@/types/database';
+import { SessionService } from '@/services/sessionService';
+// Using sessions only - rankings disabled for now
 
 export const useGameData = (gameType?: string) => {
-  const [gameRecords, setGameRecords] = useState<GameRecord[]>([]);
-  const [rankings, setRankings] = useState<Ranking[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -20,16 +20,16 @@ export const useGameData = (gameType?: string) => {
       setLoading(true);
       
       try {
-        // Run migration first
-        await DataService.migrateLocalStorageData();
-        
-        // Load game records
-        const records = await DataService.getGameRecords(gameType);
-        setGameRecords(records);
+        // Load sessions
+        const allSessions = await SessionService.getUserSessions(20);
+        const filteredSessions = gameType ? 
+          allSessions.filter(s => s.therapy_type === gameType) : 
+          allSessions;
+        setSessions(filteredSessions);
         
         // Load rankings if gameType specified
         if (gameType) {
-          const rankingData = await DataService.getRankings(gameType);
+          const rankingData = await SessionService.getTop5ByGame(gameType);
           setRankings(rankingData);
         }
       } catch (error) {
@@ -44,34 +44,45 @@ export const useGameData = (gameType?: string) => {
 
   const createGameRecord = async (
     sessionId: string,
-    gameData: Partial<GameRecord>
+    gameData: any
   ) => {
     if (!gameType) return null;
     
-    const record = await DataService.createGameRecord(sessionId, gameType, gameData);
-    if (record) {
-      setGameRecords(prev => [record, ...prev]);
-      
-      // Update ranking if score improved
-      if (gameData.total_oranges) {
-        await DataService.updateRanking(gameType, gameData.total_oranges, gameData);
-        const updatedRankings = await DataService.getRankings(gameType);
-        setRankings(updatedRankings);
-      }
+    // Update session with game data instead of creating separate record
+    const success = await SessionService.updateSessionWithTherapyData(sessionId, {
+      state: 'completed',
+      score: gameData.score || 0,
+      orange_used: gameData.orange_used || 0,
+      juice_used: gameData.juice_used || 0,
+      stats: gameData.stats || {},
+      details: gameData.details || {},
+      extra_data: gameData.extra_data || null
+    });
+    
+    if (success) {
+      // Refresh data
+      const updatedSessions = await SessionService.getUserSessions(20);
+      setSessions(updatedSessions.filter(s => s.therapy_type === gameType));
     }
-    return record;
+    
+    return success;
   };
 
   return {
-    gameRecords,
+    gameRecords: sessions, // For compatibility
     rankings,
     loading,
     createGameRecord,
     refreshData: () => {
       if (user) {
-        DataService.getGameRecords(gameType).then(setGameRecords);
+        SessionService.getUserSessions(20).then(allSessions => {
+          const filtered = gameType ? 
+            allSessions.filter(s => s.therapy_type === gameType) : 
+            allSessions;
+          setSessions(filtered);
+        });
         if (gameType) {
-          DataService.getRankings(gameType).then(setRankings);
+          SessionService.getTop5ByGame(gameType).then(setRankings);
         }
       }
     }

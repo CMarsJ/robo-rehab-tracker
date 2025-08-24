@@ -20,7 +20,7 @@ export interface SessionData {
     closingHistory: number[];
     timestamps: string[];
   };
-  extra_date?: any; // Configuración de juegos o null para terapia guiada
+  extra_data?: any; // Configuración de juegos o null para terapia guiada
 }
 
 export interface SessionResponse {
@@ -65,9 +65,9 @@ export class SessionService {
         score: sessionData.score || 0,
         orange_used: sessionData.orange_used || 0,
         juice_used: sessionData.juice_used || 0,
-        stats: sessionData.stats || {},
+        stats: sessionData.stats as any || {},
         details: sessionData.details || {},
-        extra_data: sessionData.extra_date || null
+        extra_data: sessionData.extra_data || null
       }).select().single();
 
       if (error) {

@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { DataService } from '@/services/dataService';
-import { Ranking, GameRecord } from '@/types/database';
+import { SessionService } from '@/services/sessionService';
 
 interface LegacyOrangeRanking {
   date: string;
@@ -17,10 +15,8 @@ interface LegacyOrangeRanking {
 
 const GameRankings = () => {
   const [orangeRankings, setOrangeRankings] = useState<LegacyOrangeRanking[]>([]);
-  const [neurolinkRankings, setNeurolinkRankings] = useState<Ranking[]>([]);
-  const [flappyBirdRankings, setFlappyBirdRankings] = useState<Ranking[]>([]);
-  const [neurolinkRecords, setNeurolinkRecords] = useState<GameRecord[]>([]);
-  const [flappyBirdRecords, setFlappyBirdRecords] = useState<GameRecord[]>([]);
+  const [neurolinkSessions, setNeurolinkSessions] = useState<any[]>([]);
+  const [flappyBirdSessions, setFlappyBirdSessions] = useState<any[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -34,22 +30,13 @@ const GameRankings = () => {
       if (!user) return;
       
       try {
-        // Migrate data first
-        await DataService.migrateLocalStorageData();
+        // Load NeuroLink sessions
+        const neurolinkData = await SessionService.getTop5ByGame('neurolink');
+        setNeurolinkSessions(neurolinkData);
         
-        // Load NeuroLink data
-        const neurolinkGameRecords = await DataService.getGameRecords('neurolink', 5);
-        setNeurolinkRecords(neurolinkGameRecords);
-        
-        const neurolinkRankingData = await DataService.getRankings('neurolink', 5);
-        setNeurolinkRankings(neurolinkRankingData);
-        
-        // Load Flappy Bird data
-        const flappyGameRecords = await DataService.getGameRecords('flappy_bird', 5);
-        setFlappyBirdRecords(flappyGameRecords);
-        
-        const flappyRankingData = await DataService.getRankings('flappy_bird', 5);
-        setFlappyBirdRankings(flappyRankingData);
+        // Load Flappy Bird sessions
+        const flappyData = await SessionService.getTop5ByGame('flappy_bird');
+        setFlappyBirdSessions(flappyData);
         
       } catch (error) {
         console.error('Error loading rankings:', error);
@@ -65,25 +52,25 @@ const GameRankings = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatRankingData = (records: GameRecord[]) => {
-    return records.map(record => {
-      const sessions = (record as any).sessions;
-      const duration = sessions?.duracion_minutos || 1;
-      const totalScore = record.total_oranges || 0;
-      const pointsPerSecond = duration > 0 ? totalScore / (duration * 60) : 0;
+  const formatSessionData = (sessions: any[]) => {
+    return sessions.map(session => {
+      const duration = session.duration || 1;
+      const score = session.score || 0;
+      const pointsPerSecond = duration > 0 ? score / (duration * 60) : 0;
       
       return {
-        date: new Date(sessions?.fecha_inicio || record.created_at).toLocaleDateString(),
-        totalScore: totalScore,
+        date: new Date(session.start_time).toLocaleDateString(),
+        totalScore: score,
         pointsPerSecond: pointsPerSecond,
-        totalRounds: record.total_glasses || 0,
+        orangeUsed: session.orange_used || 0,
+        juiceUsed: session.juice_used || 0,
         duration: duration
       };
     });
   };
 
-  const neurolinkFormattedData = formatRankingData(neurolinkRecords);
-  const flappyBirdFormattedData = formatRankingData(flappyBirdRecords);
+  const neurolinkFormattedData = formatSessionData(neurolinkSessions);
+  const flappyBirdFormattedData = formatSessionData(flappyBirdSessions);
 
   return (
     <div className="grid grid-cols-1 gap-6 mt-6">
@@ -145,7 +132,7 @@ const GameRankings = () => {
                 <TableHead>Fecha</TableHead>
                 <TableHead className="text-center">Puntaje</TableHead>
                 <TableHead className="text-center">Pts/Seg</TableHead>
-                <TableHead className="text-center">Rondas</TableHead>
+                <TableHead className="text-center">Naranjas</TableHead>
                 <TableHead className="text-right">Duración</TableHead>
               </TableRow>
             </TableHeader>
@@ -157,7 +144,7 @@ const GameRankings = () => {
                     <TableCell>{entry.date}</TableCell>
                     <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
                     <TableCell className="text-center">{entry.pointsPerSecond.toFixed(2)}</TableCell>
-                    <TableCell className="text-center">{entry.totalRounds}</TableCell>
+                    <TableCell className="text-center">{entry.orangeUsed}</TableCell>
                     <TableCell className="text-right">{entry.duration}min</TableCell>
                   </TableRow>
                 ))

@@ -7,7 +7,7 @@ import { useApp, useTranslation } from '@/contexts/AppContext';
 import { useSimulation } from '@/contexts/SimulationContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { DataService } from '@/services/dataService';
+import { SessionService } from '@/services/sessionService';
 import { EffortDataPoint } from '@/types/database';
 import TherapyOverlay from '@/components/TherapyOverlay';
 
@@ -135,8 +135,12 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     if (!user) return null;
 
     try {
-      const session = await DataService.createSession('therapy', duration[0]);
-      return session?.id || null;
+      const sessionId = await SessionService.createSession({
+        therapy_type: 'therapy',
+        duration: duration[0],
+        state: 'active'
+      });
+      return sessionId?.id || null;
     } catch (error) {
       console.error('Error creating session:', error);
       return null;
@@ -147,11 +151,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     if (!currentSessionId || !user) return;
 
     try {
-      // Update session status
-      await DataService.updateSession(currentSessionId, { state: 'completed' });
-      
-      // Save therapy record with effort data
-      await DataService.createTherapyRecord(currentSessionId, sessionEffortData);
+      // Update session with final data
+      await SessionService.updateSessionState(currentSessionId, 'completed');
       
       // Clear session data
       setSessionEffortData([]);
@@ -199,7 +200,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const handleCancel = async () => {
     if (currentSessionId && user) {
       try {
-        await DataService.updateSession(currentSessionId, { state: 'cancelled' });
+        await SessionService.updateSessionState(currentSessionId, 'cancelled');
       } catch (error) {
         console.error('Error cancelling session:', error);
       }
