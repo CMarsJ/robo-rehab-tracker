@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SessionData {
-  therapy_type: string;
+  therapy_type: 'orange' | 'guided_therapy'; // 👈 restringimos a tipos válidos
   duration: number;
   state: 'completed' | 'cancelled' | 'active';
   score?: number;
@@ -58,7 +58,7 @@ export class SessionService {
 
       const { data, error } = await supabase.from('sessions').insert({
         user_id: userId,
-        therapy_type: sessionData.therapy_type,
+        therapy_type: sessionData.therapy_type, // 👈 ahora solo "orange" o "guided_therapy"
         start_time: new Date().toISOString(),
         duration: sessionData.duration,
         state: sessionData.state,
@@ -149,7 +149,7 @@ export class SessionService {
     }
   }
 
-  // 👉 Método específico para actualizar terapia guiada
+  // 👉 Método específico para actualizar solo sesiones de tipo "guided_therapy"
   static async updateGuidedTherapy(sessionId: string, state: 'active' | 'completed' | 'cancelled', duration?: number): Promise<boolean> {
     try {
       const updateFields: any = { state };
@@ -159,7 +159,7 @@ export class SessionService {
         .from('sessions')
         .update(updateFields)
         .eq('id', sessionId)
-        .eq('therapy_type', 'therapy'); // aseguramos que solo aplica a terapia guiada
+        .eq('therapy_type', 'guided_therapy'); // 👈 ya no existe "therapy"
 
       if (error) {
         console.error('Error al actualizar terapia guiada:', error);
