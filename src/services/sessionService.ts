@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SessionData {
-  therapy_type: 'orange' | 'guided_therapy'; // 👈 restringimos a tipos válidos
+  therapy_type: string;
   duration: number;
   state: 'completed' | 'cancelled' | 'active';
   score?: number;
@@ -20,7 +20,7 @@ export interface SessionData {
     closingHistory: number[];
     timestamps: string[];
   };
-  extra_date?: any; // Configuración de juegos o null para terapia guiada
+  extra_data?: any; // Configuración de juegos o null para terapia guiada
 }
 
 export interface SessionResponse {
@@ -35,7 +35,7 @@ export interface SessionResponse {
   juice_used: number;
   stats: any;
   details: any;
-  extra_date: any;
+  extra_data: any;
 }
 
 export class SessionService {
@@ -58,7 +58,7 @@ export class SessionService {
 
       const { data, error } = await supabase.from('sessions').insert({
         user_id: userId,
-        therapy_type: sessionData.therapy_type, // 👈 ahora solo "orange" o "guided_therapy"
+        therapy_type: sessionData.therapy_type,
         start_time: new Date().toISOString(),
         duration: sessionData.duration,
         state: sessionData.state,
@@ -67,7 +67,7 @@ export class SessionService {
         juice_used: sessionData.juice_used || 0,
         stats: sessionData.stats as any || {},
         details: sessionData.details || {},
-        extra_date: sessionData.extra_date || null
+        extra_data: sessionData.extra_data || null
       }).select().single();
 
       if (error) {
@@ -132,7 +132,7 @@ export class SessionService {
           juice_used: therapyData.juice_used,
           stats: therapyData.stats,
           details: therapyData.details,
-          extra_date: therapyData.extra_date
+          extra_data: therapyData.extra_data
         })
         .eq('id', sessionId);
 
@@ -145,31 +145,6 @@ export class SessionService {
       return true;
     } catch (error) {
       console.error('Error en updateSessionWithTherapyData:', error);
-      return false;
-    }
-  }
-
-  // 👉 Método específico para actualizar solo sesiones de tipo "guided_therapy"
-  static async updateGuidedTherapy(sessionId: string, state: 'active' | 'completed' | 'cancelled', duration?: number): Promise<boolean> {
-    try {
-      const updateFields: any = { state };
-      if (duration) updateFields.duration = duration;
-
-      const { error } = await supabase
-        .from('sessions')
-        .update(updateFields)
-        .eq('id', sessionId)
-        .eq('therapy_type', 'guided_therapy'); // 👈 ya no existe "therapy"
-
-      if (error) {
-        console.error('Error al actualizar terapia guiada:', error);
-        return false;
-      }
-
-      console.log(`Terapia guiada actualizada correctamente ✅ (${state})`);
-      return true;
-    } catch (error) {
-      console.error('Error en updateGuidedTherapy:', error);
       return false;
     }
   }
@@ -191,6 +166,27 @@ export class SessionService {
       return (data || []) as SessionResponse[];
     } catch (error) {
       console.error('Error en getTop5ByGame:', error);
+      return [];
+    }
+  }
+
+  static async getOrangeSqueezeRankings(): Promise<any[]> {
+    try {
+      // Using raw query to access table not in type definitions
+      const { data, error } = await (supabase as any)
+        .from('rankings_orabge_squeeze')
+        .select('*')
+        .order('position', { ascending: true })
+        .limit(5);
+
+      if (error) {
+        console.error('Error al obtener rankings de naranjas:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error en getOrangeSqueezeRankings:', error);
       return [];
     }
   }

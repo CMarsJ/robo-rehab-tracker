@@ -14,22 +14,20 @@ interface LegacyOrangeRanking {
 }
 
 const GameRankings = () => {
-  const [orangeRankings, setOrangeRankings] = useState<LegacyOrangeRanking[]>([]);
+  const [orangeRankings, setOrangeRankings] = useState<any[]>([]);
   const [neurolinkSessions, setNeurolinkSessions] = useState<any[]>([]);
   const [flappyBirdSessions, setFlappyBirdSessions] = useState<any[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
-    // Load legacy orange rankings from localStorage
-    const rankings = JSON.parse(localStorage.getItem('orangeRankings') || '[]');
-    setOrangeRankings(rankings.slice(0, 5));
-  }, []);
-
-  useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
-      
       try {
+        // Load Orange Squeeze rankings from Supabase
+        const orangeData = await SessionService.getOrangeSqueezeRankings();
+        setOrangeRankings(orangeData);
+        
+        if (!user) return;
+        
         // Load NeuroLink sessions
         const neurolinkData = await SessionService.getTop5ByGame('neurolink');
         setNeurolinkSessions(neurolinkData);
@@ -46,9 +44,10 @@ const GameRankings = () => {
     loadData();
   }, [user]);
 
-  const formatTime = (minutes: number) => {
-    const mins = Math.floor(minutes);
-    const secs = Math.round((minutes - mins) * 60);
+  const formatTime = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -97,12 +96,12 @@ const GameRankings = () => {
               {orangeRankings.length > 0 ? (
                 orangeRankings.map((entry, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">#{index + 1}</TableCell>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell className="text-center">{entry.glasses}</TableCell>
-                    <TableCell className="text-center">{entry.totalOranges}</TableCell>
-                    <TableCell className="text-center">{formatTime(entry.timePerGlass)}</TableCell>
-                    <TableCell className="text-center">{formatTime(entry.timePerOrange)}</TableCell>
+                    <TableCell className="font-medium">#{entry.position}</TableCell>
+                    <TableCell>{new Date(entry.start_time).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-center">{entry.juice_used}</TableCell>
+                    <TableCell className="text-center">{entry.orange_used}</TableCell>
+                    <TableCell className="text-center">{formatTime(entry.time_orange * 4)}</TableCell>
+                    <TableCell className="text-center">{formatTime(entry.time_orange)}</TableCell>
                   </TableRow>
                 ))
               ) : (
