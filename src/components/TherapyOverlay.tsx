@@ -221,10 +221,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       state: 'active'
     });
     
-    if (session) {
-      setCurrentSessionId(session.id);
-    }
-    
     if (!isActive) onStartTimer();
   };
 

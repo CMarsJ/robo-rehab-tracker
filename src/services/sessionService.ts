@@ -65,8 +65,8 @@ export class SessionService {
         score: sessionData.score || 0,
         orange_used: sessionData.orange_used || 0,
         juice_used: sessionData.juice_used || 0,
-        stats: sessionData.stats ? sessionData.stats : null,
-        details: sessionData.details ? sessionData.details : null,
+        stats: sessionData.stats as any || {},
+        details: sessionData.details || {},
         extra_date: sessionData.extra_date || null
       }).select().single();
 
@@ -107,31 +107,44 @@ export class SessionService {
     }
   }
 
-  // Nuevo método que reemplaza updateSessionState y updateSessionWithTherapyData
-  static async completeSession(sessionId: string, therapyData: any): Promise<boolean> {
+  static async updateSessionState(sessionId: string, state: 'completed' | 'cancelled'): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({ state })
+        .eq('id', sessionId);
+
+      return !error;
+    } catch (error) {
+      console.error('Error al actualizar estado de sesión:', error);
+      return false;
+    }
+  }
+
+  static async updateSessionWithTherapyData(sessionId: string, therapyData: any): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('sessions')
         .update({
-          state: 'completed',
-          score: therapyData.score || 0,
-          orange_used: therapyData.orange_used || 0,
-          juice_used: therapyData.juice_used || 0,
-          stats: therapyData.stats || null,
-          details: therapyData.details || null,
-          extra_date: therapyData.extra_date || null
+          state: therapyData.state,
+          score: therapyData.score,
+          orange_used: therapyData.orange_used,
+          juice_used: therapyData.juice_used,
+          stats: therapyData.stats,
+          details: therapyData.details,
+          extra_date: therapyData.extra_date
         })
         .eq('id', sessionId);
 
       if (error) {
-        console.error('Error al completar la sesión:', error);
+        console.error('Error al actualizar datos de terapia:', error);
         return false;
       }
 
-      console.log('Sesión completada y actualizada correctamente ✅');
+      console.log('Datos de terapia actualizados correctamente ✅');
       return true;
     } catch (error) {
-      console.error('Error en completeSession:', error);
+      console.error('Error en updateSessionWithTherapyData:', error);
       return false;
     }
   }
