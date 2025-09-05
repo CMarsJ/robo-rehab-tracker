@@ -76,31 +76,43 @@ export class SessionService {
       }
 
       console.log('Sesión guardada correctamente ✅');
-      return data as SessionResponse;
+      return {
+        ...data,
+        extra_date: data.extra_data
+      } as SessionResponse;
     } catch (error) {
       console.error('Error en createSession:', error);
       return null;
     }
   }
 
-  static async getUserSessions(limit = 6): Promise<SessionResponse[]> {
+  static async getUserSessions(limit = 10, offset = 0, therapyTypes?: string[]): Promise<SessionResponse[]> {
     try {
       const userId = await this.getUserId();
       if (!userId) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('sessions')
         .select('*')
         .eq('user_id', userId)
         .order('start_time', { ascending: false })
-        .limit(limit);
+        .range(offset, offset + limit - 1);
+
+      if (therapyTypes && therapyTypes.length > 0) {
+        query = query.in('therapy_type', therapyTypes);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error al cargar sesiones:', error);
         return [];
       }
 
-      return (data || []) as SessionResponse[];
+      return (data || []).map(session => ({
+        ...session,
+        extra_date: session.extra_data
+      })) as SessionResponse[];
     } catch (error) {
       console.error('Error en getUserSessions:', error);
       return [];
@@ -163,7 +175,10 @@ export class SessionService {
         return [];
       }
 
-      return (data || []) as SessionResponse[];
+      return (data || []).map(session => ({
+        ...session,
+        extra_date: session.extra_data
+      })) as SessionResponse[];
     } catch (error) {
       console.error('Error en getTop5ByGame:', error);
       return [];
