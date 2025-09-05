@@ -124,9 +124,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     lastState.current = null;
   };
 
-  // --- Función para guardar datos de terapia en Supabase ---
   const saveTherapyData = async (state: 'completed' | 'cancelled') => {
     if (!currentSessionId) return;
+
+    console.log(`📤 Enviando datos de terapia a Supabase (estado: ${state})...`);
 
     // Recopilar todos los datos según la estructura de la tabla
     const therapyData = {
@@ -208,6 +209,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     };
 
     await SessionService.updateSessionWithTherapyData(currentSessionId, therapyData);
+    console.log(`✅ Datos de terapia ${state === 'completed' ? 'completada' : 'cancelada'} enviados correctamente a Supabase`);
   };
 
   const startGame = async (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
@@ -228,6 +230,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   useEffect(() => {
     if (timeLeft === 0 && isActive && currentSessionId) {
       saveTherapyData('completed');
+      console.log('✅ Sesión de terapia completada y datos enviados a Supabase');
     }
   }, [timeLeft, isActive, currentSessionId]);
 

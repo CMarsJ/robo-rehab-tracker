@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target } from 'lucide-react';
+import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ const History = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
 
   // Therapy types we want to show in history
   const therapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
@@ -71,9 +72,16 @@ const History = () => {
     });
   };
 
-  const formatTime = (seconds?: number) => {
-    if (!seconds || !isFinite(seconds)) return '-';
-    return `${seconds.toFixed(2)}s`;
+  const formatTime = (ms?: number) => {
+    if (!ms || !isFinite(ms)) return '-';
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
+
+  const toggleExpanded = (sessionId: string) => {
+    setExpandedSessions(prev => ({
+      ...prev,
+      [sessionId]: !prev[sessionId]
+    }));
   };
 
   const getSessionIcon = (therapyType: string) => {
@@ -128,29 +136,140 @@ const History = () => {
     }
   };
 
+  const buildAttemptsTable = (stats: any) => {
+    if (!stats?.hand_metrics) return [];
+
+    const openingTimes = stats.hand_metrics.opening?.all_times || [];
+    const closingTimes = stats.hand_metrics.closing?.all_times || [];
+    const maxLength = Math.max(openingTimes.length, closingTimes.length);
+
+    const attempts = [];
+    for (let i = 0; i < maxLength; i++) {
+      const opening = openingTimes[i] || null;
+      const closing = closingTimes[i] || null;
+      const total = (opening && closing) ? opening + closing : null;
+      
+      attempts.push({
+        number: i + 1,
+        opening: opening,
+        closing: closing, 
+        total: total
+      });
+    }
+
+    return attempts;
+  };
+
   const renderSessionSummary = (session: SessionResponse) => {
     const { therapy_type, stats, score, orange_used, juice_used } = session;
+    const isExpanded = expandedSessions[session.id];
+    const attempts = buildAttemptsTable(stats);
+    const visibleAttempts = isExpanded ? attempts : attempts.slice(0, 3);
+
+    if (therapy_type === 'terapia_guiada') {
+      const openingAvg = stats?.hand_metrics?.opening?.average_time_ms;
+      const closingAvg = stats?.hand_metrics?.closing?.average_time_ms;
+      const totalMovements = attempts.length;
+
+      return (
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+          <h4 className="font-semibold mb-3 text-blue-800 flex items-center gap-2">
+            <Brain className="w-5 h-5" />
+            Resumen de Terapia Guiada
+          </h4>
+          
+          {/* 3 datos principales arriba */}
+          <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+            <div className="text-center bg-white/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-blue-600">
+                {formatTime(openingAvg)}
+              </div>
+              <div className="text-blue-700">Promedio Apertura</div>
+            </div>
+            <div className="text-center bg-white/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-green-600">
+                {formatTime(closingAvg)}
+              </div>
+              <div className="text-green-700">Promedio Cierre</div>
+            </div>
+            <div className="text-center bg-white/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-purple-600">
+                {totalMovements}
+              </div>
+              <div className="text-purple-700">Movimientos</div>
+            </div>
+          </div>
+
+          {/* Tabla de intentos */}
+          {attempts.length > 0 && (
+            <div className="mt-4">
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-blue-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left">#</th>
+                      <th className="px-3 py-2 text-left">Apertura</th>
+                      <th className="px-3 py-2 text-left">Cierre</th>
+                      <th className="px-3 py-2 text-left">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleAttempts.map((attempt, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-3 py-2">{attempt.number}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {attempts.length > 3 && (
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleExpanded(session.id)}
+                    className="text-blue-600"
+                  >
+                    {isExpanded ? (
+                      <><EyeOff className="w-4 h-4 mr-1" /> Ver menos</>
+                    ) : (
+                      <><Eye className="w-4 h-4 mr-1" /> Ver más (+{attempts.length - 3})</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
 
     if (therapy_type === 'orange-squeeze') {
       return (
         <div className="mt-4 p-4 bg-orange-50 rounded-lg">
           <h4 className="font-semibold mb-3 text-orange-800 flex items-center gap-2">
-            🍊 Resumen del Juego de Naranjas
+            <Trophy className="w-5 h-5" />
+            Resumen del Juego de Naranjas
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div className="text-center">
+          
+          <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+            <div className="text-center bg-white/60 rounded-md p-3">
               <div className="text-2xl font-bold text-orange-600">
                 {orange_used || 0}
               </div>
               <div className="text-orange-700">Naranjas exprimidas</div>
             </div>
-            <div className="text-center">
+            <div className="text-center bg-white/60 rounded-md p-3">
               <div className="text-2xl font-bold text-blue-600">
                 {juice_used || 0}
               </div>
               <div className="text-blue-700">Vasos completados</div>
             </div>
-            <div className="text-center">
+            <div className="text-center bg-white/60 rounded-md p-3">
               <div className="text-2xl font-bold text-green-600">
                 {score || 0}
               </div>
@@ -158,12 +277,46 @@ const History = () => {
             </div>
           </div>
           
-          {stats && (
-            <div className="mt-3 text-sm text-orange-700">
-              {stats.hand_metrics && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div>Mejor tiempo apertura: {formatTime(stats.hand_metrics.opening?.best_time)}</div>
-                  <div>Mejor tiempo cierre: {formatTime(stats.hand_metrics.closing?.best_time)}</div>
+          {/* Tabla de intentos */}
+          {attempts.length > 0 && (
+            <div className="mt-4">
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-orange-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left">#</th>
+                      <th className="px-3 py-2 text-left">Apertura</th>
+                      <th className="px-3 py-2 text-left">Cierre</th>
+                      <th className="px-3 py-2 text-left">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleAttempts.map((attempt, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-3 py-2">{attempt.number}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {attempts.length > 3 && (
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleExpanded(session.id)}
+                    className="text-orange-600"
+                  >
+                    {isExpanded ? (
+                      <><EyeOff className="w-4 h-4 mr-1" /> Ver menos</>
+                    ) : (
+                      <><Eye className="w-4 h-4 mr-1" /> Ver más (+{attempts.length - 3})</>
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
@@ -176,10 +329,12 @@ const History = () => {
       return (
         <div className="mt-4 p-4 bg-purple-50 rounded-lg">
           <h4 className="font-semibold mb-3 text-purple-800 flex items-center gap-2">
-            🎯 Resumen de NeuroLink
+            <Target className="w-5 h-5" />
+            Resumen de NeuroLink
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div className="text-center">
+          
+          <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+            <div className="text-center bg-white/60 rounded-md p-3">
               <div className="text-2xl font-bold text-purple-600">
                 {score || 0}
               </div>
@@ -187,13 +342,13 @@ const History = () => {
             </div>
             {stats?.game_metrics && (
               <>
-                <div className="text-center">
+                <div className="text-center bg-white/60 rounded-md p-3">
                   <div className="text-2xl font-bold text-blue-600">
                     {stats.game_metrics.level || 0}
                   </div>
                   <div className="text-blue-700">Nivel alcanzado</div>
                 </div>
-                <div className="text-center">
+                <div className="text-center bg-white/60 rounded-md p-3">
                   <div className="text-2xl font-bold text-green-600">
                     {stats.game_metrics.accuracy || 0}%
                   </div>
@@ -202,56 +357,47 @@ const History = () => {
               </>
             )}
           </div>
-        </div>
-      );
-    }
 
-    if (therapy_type === 'terapia_guiada') {
-      return (
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-semibold mb-3 text-blue-800 flex items-center gap-2">
-            🧠 Resumen de Terapia Guiada
-          </h4>
-          {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              {stats.fastestOpening && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {formatTime(stats.fastestOpening)}
-                  </div>
-                  <div className="text-blue-700">Mejor apertura</div>
-                </div>
-              )}
-              {stats.fastestClosing && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatTime(stats.fastestClosing)}
-                  </div>
-                  <div className="text-green-700">Mejor cierre</div>
-                </div>
-              )}
-              {stats.averageOpening && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {formatTime(stats.averageOpening)}
-                  </div>
-                  <div className="text-purple-700">Promedio apertura</div>
-                </div>
-              )}
-              {stats.averageClosing && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {formatTime(stats.averageClosing)}
-                  </div>
-                  <div className="text-orange-700">Promedio cierre</div>
-                </div>
-              )}
-              {stats.attempts_count && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-pink-600">
-                    {stats.attempts_count}
-                  </div>
-                  <div className="text-pink-700">Intentos totales</div>
+          {/* Tabla de intentos */}
+          {attempts.length > 0 && (
+            <div className="mt-4">
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-purple-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left">#</th>
+                      <th className="px-3 py-2 text-left">Apertura</th>
+                      <th className="px-3 py-2 text-left">Cierre</th>
+                      <th className="px-3 py-2 text-left">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleAttempts.map((attempt, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-3 py-2">{attempt.number}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {attempts.length > 3 && (
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleExpanded(session.id)}
+                    className="text-purple-600"
+                  >
+                    {isExpanded ? (
+                      <><EyeOff className="w-4 h-4 mr-1" /> Ver menos</>
+                    ) : (
+                      <><Eye className="w-4 h-4 mr-1" /> Ver más (+{attempts.length - 3})</>
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
