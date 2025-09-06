@@ -78,7 +78,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           setIsActive(false);
           setIsPaused(false);
           setIsTherapyActive(false);
-          setShowOverlay(false);
+          setTimeout(() => setShowOverlay(false), 500); // dar tiempo a Overlay para guardar datos
           setSampleCounter(0);
           setStartTime(null);
           setPauseStartTime(null);
@@ -135,12 +135,20 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     if (!user) return null;
 
     try {
+      // Reutilizar sesión existente si ya fue creada por el overlay
+      const existingId = localStorage.getItem('currentSessionId');
+      if (existingId) {
+        return existingId;
+      }
+
       const sessionId = await SessionService.createSession({
-        therapy_type: 'therapy',
+        therapy_type: 'terapia_guiada',
         duration: duration[0],
         state: 'active'
       });
-      return sessionId?.id || null;
+      const id = sessionId?.id || null;
+      if (id) localStorage.setItem('currentSessionId', id);
+      return id;
     } catch (error) {
       console.error('Error creating session:', error);
       return null;
@@ -148,13 +156,15 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   };
 
   const finishSession = async () => {
+    if (!currentSessionId && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('currentSessionId');
+      if (stored) setCurrentSessionId(stored);
+    }
     if (!currentSessionId || !user) return;
 
     try {
-      // Update session with final data
       await SessionService.updateSessionState(currentSessionId, 'completed');
-      
-      // Clear session data
+      localStorage.removeItem('currentSessionId');
       setSessionEffortData([]);
     } catch (error) {
       console.error('Error finishing session:', error);
@@ -206,6 +216,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       }
     }
     
+    try { localStorage.removeItem('currentSessionId'); } catch {}
     setIsActive(false);
     setIsPaused(false);
     setTimeLeft(0);

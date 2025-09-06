@@ -87,6 +87,13 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setGameMode('timer');
     setGameCompleted(false);
     
+    // Usar sesión existente si ya fue creada por el temporizador
+    const existingId = typeof window !== 'undefined' ? localStorage.getItem('currentSessionId') : null;
+    if (existingId) {
+      setCurrentSessionId(existingId);
+      return;
+    }
+    
     // Crear sesión en Supabase
     const session = await SessionService.createSession({
       therapy_type: 'terapia_guiada',
@@ -94,12 +101,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       state: 'active'
     });
 
-    
     if (session) {
       setCurrentSessionId(session.id);
+      try { localStorage.setItem('currentSessionId', session.id); } catch {}
     }
   };
-
   const handleCancelTherapy = async () => {
     await saveTherapyData('cancelled');
     onCancel();
@@ -122,8 +128,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     openTimestamp.current = null;
     closedTimestamp.current = null;
     lastState.current = null;
+    try { localStorage.removeItem('currentSessionId'); } catch {}
   };
-
   const saveTherapyData = async (state: 'completed' | 'cancelled') => {
     if (!currentSessionId) return;
 
@@ -222,13 +228,16 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       duration: duration,
       state: 'active'
     });
+    if (session) {
+      setCurrentSessionId(session.id);
+      try { localStorage.setItem('currentSessionId', session.id); } catch {}
+    }
     
     if (!isActive) onStartTimer();
   };
-
   // --- Completar terapia cuando se acaba el tiempo ---
   useEffect(() => {
-    if (timeLeft === 0 && isActive && currentSessionId) {
+    if (timeLeft === 0 && currentSessionId) {
       saveTherapyData('completed');
       console.log('✅ Sesión de terapia completada y datos enviados a Supabase');
     }
