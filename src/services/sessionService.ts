@@ -78,7 +78,7 @@ export class SessionService {
       console.log('Sesión guardada correctamente ✅');
       return {
         ...data,
-        extra_date: data.extra_data
+        extra_date: data.extra_date
       } as SessionResponse;
     } catch (error) {
       console.error('Error en createSession:', error);
@@ -111,7 +111,7 @@ export class SessionService {
 
       return (data || []).map(session => ({
         ...session,
-        extra_date: session.extra_data
+        extra_date: session.extra_date
       })) as SessionResponse[];
     } catch (error) {
       console.error('Error en getUserSessions:', error);
@@ -177,7 +177,7 @@ export class SessionService {
 
       return (data || []).map(session => ({
         ...session,
-        extra_date: session.extra_data
+        extra_date: session.extra_date
       })) as SessionResponse[];
     } catch (error) {
       console.error('Error en getTop5ByGame:', error);
