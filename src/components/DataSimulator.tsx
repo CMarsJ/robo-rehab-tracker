@@ -10,12 +10,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { HelpCircle, Settings, ToggleLeft, ToggleRight } from 'lucide-react';
+import { HelpCircle, Settings, ToggleLeft, ToggleRight, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
+import MQTTConfig from './MQTTConfig';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const DataSimulator = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { leftHand, rightHand, updateSimulationData, autoMode, setAutoMode } = useSimulation();
+  const { 
+    leftHand, 
+    rightHand, 
+    updateSimulationData, 
+    autoMode, 
+    setAutoMode,
+    mqttStatus,
+    mqttMessage,
+    isReceivingRealData,
+    enableSimulator,
+    setEnableSimulator
+  } = useSimulation();
   const scrollRef = useRef<HTMLDivElement>(null);
   
   const [leftHandActive, setLeftHandActive] = useState(leftHand.active);
@@ -193,6 +206,57 @@ const DataSimulator = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Estado MQTT */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {mqttStatus === 'connected' ? (
+                        <Wifi className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <WifiOff className="h-4 w-4 text-gray-400" />
+                      )}
+                      <span className="text-xs font-medium">
+                        {mqttStatus === 'connected' ? 'MQTT Conectado' : 'MQTT Desconectado'}
+                      </span>
+                    </div>
+                    <MQTTConfig />
+                  </div>
+                  
+                  {isReceivingRealData && (
+                    <Alert className="bg-green-50 border-green-200">
+                      <AlertCircle className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-xs text-green-700">
+                        ✅ Recibiendo datos reales - Simulador deshabilitado
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {mqttStatus === 'connected' && !isReceivingRealData && (
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-xs text-yellow-700">
+                        ⚠️ Conectado pero sin datos - Habilite el simulador
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+
+                {/* Habilitar simulador */}
+                {!isReceivingRealData && (
+                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <Label className="text-sm font-medium text-orange-900">Habilitar Simulador</Label>
+                        <p className="text-xs text-orange-700">Usar datos simulados</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={enableSimulator}
+                      onCheckedChange={setEnableSimulator}
+                    />
+                  </div>
+                )}
+
                 {/* Modo automático */}
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
                   <div className="flex items-center space-x-3">
@@ -209,6 +273,7 @@ const DataSimulator = () => {
                   <Switch
                     checked={autoMode}
                     onCheckedChange={setAutoMode}
+                    disabled={!enableSimulator || isReceivingRealData}
                   />
                 </div>
 
@@ -219,7 +284,7 @@ const DataSimulator = () => {
                       id="left-hand"
                       checked={leftHandActive}
                       onCheckedChange={setLeftHandActive}
-                      disabled={autoMode}
+                      disabled={autoMode || !enableSimulator || isReceivingRealData}
                     />
                     <Label htmlFor="left-hand" className="text-xs">Mano Izq. Activa</Label>
                   </div>
@@ -228,7 +293,7 @@ const DataSimulator = () => {
                       id="right-hand"
                       checked={rightHandActive}
                       onCheckedChange={setRightHandActive}
-                      disabled={autoMode}
+                      disabled={autoMode || !enableSimulator || isReceivingRealData}
                     />
                     <Label htmlFor="right-hand" className="text-xs">Mano Der. Activa</Label>
                   </div>
@@ -279,9 +344,16 @@ const DataSimulator = () => {
                 <Button 
                   onClick={simulateData}
                   className="w-full"
-                  disabled={autoMode}
+                  disabled={autoMode || !enableSimulator || isReceivingRealData}
                 >
-                  {autoMode ? 'Modo Automático Activo' : 'Enviar Datos Simulados'}
+                  {isReceivingRealData 
+                    ? 'Usando Datos Reales' 
+                    : autoMode 
+                      ? 'Modo Automático Activo' 
+                      : enableSimulator
+                        ? 'Enviar Datos Simulados'
+                        : 'Simulador Deshabilitado'
+                  }
                 </Button>
               </CardContent>
             </Card>

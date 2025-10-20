@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { mqttService } from '@/services/mqttService';
 
 interface HandAngles {
   thumb1: number;
@@ -26,6 +27,11 @@ interface SimulationContextType {
   clearEffortHistory: () => void;
   autoMode: boolean;
   setAutoMode: (active: boolean) => void;
+  mqttStatus: 'connected' | 'disconnected' | 'error';
+  mqttMessage: string;
+  isReceivingRealData: boolean;
+  enableSimulator: boolean;
+  setEnableSimulator: (enabled: boolean) => void;
 }
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
@@ -60,6 +66,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isTherapyActive, setIsTherapyActive] = useState(false);
   const [effortHistory, setEffortHistory] = useState<Array<{ time: string; paretica: number; noParetica: number; }>>([]);
   const [autoMode, setAutoMode] = useState(false);
+  const [mqttStatus, setMqttStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [mqttMessage, setMqttMessage] = useState('No conectado');
+  const [isReceivingRealData, setIsReceivingRealData] = useState(false);
+  const [enableSimulator, setEnableSimulator] = useState(false);
 
   // Cargar datos del localStorage al inicializar
   useEffect(() => {
@@ -92,11 +102,52 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, []);
 
-  // Auto mode effect
+  // MQTT Connection Effect
+  useEffect(() => {
+    // Configurar callbacks de MQTT
+    mqttService.onData((data) => {
+      console.log('📊 Real data received from MQTT:', data);
+      setIsReceivingRealData(true);
+      updateSimulationData(data.leftHand, data.rightHand);
+    });
+
+    mqttService.onStatus((status, message) => {
+      console.log(`📡 MQTT Status: ${status} - ${message}`);
+      setMqttStatus(status);
+      setMqttMessage(message || '');
+    });
+
+    // Intentar conectar con credenciales guardadas
+    const savedUsername = localStorage.getItem('mqtt_username');
+    const savedPassword = localStorage.getItem('mqtt_password');
+    const savedTopic = localStorage.getItem('mqtt_topic') || 'rehab/hand-data';
+
+    if (savedUsername && savedPassword) {
+      console.log('🔄 Connecting with saved credentials...');
+      mqttService.connect(savedUsername, savedPassword, savedTopic);
+    }
+
+    // Check de datos reales cada 10 segundos
+    const checkInterval = setInterval(() => {
+      const receiving = mqttService.isReceivingData();
+      setIsReceivingRealData(receiving);
+      
+      if (!receiving && mqttService.isConnected()) {
+        console.log('⚠️ Connected but not receiving data');
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(checkInterval);
+      mqttService.disconnect();
+    };
+  }, []);
+
+  // Auto mode effect - solo si no hay datos reales y el simulador está habilitado
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    if (autoMode) {
+    if (autoMode && enableSimulator && !isReceivingRealData) {
       interval = setInterval(() => {
         const randomLeftHand: HandData = {
           active: Math.random() > 0.3, // 70% chance of being active
@@ -131,7 +182,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoMode]);
+  }, [autoMode, enableSimulator, isReceivingRealData]);
 
   const updateSimulationData = (newLeftHand: HandData, newRightHand: HandData) => {
     setLeftHand(newLeftHand);
@@ -178,7 +229,12 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       addEffortData,
       clearEffortHistory,
       autoMode,
-      setAutoMode
+      setAutoMode,
+      mqttStatus,
+      mqttMessage,
+      isReceivingRealData,
+      enableSimulator,
+      setEnableSimulator
     }}>
       {children}
     </SimulationContext.Provider>
