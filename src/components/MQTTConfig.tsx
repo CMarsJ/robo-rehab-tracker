@@ -21,9 +21,9 @@ interface MQTTConfigProps {
 
 const MQTTConfig: React.FC<MQTTConfigProps> = ({ onConnectionChange }) => {
   const { toast } = useToast();
-  const [username, setUsername] = useState(localStorage.getItem('mqtt_username') || '');
-  const [password, setPassword] = useState(localStorage.getItem('mqtt_password') || '');
-  const [topic, setTopic] = useState(localStorage.getItem('mqtt_topic') || 'rehab/hand-data');
+  const [username, setUsername] = useState(localStorage.getItem('mqtt_username') || 'ESP32');
+  const [password, setPassword] = useState(localStorage.getItem('mqtt_password') || 'Juanesteban1');
+  const [topic, setTopic] = useState(localStorage.getItem('mqtt_topic') || 'sensor/data');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -114,7 +114,7 @@ const MQTTConfig: React.FC<MQTTConfigProps> = ({ onConnectionChange }) => {
           <CardHeader className="px-0 pt-0">
             <CardTitle className="text-sm">HiveMQ Cloud</CardTitle>
             <CardDescription className="text-xs">
-              184e3487ca504c6499ad247eabc97e38.s1.eu.hivemq.cloud
+              c178ec237d6346ae962b54e2b3bc490d.s1.eu.hivemq.cloud:8883
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-0">
@@ -145,7 +145,7 @@ const MQTTConfig: React.FC<MQTTConfigProps> = ({ onConnectionChange }) => {
               <Input
                 id="topic"
                 type="text"
-                placeholder="rehab/hand-data"
+                placeholder="sensor/data"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 disabled={isConnected}

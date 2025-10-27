@@ -21,7 +21,7 @@ export interface MQTTMessage {
 
 export class MQTTService {
   private client: MqttClient | null = null;
-  private brokerUrl = 'wss://184e3487ca504c6499ad247eabc97e38.s1.eu.hivemq.cloud:8884/mqtt';
+  private brokerUrl = 'wss://c178ec237d6346ae962b54e2b3bc490d.s1.eu.hivemq.cloud:8884/mqtt';
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private lastDataTimestamp: number = 0;
@@ -34,7 +34,7 @@ export class MQTTService {
     console.log('🔌 MQTT Service initialized');
   }
 
-  connect(username: string, password: string, topic: string = 'rehab/hand-data') {
+  connect(username: string, password: string, topic: string = 'sensor/data') {
     console.log('🔄 Connecting to HiveMQ Cloud...');
     
     try {
