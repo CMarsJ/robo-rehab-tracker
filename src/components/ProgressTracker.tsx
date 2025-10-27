@@ -184,7 +184,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
               {t.weeklyProgress || "Progreso semanal"}
             </span>
             <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-              {completedDays}/7 {(t as any).days || "días"}
+              {completedDays}/7 {t.days}
             </span>
           </div>
 
@@ -228,7 +228,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
           <Progress value={(completedDays / 7) * 100} className="h-2" />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {Math.round((completedDays / 7) * 100)}%{" "}
-            {(t as any).completedThisWeek || "completado esta semana"}
+            {t.completedThisWeek}
           </p>
         </div>
 
@@ -239,13 +239,13 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
               {t.monthlyProgress || "Progreso mensual"}
             </span>
             <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
-              {displayMonthlyDays}/{daysInMonth} {(t as any).days || "días"}
+              {displayMonthlyDays}/{daysInMonth} {t.days}
             </span>
           </div>
 
           <Progress value={monthProgress} className="h-2 mb-1" />
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {monthProgress}% {(t as any).completedThisMonth || "completado este mes"}
+            {monthProgress}% {t.completedThisMonth}
           </p>
         </div>
       </CardContent>

@@ -26,7 +26,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
       <h5 className="text-xs font-medium text-center">{title}</h5>
       <div className="grid grid-cols-2 gap-1 text-xs">
         <div className="space-y-1">
-          <div className="text-center font-medium">Pulgar</div>
+          <div className="text-center font-medium">{t.thumb}</div>
           <div className="flex justify-between">
             <span>IP:</span>
             <span>{angles.thumb1}°</span>
@@ -37,7 +37,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
           </div>
         </div>
         <div className="space-y-1">
-          <div className="text-center font-medium">Dedos</div>
+          <div className="text-center font-medium">{t.fingers}</div>
           <div className="flex justify-between">
             <span>DIP:</span>
             <span>{angles.finger1}°</span>
@@ -80,7 +80,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             <div className="text-4xl">✋</div>
           </div>
           
-          <AngleDisplay angles={leftHand.angles} title="Ángulos de Articulación" />
+          <AngleDisplay angles={leftHand.angles} title={t.articulationAngles} />
           
           <div className="mt-3 flex flex-col items-center gap-2">
             <Badge variant="outline" className={`${
@@ -119,7 +119,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             <div className="text-4xl">✋</div>
           </div>
           
-          <AngleDisplay angles={rightHand.angles} title="Ángulos de Articulación" />
+          <AngleDisplay angles={rightHand.angles} title={t.articulationAngles} />
           
           <div className="mt-3 flex flex-col items-center gap-2">
             <Badge variant="outline" className={`${

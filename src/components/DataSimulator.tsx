@@ -14,8 +14,10 @@ import { HelpCircle, Settings, ToggleLeft, ToggleRight, Wifi, WifiOff, AlertCirc
 import { useSimulation } from '@/contexts/SimulationContext';
 import MQTTConfig from './MQTTConfig';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useTranslation } from '@/contexts/AppContext';
 
 const DataSimulator = () => {
+  const t = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { 
     leftHand, 
@@ -202,7 +204,7 @@ const DataSimulator = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Simulador de Datos
+                  {t.dataSimulator}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -213,29 +215,29 @@ const DataSimulator = () => {
                       {mqttStatus === 'connected' ? (
                         <Wifi className="h-4 w-4 text-green-500" />
                       ) : (
-                        <WifiOff className="h-4 w-4 text-gray-400" />
+                        <WifiOff className="h-4 w-4 text-muted-foreground" />
                       )}
                       <span className="text-xs font-medium">
-                        {mqttStatus === 'connected' ? 'MQTT Conectado' : 'MQTT Desconectado'}
+                        {mqttStatus === 'connected' ? t.mqttConnected : t.mqttDisconnected}
                       </span>
                     </div>
                     <MQTTConfig />
                   </div>
                   
                   {isReceivingRealData && (
-                    <Alert className="bg-green-50 border-green-200">
-                      <AlertCircle className="h-4 w-4 text-green-600" />
-                      <AlertDescription className="text-xs text-green-700">
-                        ✅ Recibiendo datos reales - Simulador deshabilitado
+                    <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                      <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <AlertDescription className="text-xs text-green-700 dark:text-green-300">
+                        ✅ {t.receivingRealData}
                       </AlertDescription>
                     </Alert>
                   )}
                   
                   {mqttStatus === 'connected' && !isReceivingRealData && (
-                    <Alert className="bg-yellow-50 border-yellow-200">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      <AlertDescription className="text-xs text-yellow-700">
-                        ⚠️ Conectado pero sin datos - Habilite el simulador
+                    <Alert className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800">
+                      <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                      <AlertDescription className="text-xs text-yellow-700 dark:text-yellow-300">
+                        ⚠️ {t.connectedNoData}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -243,11 +245,11 @@ const DataSimulator = () => {
 
                 {/* Habilitar simulador */}
                 {!isReceivingRealData && (
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
                     <div className="flex items-center space-x-3">
                       <div>
-                        <Label className="text-sm font-medium text-orange-900">Habilitar Simulador</Label>
-                        <p className="text-xs text-orange-700">Usar datos simulados</p>
+                        <Label className="text-sm font-medium text-orange-900 dark:text-orange-300">{t.enableSimulator}</Label>
+                        <p className="text-xs text-orange-700 dark:text-orange-400">{t.useSimulatedData}</p>
                       </div>
                     </div>
                     <Switch
@@ -258,16 +260,16 @@ const DataSimulator = () => {
                 )}
 
                 {/* Modo automático */}
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border">
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-border">
                   <div className="flex items-center space-x-3">
                     {autoMode ? (
-                      <ToggleRight className="h-6 w-6 text-blue-600" />
+                      <ToggleRight className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     ) : (
-                      <ToggleLeft className="h-6 w-6 text-gray-400" />
+                      <ToggleLeft className="h-6 w-6 text-muted-foreground" />
                     )}
                     <div>
-                      <Label className="text-sm font-medium">Modo Automático</Label>
-                      <p className="text-xs text-gray-500">Datos aleatorios cada 30s</p>
+                      <Label className="text-sm font-medium">{t.automaticMode}</Label>
+                      <p className="text-xs text-muted-foreground">{t.randomDataEvery30s}</p>
                     </div>
                   </div>
                   <Switch
@@ -286,7 +288,7 @@ const DataSimulator = () => {
                       onCheckedChange={setLeftHandActive}
                       disabled={autoMode || !enableSimulator || isReceivingRealData}
                     />
-                    <Label htmlFor="left-hand" className="text-xs">Mano Izq. Activa</Label>
+                    <Label htmlFor="left-hand" className="text-xs">{t.leftHandActive}</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -295,7 +297,7 @@ const DataSimulator = () => {
                       onCheckedChange={setRightHandActive}
                       disabled={autoMode || !enableSimulator || isReceivingRealData}
                     />
-                    <Label htmlFor="right-hand" className="text-xs">Mano Der. Activa</Label>
+                    <Label htmlFor="right-hand" className="text-xs">{t.rightHandActive}</Label>
                   </div>
                 </div>
 
@@ -303,22 +305,22 @@ const DataSimulator = () => {
                 <AngleSliders 
                   angles={leftAngles}
                   setAngles={setLeftAngles}
-                  title="Mano Izquierda (No Parética)"
+                  title={t.leftHandNonParetic}
                 />
 
                 {/* Ángulos mano derecha */}
                 <AngleSliders 
                   angles={rightAngles}
                   setAngles={setRightAngles}
-                  title="Mano Derecha (Parética)"
+                  title={t.rightHandParetic}
                 />
 
                 {/* Esfuerzo muscular */}
                 <div className="space-y-3">
-                  <h4 className="font-medium text-sm">Esfuerzo Muscular</h4>
+                  <h4 className="font-medium text-sm">{t.muscularEffort}</h4>
                   <div className="space-y-2">
                     <div>
-                      <Label className="text-xs">Mano Izquierda: {leftEffort[0]}%</Label>
+                      <Label className="text-xs">{t.leftHand}: {leftEffort[0]}%</Label>
                       <Slider
                         value={leftEffort}
                         onValueChange={setLeftEffort}
@@ -328,7 +330,7 @@ const DataSimulator = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Mano Derecha: {rightEffort[0]}%</Label>
+                      <Label className="text-xs">{t.rightHand}: {rightEffort[0]}%</Label>
                       <Slider
                         value={rightEffort}
                         onValueChange={setRightEffort}
@@ -347,12 +349,12 @@ const DataSimulator = () => {
                   disabled={autoMode || !enableSimulator || isReceivingRealData}
                 >
                   {isReceivingRealData 
-                    ? 'Usando Datos Reales' 
+                    ? t.usingRealData
                     : autoMode 
-                      ? 'Modo Automático Activo' 
+                      ? t.automaticModeActive
                       : enableSimulator
-                        ? 'Enviar Datos Simulados'
-                        : 'Simulador Deshabilitado'
+                        ? t.sendSimulatedData
+                        : t.simulatorDisabled
                   }
                 </Button>
               </CardContent>

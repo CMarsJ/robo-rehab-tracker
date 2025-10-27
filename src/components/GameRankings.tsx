@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionService } from '@/services/sessionService';
+import { useTranslation } from '@/contexts/AppContext';
 
 interface LegacyOrangeRanking {
   date: string;
@@ -14,6 +15,7 @@ interface LegacyOrangeRanking {
 }
 
 const GameRankings = () => {
+  const t = useTranslation();
   const [orangeRankings, setOrangeRankings] = useState<any[]>([]);
   const [neurolinkSessions, setNeurolinkSessions] = useState<any[]>([]);
   const [flappyBirdSessions, setFlappyBirdSessions] = useState<any[]>([]);
@@ -77,19 +79,19 @@ const GameRankings = () => {
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            🍊 Ranking - Exprimiendo Naranjas
+            🍊 {t.rankingOrangeSqueeze}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Pos.</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-center">Vasos</TableHead>
-                <TableHead className="text-center">Naranjas</TableHead>
-                <TableHead className="text-center">Tiempo/Vaso</TableHead>
-                <TableHead className="text-center">Tiempo/Naranja</TableHead>
+                <TableHead className="w-16">{t.position}</TableHead>
+                <TableHead>{t.date}</TableHead>
+                <TableHead className="text-center">{t.glasses}</TableHead>
+                <TableHead className="text-center">{t.oranges}</TableHead>
+                <TableHead className="text-center">{t.timePerGlass}</TableHead>
+                <TableHead className="text-center">{t.timePerOrange}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -97,7 +99,7 @@ const GameRankings = () => {
                 orangeRankings.map((entry, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">#{entry.position}</TableCell>
-                    <TableCell>{new Date(entry.start_time).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(entry.start_time).toLocaleDateString(t.locale)}</TableCell>
                     <TableCell className="text-center">{entry.juice_used}</TableCell>
                     <TableCell className="text-center">{entry.orange_used}</TableCell>
                     <TableCell className="text-center">{formatTime(entry.time_orange * 4)}</TableCell>
@@ -107,7 +109,7 @@ const GameRankings = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No hay registros aún
+                    {t.noRecords}
                   </TableCell>
                 </TableRow>
               )}
@@ -120,19 +122,19 @@ const GameRankings = () => {
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            🎯 Ranking - NeuroLink
+            🎯 {t.rankingNeuroLink}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Pos.</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-center">Puntaje</TableHead>
-                <TableHead className="text-center">Pts/Seg</TableHead>
-                <TableHead className="text-center">Naranjas</TableHead>
-                <TableHead className="text-right">Duración</TableHead>
+                <TableHead className="w-16">{t.position}</TableHead>
+                <TableHead>{t.date}</TableHead>
+                <TableHead className="text-center">{t.score}</TableHead>
+                <TableHead className="text-center">{t.pointsPerSecond}</TableHead>
+                <TableHead className="text-center">{t.oranges}</TableHead>
+                <TableHead className="text-right">{t.duration}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,13 +146,13 @@ const GameRankings = () => {
                     <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
                     <TableCell className="text-center">{entry.pointsPerSecond.toFixed(2)}</TableCell>
                     <TableCell className="text-center">{entry.orangeUsed}</TableCell>
-                    <TableCell className="text-right">{entry.duration}min</TableCell>
+                    <TableCell className="text-right">{entry.duration}{t.minutes}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    {user ? 'No hay registros aún' : 'Inicia sesión para ver rankings'}
+                    {user ? t.noRecords : t.loginToViewRankings}
                   </TableCell>
                 </TableRow>
               )}
@@ -163,18 +165,18 @@ const GameRankings = () => {
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            🐦 Ranking - Flappy Bird
+            🐦 {t.rankingFlappyBird}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Pos.</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-center">Puntaje</TableHead>
-                <TableHead className="text-center">Pts/Min</TableHead>
-                <TableHead className="text-right">Duración</TableHead>
+                <TableHead className="w-16">{t.position}</TableHead>
+                <TableHead>{t.date}</TableHead>
+                <TableHead className="text-center">{t.score}</TableHead>
+                <TableHead className="text-center">{t.pointsPerMinute}</TableHead>
+                <TableHead className="text-right">{t.duration}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -185,13 +187,13 @@ const GameRankings = () => {
                     <TableCell>{entry.date}</TableCell>
                     <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
                     <TableCell className="text-center">{(entry.totalScore / entry.duration).toFixed(1)}</TableCell>
-                    <TableCell className="text-right">{entry.duration}min</TableCell>
+                    <TableCell className="text-right">{entry.duration}{t.minutes}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    {user ? 'No hay registros aún' : 'Inicia sesión para ver rankings'}
+                    {user ? t.noRecords : t.loginToViewRankings}
                   </TableCell>
                 </TableRow>
               )}

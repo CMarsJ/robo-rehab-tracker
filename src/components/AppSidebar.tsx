@@ -132,7 +132,7 @@ const AppSidebar = () => {
           </div>
         </div>
         <Button onClick={handleLogout} variant="outline" className="mt-3 w-full">
-          Cerrar sesión
+          {t.logout}
         </Button>
       </SidebarFooter>
     </Sidebar>
