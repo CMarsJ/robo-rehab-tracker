@@ -26,6 +26,18 @@ const History = () => {
     return <Navigate to="/auth" replace />;
   }
 
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">{t.history}</h1>
+          <p className="text-muted-foreground">{t.loadingHistory}</p>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (user) {
       fetchSessions();
@@ -100,13 +112,13 @@ const History = () => {
   const getSessionTitle = (therapyType: string) => {
     switch (therapyType) {
       case 'orange-squeeze':
-        return 'Juego de Naranjas';
+        return t.orangeGameTitle;
       case 'neurolink':
-        return 'NeuroLink';
+        return t.neuroLinkTitle;
       case 'terapia_guiada':
-        return 'Terapia Guiada';
+        return t.guidedTherapyTitle;
       default:
-        return 'Sesión de Terapia';
+        return t.therapySession;
     }
   };
 
@@ -126,13 +138,13 @@ const History = () => {
   const getStateText = (state: string) => {
     switch (state) {
       case 'completed':
-        return 'Completada';
+        return t.completedStatus;
       case 'cancelled':
-        return 'Cancelada';
+        return t.cancelled;
       case 'active':
-        return 'Activa';
+        return t.activeSession;
       default:
-        return 'Desconocido';
+        return t.unknown;
     }
   };
 
@@ -172,72 +184,60 @@ const History = () => {
       const totalMovements = attempts.length;
 
       return (
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-semibold mb-3 text-blue-800 flex items-center gap-2">
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+          <h4 className="font-semibold mb-3 text-blue-800 dark:text-blue-300 flex items-center gap-2">
             <Brain className="w-5 h-5" />
-            Resumen de Terapia Guiada
+            {t.guidedTherapySummary}
           </h4>
           
           {/* 3 datos principales arriba */}
           <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {formatTime(openingAvg)}
               </div>
-              <div className="text-blue-700">Promedio Apertura</div>
+              <div className="text-blue-700 dark:text-blue-300">{t.averageOpening}</div>
             </div>
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-green-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {formatTime(closingAvg)}
               </div>
-              <div className="text-green-700">Promedio Cierre</div>
+              <div className="text-green-700 dark:text-green-300">{t.averageClosing}</div>
             </div>
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-purple-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {totalMovements}
               </div>
-              <div className="text-purple-700">Movimientos</div>
+              <div className="text-purple-700 dark:text-purple-300">{t.movements}</div>
             </div>
           </div>
 
           {/* Tabla de intentos */}
           {attempts.length > 0 && (
             <div className="mt-4">
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-lg border dark:border-gray-700">
                 <table className="w-full text-sm">
-                  <thead className="bg-blue-100">
+                  <thead className="bg-blue-100 dark:bg-blue-900/30">
                     <tr>
                       <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">Apertura</th>
-                      <th className="px-3 py-2 text-left">Cierre</th>
-                      <th className="px-3 py-2 text-left">Total</th>
+                      <th className="px-3 py-2 text-left">{t.opening}</th>
+                      <th className="px-3 py-2 text-left">{t.closing}</th>
+                      <th className="px-3 py-2 text-left">{t.total}</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {visibleAttempts.map((attempt, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="px-3 py-2">{attempt.number}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
+...
               {attempts.length > 3 && (
                 <div className="mt-2 flex justify-end">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpanded(session.id)}
-                    className="text-blue-600"
+                    className="text-blue-600 dark:text-blue-400"
                   >
                     {isExpanded ? (
-                      <><EyeOff className="w-4 h-4 mr-1" /> Ver menos</>
+                      <><EyeOff className="w-4 h-4 mr-1" /> {t.viewLess}</>
                     ) : (
-                      <><Eye className="w-4 h-4 mr-1" /> Ver más (+{attempts.length - 3})</>
+                      <><Eye className="w-4 h-4 mr-1" /> {t.viewMore} (+{attempts.length - 3})</>
                     )}
                   </Button>
                 </div>
@@ -250,71 +250,59 @@ const History = () => {
 
     if (therapy_type === 'orange-squeeze') {
       return (
-        <div className="mt-4 p-4 bg-orange-50 rounded-lg">
-          <h4 className="font-semibold mb-3 text-orange-800 flex items-center gap-2">
+        <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+          <h4 className="font-semibold mb-3 text-orange-800 dark:text-orange-300 flex items-center gap-2">
             <Trophy className="w-5 h-5" />
-            Resumen del Juego de Naranjas
+            {t.orangeGameSummary}
           </h4>
           
           <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-orange-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {orange_used || 0}
               </div>
-              <div className="text-orange-700">Naranjas exprimidas</div>
+              <div className="text-orange-700 dark:text-orange-300">{t.squeezedOranges}</div>
             </div>
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {juice_used || 0}
               </div>
-              <div className="text-blue-700">Vasos completados</div>
+              <div className="text-blue-700 dark:text-blue-300">{t.completedGlasses}</div>
             </div>
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-green-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {score || 0}
               </div>
-              <div className="text-green-700">Puntuación</div>
+              <div className="text-green-700 dark:text-green-300">{t.finalScore}</div>
             </div>
           </div>
           
           {/* Tabla de intentos */}
           {attempts.length > 0 && (
             <div className="mt-4">
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-lg border dark:border-gray-700">
                 <table className="w-full text-sm">
-                  <thead className="bg-orange-100">
+                  <thead className="bg-orange-100 dark:bg-orange-900/30">
                     <tr>
                       <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">Apertura</th>
-                      <th className="px-3 py-2 text-left">Cierre</th>
-                      <th className="px-3 py-2 text-left">Total</th>
+                      <th className="px-3 py-2 text-left">{t.opening}</th>
+                      <th className="px-3 py-2 text-left">{t.closing}</th>
+                      <th className="px-3 py-2 text-left">{t.total}</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {visibleAttempts.map((attempt, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="px-3 py-2">{attempt.number}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
+...
               {attempts.length > 3 && (
                 <div className="mt-2 flex justify-end">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpanded(session.id)}
-                    className="text-orange-600"
+                    className="text-orange-600 dark:text-orange-400"
                   >
                     {isExpanded ? (
-                      <><EyeOff className="w-4 h-4 mr-1" /> Ver menos</>
+                      <><EyeOff className="w-4 h-4 mr-1" /> {t.viewLess}</>
                     ) : (
-                      <><Eye className="w-4 h-4 mr-1" /> Ver más (+{attempts.length - 3})</>
+                      <><Eye className="w-4 h-4 mr-1" /> {t.viewMore} (+{attempts.length - 3})</>
                     )}
                   </Button>
                 </div>
@@ -327,32 +315,32 @@ const History = () => {
 
     if (therapy_type === 'neurolink') {
       return (
-        <div className="mt-4 p-4 bg-purple-50 rounded-lg">
-          <h4 className="font-semibold mb-3 text-purple-800 flex items-center gap-2">
+        <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+          <h4 className="font-semibold mb-3 text-purple-800 dark:text-purple-300 flex items-center gap-2">
             <Target className="w-5 h-5" />
-            Resumen de NeuroLink
+            {t.neuroLinkSummary}
           </h4>
           
           <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-            <div className="text-center bg-white/60 rounded-md p-3">
-              <div className="text-2xl font-bold text-purple-600">
+            <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {score || 0}
               </div>
-              <div className="text-purple-700">Puntuación final</div>
+              <div className="text-purple-700 dark:text-purple-300">{t.finalScore}</div>
             </div>
             {stats?.game_metrics && (
               <>
-                <div className="text-center bg-white/60 rounded-md p-3">
-                  <div className="text-2xl font-bold text-blue-600">
+                <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {stats.game_metrics.level || 0}
                   </div>
-                  <div className="text-blue-700">Nivel alcanzado</div>
+                  <div className="text-blue-700 dark:text-blue-300">{t.levelReached}</div>
                 </div>
-                <div className="text-center bg-white/60 rounded-md p-3">
-                  <div className="text-2xl font-bold text-green-600">
+                <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {stats.game_metrics.accuracy || 0}%
                   </div>
-                  <div className="text-green-700">Precisión</div>
+                  <div className="text-green-700 dark:text-green-300">{t.accuracy}</div>
                 </div>
               </>
             )}
@@ -361,41 +349,29 @@ const History = () => {
           {/* Tabla de intentos */}
           {attempts.length > 0 && (
             <div className="mt-4">
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-lg border dark:border-gray-700">
                 <table className="w-full text-sm">
-                  <thead className="bg-purple-100">
+                  <thead className="bg-purple-100 dark:bg-purple-900/30">
                     <tr>
                       <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">Apertura</th>
-                      <th className="px-3 py-2 text-left">Cierre</th>
-                      <th className="px-3 py-2 text-left">Total</th>
+                      <th className="px-3 py-2 text-left">{t.opening}</th>
+                      <th className="px-3 py-2 text-left">{t.closing}</th>
+                      <th className="px-3 py-2 text-left">{t.total}</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {visibleAttempts.map((attempt, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="px-3 py-2">{attempt.number}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
-                        <td className="px-3 py-2">{formatTime(attempt.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
+...
               {attempts.length > 3 && (
                 <div className="mt-2 flex justify-end">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpanded(session.id)}
-                    className="text-purple-600"
+                    className="text-purple-600 dark:text-purple-400"
                   >
                     {isExpanded ? (
-                      <><EyeOff className="w-4 h-4 mr-1" /> Ver menos</>
+                      <><EyeOff className="w-4 h-4 mr-1" /> {t.viewLess}</>
                     ) : (
-                      <><Eye className="w-4 h-4 mr-1" /> Ver más (+{attempts.length - 3})</>
+                      <><Eye className="w-4 h-4 mr-1" /> {t.viewMore} (+{attempts.length - 3})</>
                     )}
                   </Button>
                 </div>
@@ -409,12 +385,12 @@ const History = () => {
     return null;
   };
 
-  if (loading || loadingData) {
+  if (loadingData) {
     return (
       <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-foreground">{t.history}</h1>
-          <p className="text-muted-foreground">Cargando historial...</p>
+          <p className="text-muted-foreground">{t.loadingHistory}</p>
         </div>
       </div>
     );
@@ -425,7 +401,7 @@ const History = () => {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">{t.history}</h1>
         <p className="text-muted-foreground">
-          Historial cronológico de tus sesiones de rehabilitación
+          {t.historyDescription}
         </p>
       </div>
 
@@ -439,9 +415,9 @@ const History = () => {
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No hay sesiones registradas</h3>
+            <h3 className="text-lg font-semibold mb-2">{t.noSessionsRecorded}</h3>
             <p className="text-muted-foreground">
-              Completa tu primera sesión de terapia o entrenamiento para ver tu historial aquí.
+              {t.completeFirstSession}
             </p>
           </CardContent>
         </Card>
