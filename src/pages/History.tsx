@@ -225,7 +225,18 @@ const History = () => {
                       <th className="px-3 py-2 text-left">{t.total}</th>
                     </tr>
                   </thead>
-...
+                  <tbody>
+                    {visibleAttempts.map((attempt) => (
+                      <tr key={attempt.number} className="border-t dark:border-gray-700">
+                        <td className="px-3 py-2">{attempt.number}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
+                        <td className="px-3 py-2 font-medium">{formatTime(attempt.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {attempts.length > 3 && (
                 <div className="mt-2 flex justify-end">
                   <Button
@@ -290,7 +301,18 @@ const History = () => {
                       <th className="px-3 py-2 text-left">{t.total}</th>
                     </tr>
                   </thead>
-...
+                  <tbody>
+                    {visibleAttempts.map((attempt) => (
+                      <tr key={attempt.number} className="border-t dark:border-gray-700">
+                        <td className="px-3 py-2">{attempt.number}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
+                        <td className="px-3 py-2 font-medium">{formatTime(attempt.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {attempts.length > 3 && (
                 <div className="mt-2 flex justify-end">
                   <Button
@@ -359,7 +381,18 @@ const History = () => {
                       <th className="px-3 py-2 text-left">{t.total}</th>
                     </tr>
                   </thead>
-...
+                  <tbody>
+                    {visibleAttempts.map((attempt) => (
+                      <tr key={attempt.number} className="border-t dark:border-gray-700">
+                        <td className="px-3 py-2">{attempt.number}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.opening)}</td>
+                        <td className="px-3 py-2">{formatTime(attempt.closing)}</td>
+                        <td className="px-3 py-2 font-medium">{formatTime(attempt.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {attempts.length > 3 && (
                 <div className="mt-2 flex justify-end">
                   <Button
