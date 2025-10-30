@@ -12,6 +12,7 @@ import ConfigAuth from '@/components/ConfigAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 const Configuration = () => {
   const t = useTranslation();
@@ -28,6 +29,7 @@ const Configuration = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setLocalOrangeGoal(orangeJuiceGoal.toString());
@@ -54,17 +56,44 @@ const Configuration = () => {
   }, [baseEnemyCount]);
 
   useEffect(() => {
-    const loadAvatar = async () => {
+    const loadProfileData = async () => {
       if (!user) return;
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('avatar_url, display_name, therapist_name')
         .eq('user_id', user.id)
         .maybeSingle();
-      const url = (data as any)?.avatar_url;
-      if (url) setAvatarPreview(url as string);
+      
+      if (data) {
+        const profile = data as any;
+        if (profile.avatar_url) setAvatarPreview(profile.avatar_url);
+        if (profile.display_name) setLocalPatientName(profile.display_name);
+        if (profile.therapist_name) setLocalTherapistName(profile.therapist_name);
+      }
     };
-    loadAvatar();
+    loadProfileData();
+  }, [user]);
+
+  useEffect(() => {
+    const loadGameSettings = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('game_settings')
+        .select('enemy_speed, player_shot_speed, numero_base_enemigos, configuracion_inicio')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        const settings = data as any;
+        if (settings.enemy_speed) setLocalEnemySpeed(settings.enemy_speed);
+        if (settings.player_shot_speed) setLocalShotSpeed(settings.player_shot_speed);
+        if (settings.numero_base_enemigos) setLocalBaseEnemyCount(settings.numero_base_enemigos);
+        if (settings.configuracion_inicio?.orange_juice_goal) {
+          setLocalOrangeGoal(settings.configuracion_inicio.orange_juice_goal.toString());
+        }
+      }
+    };
+    loadGameSettings();
   }, [user]);
 
   const handleAuthenticate = (password: string) => {
@@ -80,9 +109,35 @@ const Configuration = () => {
     return <ConfigAuth onAuthenticate={handleAuthenticate} error={authError} />;
   }
 
-  const handleSaveProfile = () => {
-    setPatientName(localPatientName);
-    setTherapistName(localTherapistName);
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          display_name: localPatientName,
+          therapist_name: localTherapistName
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setPatientName(localPatientName);
+      setTherapistName(localTherapistName);
+      
+      toast({
+        title: '✅ Perfil guardado',
+        description: 'Los datos del perfil se guardaron correctamente',
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo guardar el perfil',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleUploadAvatar = async () => {
@@ -103,6 +158,11 @@ const Configuration = () => {
         .eq('user_id', user.id);
       setAvatarPreview(publicUrl);
       setAvatarFile(null);
+      
+      toast({
+        title: '✅ Foto actualizada',
+        description: 'Tu foto de perfil se actualizó correctamente',
+      });
     } catch (e) {
       console.error('Error uploading avatar:', e);
     } finally {
@@ -110,17 +170,118 @@ const Configuration = () => {
     }
   };
 
-  const handleSaveGameConfig = () => {
+  const handleSaveGameConfig = async () => {
+    if (!user) return;
+    
     const goal = parseInt(localOrangeGoal);
-    if (!isNaN(goal) && goal > 0) {
+    if (isNaN(goal) || goal <= 0) {
+      toast({
+        title: '❌ Error',
+        description: 'Por favor ingresa un valor válido para el objetivo',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Verificar si existe una configuración para el usuario
+      const { data: existing } = await supabase
+        .from('game_settings')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Actualizar configuración existente
+        const { error } = await supabase
+          .from('game_settings')
+          .update({
+            configuracion_inicio: { orange_juice_goal: goal }
+          })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Crear nueva configuración
+        const { error } = await supabase
+          .from('game_settings')
+          .insert({
+            user_id: user.id,
+            configuracion_inicio: { orange_juice_goal: goal }
+          });
+
+        if (error) throw error;
+      }
+
       setOrangeJuiceGoal(goal);
+      
+      toast({
+        title: '✅ Configuración guardada',
+        description: 'La configuración del juego se guardó correctamente',
+      });
+    } catch (error) {
+      console.error('Error saving game config:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo guardar la configuración',
+        variant: 'destructive',
+      });
     }
   };
 
-  const handleSaveNeuroLinkConfig = () => {
-    setEnemySpeed(localEnemySpeed);
-    setShotSpeed(localShotSpeed);
-    setBaseEnemyCount(localBaseEnemyCount);
+  const handleSaveNeuroLinkConfig = async () => {
+    if (!user) return;
+
+    try {
+      // Verificar si existe una configuración para el usuario
+      const { data: existing } = await supabase
+        .from('game_settings')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Actualizar configuración existente
+        const { error } = await supabase
+          .from('game_settings')
+          .update({
+            enemy_speed: localEnemySpeed,
+            player_shot_speed: localShotSpeed,
+            numero_base_enemigos: localBaseEnemyCount
+          })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Crear nueva configuración
+        const { error } = await supabase
+          .from('game_settings')
+          .insert({
+            user_id: user.id,
+            enemy_speed: localEnemySpeed,
+            player_shot_speed: localShotSpeed,
+            numero_base_enemigos: localBaseEnemyCount
+          });
+
+        if (error) throw error;
+      }
+
+      setEnemySpeed(localEnemySpeed);
+      setShotSpeed(localShotSpeed);
+      setBaseEnemyCount(localBaseEnemyCount);
+      
+      toast({
+        title: '✅ Configuración guardada',
+        description: 'La configuración de NeuroLink se guardó correctamente',
+      });
+    } catch (error) {
+      console.error('Error saving NeuroLink config:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo guardar la configuración',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

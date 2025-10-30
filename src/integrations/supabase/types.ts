@@ -122,6 +122,8 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          patient_age: number | null
+          therapist_name: string | null
           updated_at: string
           user_id: string
         }
@@ -130,6 +132,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          patient_age?: number | null
+          therapist_name?: string | null
           updated_at?: string
           user_id: string
         }
@@ -138,6 +142,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          patient_age?: number | null
+          therapist_name?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -223,18 +229,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      rebuild_rankings_force: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      rebuild_rankings_force_positions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_rankings: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      rebuild_rankings_force: { Args: never; Returns: undefined }
+      rebuild_rankings_force_positions: { Args: never; Returns: undefined }
+      update_rankings: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

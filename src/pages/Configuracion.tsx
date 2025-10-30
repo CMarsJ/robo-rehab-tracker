@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,41 +8,102 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Settings, User, Bell, Volume2, Save, Shield, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Configuracion = () => {
-  const [patientName, setPatientName] = useState('Juan Pérez');
-  const [therapistName, setTherapistName] = useState('Dr. María González');
-  const [patientAge, setPatientAge] = useState('45');
+  const { user } = useAuth();
+  const [patientName, setPatientName] = useState('');
+  const [therapistName, setTherapistName] = useState('');
+  const [patientAge, setPatientAge] = useState('');
   const [sessionReminders, setSessionReminders] = useState(true);
   const [achievementNotifications, setAchievementNotifications] = useState(true);
   const [soundVolume, setSoundVolume] = useState([75]);
   const [autoSave, setAutoSave] = useState(true);
   const [dataBackup, setDataBackup] = useState(true);
   const [privacyMode, setPrivacyMode] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const { toast } = useToast();
 
-  const handleSaveSettings = () => {
-    // Aquí se guardarían realmente los datos
-    console.log('Guardando configuración:', {
-      patientName,
-      therapistName,
-      patientAge,
-      sessionReminders,
-      achievementNotifications,
-      soundVolume: soundVolume[0],
-      autoSave,
-      dataBackup,
-      privacyMode
-    });
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, therapist_name, patient_age')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (data) {
+          const profile = data as any;
+          if (profile.display_name) setPatientName(profile.display_name);
+          if (profile.therapist_name) setTherapistName(profile.therapist_name);
+          if (profile.patient_age) setPatientAge(profile.patient_age.toString());
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    toast({
-      title: "Configuración guardada",
-      description: "Todas las configuraciones han sido actualizadas correctamente.",
-    });
+    loadSettings();
+  }, [user]);
+
+  const handleSaveSettings = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión para guardar la configuración.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const age = patientAge ? parseInt(patientAge) : null;
+    
+    if (patientAge && (isNaN(age!) || age! <= 0 || age! > 150)) {
+      toast({
+        title: "Error",
+        description: "Por favor ingresa una edad válida (1-150 años).",
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          display_name: patientName,
+          therapist_name: therapistName,
+          patient_age: age
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Configuración guardada",
+        description: "Todas las configuraciones han sido actualizadas correctamente.",
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la configuración.",
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleResetSettings = () => {
+  const handleResetSettings = async () => {
     setPatientName('');
     setTherapistName('');
     setPatientAge('');
@@ -58,6 +119,14 @@ const Configuracion = () => {
       description: "Todas las configuraciones han sido restablecidas a los valores por defecto.",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Cargando configuración...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
