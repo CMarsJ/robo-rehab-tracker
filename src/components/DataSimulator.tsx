@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/popover';
 import { HelpCircle, Settings, ToggleLeft, ToggleRight, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { useSimulation } from '@/contexts/SimulationContext';
-import MQTTConfig from './MQTTConfig';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslation } from '@/contexts/AppContext';
 
@@ -210,18 +209,15 @@ const DataSimulator = () => {
               <CardContent className="space-y-4">
                 {/* Estado MQTT */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {mqttStatus === 'connected' ? (
-                        <Wifi className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <WifiOff className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <span className="text-xs font-medium">
-                        {mqttStatus === 'connected' ? t.mqttConnected : t.mqttDisconnected}
-                      </span>
-                    </div>
-                    <MQTTConfig />
+                  <div className="flex items-center gap-2">
+                    {mqttStatus === 'connected' ? (
+                      <Wifi className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <WifiOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="text-xs font-medium">
+                      {mqttStatus === 'connected' ? t.mqttConnected : t.mqttDisconnected}
+                    </span>
                   </div>
                   
                   {isReceivingRealData && (

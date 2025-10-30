@@ -90,9 +90,9 @@ const MQTTStatusButton: React.FC = () => {
   };
 
   const getStatusEmoji = () => {
-    if (isConnecting) return '🟡';
-    if (isConnected) return '🟢';
-    return '🔴';
+    if (isConnecting) return '📡';
+    if (isConnected) return '📶';
+    return '📵';
   };
 
   return (
