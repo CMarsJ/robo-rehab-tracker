@@ -209,17 +209,6 @@ const DataSimulator = () => {
               <CardContent className="space-y-4">
                 {/* Estado MQTT */}
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {mqttStatus === 'connected' ? (
-                      <Wifi className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <WifiOff className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="text-xs font-medium">
-                      {mqttStatus === 'connected' ? t.mqttConnected : t.mqttDisconnected}
-                    </span>
-                  </div>
-                  
                   {isReceivingRealData && (
                     <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
                       <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />

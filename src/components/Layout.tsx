@@ -41,9 +41,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Moon className="h-4 w-4" />
                   )}
                 </Button>
-                <MQTTStatusButton />
                 <NotificationDropdown />
                 <LanguageSelector />
+                <MQTTStatusButton />
               </div>
             </div>
           </header>
