@@ -14,6 +14,18 @@ export interface WeeklyReportData {
   };
 }
 
+export interface MonthlyReportData {
+  totalTherapyTime: number;
+  sessionsByType: Record<string, { count: number; totalTime: number; averageTime: number }>;
+  totalSessions: number;
+  weeklyProgress: { week: string; sessions: number; time: number }[];
+  achievements: {
+    bestScore: number;
+    totalOranges: number;
+    improvementRate: number;
+  };
+}
+
 export class ReportService {
   static async getWeeklyReport(date: Date = new Date()): Promise<WeeklyReportData | null> {
     try {
@@ -106,6 +118,113 @@ export class ReportService {
       };
     } catch (error) {
       console.error('Error getting weekly report:', error);
+      return null;
+    }
+  }
+
+  static async getMonthlyReport(date: Date = new Date()): Promise<MonthlyReportData | null> {
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) return null;
+
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+
+      const { data: sessions, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('user_id', user.data.user.id)
+        .gte('start_time', monthStart.toISOString())
+        .lte('start_time', monthEnd.toISOString())
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+      if (!sessions || sessions.length === 0) {
+        return {
+          totalTherapyTime: 0,
+          sessionsByType: {},
+          totalSessions: 0,
+          weeklyProgress: [],
+          achievements: {
+            bestScore: 0,
+            totalOranges: 0,
+            improvementRate: 0,
+          },
+        };
+      }
+
+      // Calcular tiempo total
+      const totalTherapyTime = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
+
+      // Agrupar por tipo de terapia
+      const sessionsByType: Record<string, { count: number; totalTime: number; averageTime: number }> = {};
+      sessions.forEach((session) => {
+        const type = session.therapy_type;
+        if (!sessionsByType[type]) {
+          sessionsByType[type] = { count: 0, totalTime: 0, averageTime: 0 };
+        }
+        sessionsByType[type].count++;
+        sessionsByType[type].totalTime += session.duration || 0;
+      });
+
+      // Calcular promedios
+      Object.keys(sessionsByType).forEach((type) => {
+        sessionsByType[type].averageTime = 
+          sessionsByType[type].totalTime / sessionsByType[type].count;
+      });
+
+      // Progreso semanal (agrupar por semana)
+      const weeklyProgress: { week: string; sessions: number; time: number }[] = [];
+      const weeksInMonth = new Map<string, { sessions: number; time: number }>();
+      
+      sessions.forEach((session) => {
+        const sessionDate = new Date(session.start_time);
+        const weekStart = startOfWeek(sessionDate, { weekStartsOn: 1 });
+        const weekKey = format(weekStart, 'dd/MM');
+        
+        if (!weeksInMonth.has(weekKey)) {
+          weeksInMonth.set(weekKey, { sessions: 0, time: 0 });
+        }
+        
+        const weekData = weeksInMonth.get(weekKey)!;
+        weekData.sessions++;
+        weekData.time += session.duration || 0;
+      });
+
+      weeksInMonth.forEach((data, week) => {
+        weeklyProgress.push({
+          week: `Sem ${week}`,
+          sessions: data.sessions,
+          time: data.time,
+        });
+      });
+
+      // Logros
+      const scores = sessions.map(s => s.score || 0).filter(s => s > 0);
+      const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
+      const totalOranges = sessions.reduce((sum, s) => {
+        try {
+          const stats = s.stats as any;
+          const oranges = stats?.game_metrics?.total_oranges || 0;
+          return sum + oranges;
+        } catch {
+          return sum;
+        }
+      }, 0);
+
+      return {
+        totalTherapyTime,
+        sessionsByType,
+        totalSessions: sessions.length,
+        weeklyProgress,
+        achievements: {
+          bestScore,
+          totalOranges,
+          improvementRate: 0,
+        },
+      };
+    } catch (error) {
+      console.error('Error getting monthly report:', error);
       return null;
     }
   }

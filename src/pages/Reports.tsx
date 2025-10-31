@@ -4,15 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Calendar, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
-import { ReportService, WeeklyReportData } from '@/services/reportService';
+import { ReportService, WeeklyReportData, MonthlyReportData } from '@/services/reportService';
 import { WeeklyReport } from '@/components/Reports/WeeklyReport';
+import { MonthlyReport } from '@/components/Reports/MonthlyReport';
 import { useToast } from '@/hooks/use-toast';
 
 const Reports = () => {
   const t = useTranslation();
   const { toast } = useToast();
   const [showWeeklyReport, setShowWeeklyReport] = useState(false);
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false);
   const [weeklyData, setWeeklyData] = useState<WeeklyReportData | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyReportData | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleGenerateReport = async (type: 'week' | 'month') => {
@@ -44,8 +47,34 @@ const Reports = () => {
       } finally {
         setLoading(false);
       }
-    } else {
-      console.log('Reporte mensual - próximamente');
+    } else if (type === 'month') {
+      setLoading(true);
+      try {
+        const data = await ReportService.getMonthlyReport();
+        if (data) {
+          setMonthlyData(data);
+          setShowMonthlyReport(true);
+          toast({
+            title: "Reporte generado",
+            description: "El reporte mensual se ha generado exitosamente",
+          });
+        } else {
+          toast({
+            title: "Sin datos",
+            description: "No hay datos disponibles para este mes",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error generating report:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo generar el reporte",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -63,6 +92,24 @@ const Reports = () => {
           </div>
         </div>
         <WeeklyReport data={weeklyData} />
+      </div>
+    );
+  }
+
+  if (showMonthlyReport && monthlyData) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => setShowMonthlyReport(false)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Reporte Mensual</h1>
+            <p className="text-muted-foreground">Resumen de actividad del mes</p>
+          </div>
+        </div>
+        <MonthlyReport data={monthlyData} />
       </div>
     );
   }
@@ -115,9 +162,10 @@ const Reports = () => {
             <Button 
               onClick={() => handleGenerateReport('month')}
               className="w-full"
+              disabled={loading}
             >
               <FileText className="w-4 h-4 mr-2" />
-              Generar Reporte Mensual
+              {loading ? 'Generando...' : 'Generar Reporte Mensual'}
             </Button>
           </CardContent>
         </Card>
