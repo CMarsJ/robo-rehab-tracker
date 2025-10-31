@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SessionResponse } from './sessionService';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, subWeeks, subMonths } from 'date-fns';
 
 export interface WeeklyReportData {
   totalTherapyTime: number; // en minutos
@@ -27,13 +27,15 @@ export interface MonthlyReportData {
 }
 
 export class ReportService {
-  static async getWeeklyReport(date: Date = new Date()): Promise<WeeklyReportData | null> {
+  static async getWeeklyReport(weeksAgo: number = 1): Promise<WeeklyReportData | null> {
     try {
       const user = await supabase.auth.getUser();
       if (!user.data.user) return null;
 
-      const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Lunes
-      const weekEnd = endOfWeek(date, { weekStartsOn: 1 }); // Domingo
+      // Restar las semanas indicadas desde hoy
+      const targetDate = subWeeks(new Date(), weeksAgo);
+      const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 }); // Lunes
+      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 }); // Domingo
 
       const { data: sessions, error } = await supabase
         .from('sessions')
@@ -122,13 +124,15 @@ export class ReportService {
     }
   }
 
-  static async getMonthlyReport(date: Date = new Date()): Promise<MonthlyReportData | null> {
+  static async getMonthlyReport(monthsAgo: number = 1): Promise<MonthlyReportData | null> {
     try {
       const user = await supabase.auth.getUser();
       if (!user.data.user) return null;
 
-      const monthStart = startOfMonth(date);
-      const monthEnd = endOfMonth(date);
+      // Restar los meses indicados desde hoy
+      const targetDate = subMonths(new Date(), monthsAgo);
+      const monthStart = startOfMonth(targetDate);
+      const monthEnd = endOfMonth(targetDate);
 
       const { data: sessions, error } = await supabase
         .from('sessions')

@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, Calendar, ArrowLeft } from 'lucide-react';
+import { FileText, Download, Calendar, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
 import { ReportService, WeeklyReportData, MonthlyReportData } from '@/services/reportService';
 import { WeeklyReport } from '@/components/Reports/WeeklyReport';
 import { MonthlyReport } from '@/components/Reports/MonthlyReport';
 import { useToast } from '@/hooks/use-toast';
+import { format, subWeeks, subMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const Reports = () => {
   const t = useTranslation();
@@ -17,18 +19,21 @@ const Reports = () => {
   const [weeklyData, setWeeklyData] = useState<WeeklyReportData | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyReportData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState(1); // 1 = semana pasada
+  const [selectedMonth, setSelectedMonth] = useState(1); // 1 = mes pasado
 
   const handleGenerateReport = async (type: 'week' | 'month') => {
     if (type === 'week') {
       setLoading(true);
       try {
-        const data = await ReportService.getWeeklyReport();
+        const data = await ReportService.getWeeklyReport(selectedWeek);
         if (data) {
           setWeeklyData(data);
           setShowWeeklyReport(true);
+          const weekDate = subWeeks(new Date(), selectedWeek);
           toast({
             title: "Reporte generado",
-            description: "El reporte semanal se ha generado exitosamente",
+            description: `Reporte semanal de ${format(weekDate, "dd 'de' MMMM", { locale: es })}`,
           });
         } else {
           toast({
@@ -50,13 +55,14 @@ const Reports = () => {
     } else if (type === 'month') {
       setLoading(true);
       try {
-        const data = await ReportService.getMonthlyReport();
+        const data = await ReportService.getMonthlyReport(selectedMonth);
         if (data) {
           setMonthlyData(data);
           setShowMonthlyReport(true);
+          const monthDate = subMonths(new Date(), selectedMonth);
           toast({
             title: "Reporte generado",
-            description: "El reporte mensual se ha generado exitosamente",
+            description: `Reporte mensual de ${format(monthDate, "MMMM yyyy", { locale: es })}`,
           });
         } else {
           toast({
@@ -133,9 +139,33 @@ const Reports = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Genera un reporte completo con todas las gráficas y datos del rendimiento 
-              del paciente de la última semana.
+              Genera un reporte completo de una semana finalizada
             </p>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setSelectedWeek(Math.min(selectedWeek + 1, 52))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div className="text-center">
+                <p className="font-medium">
+                  {format(subWeeks(new Date(), selectedWeek), "dd 'de' MMMM yyyy", { locale: es })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Hace {selectedWeek} {selectedWeek === 1 ? 'semana' : 'semanas'}
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setSelectedWeek(Math.max(selectedWeek - 1, 1))}
+                disabled={selectedWeek === 1}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
             <Button 
               onClick={() => handleGenerateReport('week')}
               className="w-full"
@@ -156,9 +186,33 @@ const Reports = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Genera un reporte completo con todas las gráficas y datos del rendimiento 
-              del paciente del último mes.
+              Genera un reporte completo de un mes finalizado
             </p>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setSelectedMonth(Math.min(selectedMonth + 1, 12))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div className="text-center">
+                <p className="font-medium">
+                  {format(subMonths(new Date(), selectedMonth), "MMMM yyyy", { locale: es })}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Hace {selectedMonth} {selectedMonth === 1 ? 'mes' : 'meses'}
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setSelectedMonth(Math.max(selectedMonth - 1, 1))}
+                disabled={selectedMonth === 1}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
             <Button 
               onClick={() => handleGenerateReport('month')}
               className="w-full"
