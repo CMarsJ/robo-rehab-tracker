@@ -1,0 +1,112 @@
+import { supabase } from '@/integrations/supabase/client';
+import { SessionResponse } from './sessionService';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from 'date-fns';
+
+export interface WeeklyReportData {
+  totalTherapyTime: number; // en minutos
+  sessionsByType: Record<string, { count: number; totalTime: number; averageTime: number }>;
+  totalSessions: number;
+  dailyProgress: { day: string; sessions: number; time: number }[];
+  achievements: {
+    bestScore: number;
+    totalOranges: number;
+    improvementRate: number;
+  };
+}
+
+export class ReportService {
+  static async getWeeklyReport(date: Date = new Date()): Promise<WeeklyReportData | null> {
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) return null;
+
+      const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Lunes
+      const weekEnd = endOfWeek(date, { weekStartsOn: 1 }); // Domingo
+
+      const { data: sessions, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('user_id', user.data.user.id)
+        .gte('start_time', weekStart.toISOString())
+        .lte('start_time', weekEnd.toISOString())
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+      if (!sessions || sessions.length === 0) {
+        return {
+          totalTherapyTime: 0,
+          sessionsByType: {},
+          totalSessions: 0,
+          dailyProgress: [],
+          achievements: {
+            bestScore: 0,
+            totalOranges: 0,
+            improvementRate: 0,
+          },
+        };
+      }
+
+      // Calcular tiempo total
+      const totalTherapyTime = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
+
+      // Agrupar por tipo de terapia
+      const sessionsByType: Record<string, { count: number; totalTime: number; averageTime: number }> = {};
+      sessions.forEach((session) => {
+        const type = session.therapy_type;
+        if (!sessionsByType[type]) {
+          sessionsByType[type] = { count: 0, totalTime: 0, averageTime: 0 };
+        }
+        sessionsByType[type].count++;
+        sessionsByType[type].totalTime += session.duration || 0;
+      });
+
+      // Calcular promedios
+      Object.keys(sessionsByType).forEach((type) => {
+        sessionsByType[type].averageTime = 
+          sessionsByType[type].totalTime / sessionsByType[type].count;
+      });
+
+      // Progreso diario
+      const dailyProgress: { day: string; sessions: number; time: number }[] = [];
+      for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+        const dayStr = format(d, 'yyyy-MM-dd');
+        const daySessions = sessions.filter(s => 
+          format(new Date(s.start_time), 'yyyy-MM-dd') === dayStr
+        );
+        dailyProgress.push({
+          day: format(d, 'EEE'),
+          sessions: daySessions.length,
+          time: daySessions.reduce((sum, s) => sum + (s.duration || 0), 0),
+        });
+      }
+
+      // Logros
+      const scores = sessions.map(s => s.score || 0).filter(s => s > 0);
+      const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
+      const totalOranges = sessions.reduce((sum, s) => {
+        try {
+          const stats = s.stats as any;
+          const oranges = stats?.game_metrics?.total_oranges || 0;
+          return sum + oranges;
+        } catch {
+          return sum;
+        }
+      }, 0);
+
+      return {
+        totalTherapyTime,
+        sessionsByType,
+        totalSessions: sessions.length,
+        dailyProgress,
+        achievements: {
+          bestScore,
+          totalOranges,
+          improvementRate: 0, // Se puede calcular comparando con semana anterior
+        },
+      };
+    } catch (error) {
+      console.error('Error getting weekly report:', error);
+      return null;
+    }
+  }
+}
