@@ -45,6 +45,17 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 221 83% 53%;
+    
+    --medical-blue: 221 83% 53%;
+    --medical-blue-light: 217 91% 60%;
+    --medical-blue-dark: 221 83% 42%;
+    --medical-green: 156 72% 39%;
+    --medical-green-light: 158 64% 52%;
+    --medical-green-dark: 158 64% 30%;
+    --medical-orange: 38 92% 50%;
+    --medical-orange-light: 43 96% 56%;
+    --medical-red: 0 84% 60%;
+    --medical-red-light: 0 91% 71%;
   }
 
   .dark {
@@ -84,6 +95,17 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 221 83% 53%;
+    
+    --medical-blue: 221 83% 53%;
+    --medical-blue-light: 217 91% 65%;
+    --medical-blue-dark: 221 83% 38%;
+    --medical-green: 156 72% 45%;
+    --medical-green-light: 158 64% 58%;
+    --medical-green-dark: 158 64% 35%;
+    --medical-orange: 38 92% 55%;
+    --medical-orange-light: 43 96% 62%;
+    --medical-red: 0 72% 51%;
+    --medical-red-light: 0 77% 62%;
   }
 }
 
@@ -99,10 +121,10 @@
 
 @layer components {
   .hand-paretic {
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    background: linear-gradient(135deg, hsl(var(--medical-orange-light)) 0%, hsl(var(--medical-orange)) 100%);
   }
   
   .hand-non-paretic {
-    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    background: linear-gradient(135deg, hsl(var(--medical-green-light)) 0%, hsl(var(--medical-green)) 100%);
   }
 }
