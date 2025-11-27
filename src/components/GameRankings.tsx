@@ -133,7 +133,6 @@ const GameRankings = () => {
                 <TableHead>{t.date}</TableHead>
                 <TableHead className="text-center">{t.score}</TableHead>
                 <TableHead className="text-center">{t.pointsPerSecond}</TableHead>
-                <TableHead className="text-center">{t.oranges}</TableHead>
                 <TableHead className="text-right">{t.duration}</TableHead>
               </TableRow>
             </TableHeader>
@@ -145,13 +144,12 @@ const GameRankings = () => {
                     <TableCell>{entry.date}</TableCell>
                     <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
                     <TableCell className="text-center">{entry.pointsPerSecond.toFixed(2)}</TableCell>
-                    <TableCell className="text-center">{entry.orangeUsed}</TableCell>
                     <TableCell className="text-right">{entry.duration}{t.minutes}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     {user ? t.noRecords : t.loginToViewRankings}
                   </TableCell>
                 </TableRow>
