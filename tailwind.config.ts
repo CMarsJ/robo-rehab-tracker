@@ -64,16 +64,16 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				medical: {
-					blue: '#2563eb',
-					'blue-light': '#3b82f6',
-					'blue-dark': '#1d4ed8',
-					green: '#10b981',
-					'green-light': '#34d399',
-					'green-dark': '#059669',
-					orange: '#f59e0b',
-					'orange-light': '#fbbf24',
-					red: '#ef4444',
-					'red-light': '#f87171'
+					blue: 'hsl(var(--medical-blue))',
+					'blue-light': 'hsl(var(--medical-blue-light))',
+					'blue-dark': 'hsl(var(--medical-blue-dark))',
+					green: 'hsl(var(--medical-green))',
+					'green-light': 'hsl(var(--medical-green-light))',
+					'green-dark': 'hsl(var(--medical-green-dark))',
+					orange: 'hsl(var(--medical-orange))',
+					'orange-light': 'hsl(var(--medical-orange-light))',
+					red: 'hsl(var(--medical-red))',
+					'red-light': 'hsl(var(--medical-red-light))'
 				}
 			},
 			borderRadius: {
