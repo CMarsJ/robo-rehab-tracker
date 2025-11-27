@@ -168,10 +168,10 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
   }, 0);
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-500" />
+        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-medical-orange" />
           {(t.achievements || "Logros")} de {currentMonthName} {today.getFullYear()}
         </CardTitle>
       </CardHeader>
@@ -180,10 +180,10 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
         {/* Progreso semanal */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-muted-foreground">
               {t.weeklyProgress || "Progreso semanal"}
             </span>
-            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-sm font-bold text-primary">
               {completedDays}/7 {t.days}
             </span>
           </div>
@@ -200,10 +200,10 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
                     className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-medium mb-1 transition-all duration-300
                     ${
                       isCompleted
-                        ? "bg-green-500 text-white"
+                        ? "bg-medical-green text-white"
                         : isToday
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {isCompleted ? (
@@ -217,7 +217,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
                         .toUpperCase()
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {day.getDate()}
                   </div>
                 </div>
@@ -226,7 +226,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
           </div>
 
           <Progress value={(completedDays / 7) * 100} className="h-2" />
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {Math.round((completedDays / 7) * 100)}%{" "}
             {t.completedThisWeek}
           </p>
@@ -235,16 +235,16 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ onDayCompleted }) => 
         {/* Progreso mensual */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-muted-foreground">
               {t.monthlyProgress || "Progreso mensual"}
             </span>
-            <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+            <span className="text-sm font-bold text-accent">
               {displayMonthlyDays}/{daysInMonth} {t.days}
             </span>
           </div>
 
           <Progress value={monthProgress} className="h-2 mb-1" />
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-muted-foreground">
             {monthProgress}% {t.completedThisMonth}
           </p>
         </div>
