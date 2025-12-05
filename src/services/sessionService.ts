@@ -187,7 +187,6 @@ export class SessionService {
 
   static async getOrangeSqueezeRankings(): Promise<any[]> {
     try {
-      // Using raw query to access table not in type definitions
       const { data, error } = await (supabase as any)
         .from('rankings_orabge_squeeze')
         .select('*')
@@ -202,6 +201,46 @@ export class SessionService {
       return data || [];
     } catch (error) {
       console.error('Error en getOrangeSqueezeRankings:', error);
+      return [];
+    }
+  }
+
+  static async getNeuroLinkRankings(): Promise<any[]> {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('rankings_neurolink')
+        .select('*')
+        .order('position', { ascending: true })
+        .limit(5);
+
+      if (error) {
+        console.error('Error al obtener rankings de NeuroLink:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error en getNeuroLinkRankings:', error);
+      return [];
+    }
+  }
+
+  static async getFlappyBirdRankings(): Promise<any[]> {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('rankings_flappy_bird')
+        .select('*')
+        .order('position', { ascending: true })
+        .limit(5);
+
+      if (error) {
+        console.error('Error al obtener rankings de Flappy Bird:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error en getFlappyBirdRankings:', error);
       return [];
     }
   }
