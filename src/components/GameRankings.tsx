@@ -5,38 +5,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SessionService } from '@/services/sessionService';
 import { useTranslation } from '@/contexts/AppContext';
 
-interface LegacyOrangeRanking {
-  date: string;
-  glasses: number;
-  totalOranges: number;
-  timePerGlass: number;
-  timePerOrange: number;
-  totalTime: number;
-}
-
 const GameRankings = () => {
   const t = useTranslation();
   const [orangeRankings, setOrangeRankings] = useState<any[]>([]);
-  const [neurolinkSessions, setNeurolinkSessions] = useState<any[]>([]);
-  const [flappyBirdSessions, setFlappyBirdSessions] = useState<any[]>([]);
+  const [neurolinkRankings, setNeurolinkRankings] = useState<any[]>([]);
+  const [flappyBirdRankings, setFlappyBirdRankings] = useState<any[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load Orange Squeeze rankings from Supabase
+        // Load all rankings from dedicated Supabase tables
         const orangeData = await SessionService.getOrangeSqueezeRankings();
         setOrangeRankings(orangeData);
         
-        if (!user) return;
+        const neurolinkData = await SessionService.getNeuroLinkRankings();
+        setNeurolinkRankings(neurolinkData);
         
-        // Load NeuroLink sessions
-        const neurolinkData = await SessionService.getTop5ByGame('neurolink');
-        setNeurolinkSessions(neurolinkData);
-        
-        // Load Flappy Bird sessions
-        const flappyData = await SessionService.getTop5ByGame('flappy_bird');
-        setFlappyBirdSessions(flappyData);
+        const flappyData = await SessionService.getFlappyBirdRankings();
+        setFlappyBirdRankings(flappyData);
         
       } catch (error) {
         console.error('Error loading rankings:', error);
@@ -52,27 +39,6 @@ const GameRankings = () => {
     const secs = totalSeconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  const formatSessionData = (sessions: any[]) => {
-    return sessions.map(session => {
-      const duration = session.duration || 1;
-      const score = session.score || 0;
-      const pointsPerSecond = duration > 0 ? score / (duration * 60) : 0;
-      
-      return {
-        date: new Date(session.start_time).toLocaleDateString(),
-        totalScore: score,
-        pointsPerSecond: pointsPerSecond,
-        orangeUsed: session.orange_used || 0,
-        juiceUsed: session.juice_used || 0,
-        duration: duration
-      };
-    });
-  };
-
-  const neurolinkFormattedData = formatSessionData(neurolinkSessions);
-  const flappyBirdFormattedData = formatSessionData(flappyBirdSessions);
-
   return (
     <div className="grid grid-cols-1 gap-6 mt-6">
       {/* Ranking Naranjas */}
@@ -137,20 +103,20 @@ const GameRankings = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {neurolinkFormattedData.length > 0 ? (
-                neurolinkFormattedData.map((entry, index) => (
+              {neurolinkRankings.length > 0 && neurolinkRankings.some(s => s.user_id) ? (
+                neurolinkRankings.filter(s => s.user_id).map((entry, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">#{index + 1}</TableCell>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
-                    <TableCell className="text-center">{entry.pointsPerSecond.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{entry.duration}{t.minutes}</TableCell>
+                    <TableCell className="font-medium">#{entry.position}</TableCell>
+                    <TableCell>{entry.start_time ? new Date(entry.start_time).toLocaleDateString(t.locale) : '-'}</TableCell>
+                    <TableCell className="text-center font-bold">{entry.score}</TableCell>
+                    <TableCell className="text-center">{Number(entry.points_per_second).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{Math.floor(entry.duration / 60000)}{t.minutes}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    {user ? t.noRecords : t.loginToViewRankings}
+                    {t.noRecords}
                   </TableCell>
                 </TableRow>
               )}
@@ -178,20 +144,20 @@ const GameRankings = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {flappyBirdFormattedData.length > 0 ? (
-                flappyBirdFormattedData.map((entry, index) => (
+              {flappyBirdRankings.length > 0 && flappyBirdRankings.some(s => s.user_id) ? (
+                flappyBirdRankings.filter(s => s.user_id).map((entry, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">#{index + 1}</TableCell>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell className="text-center font-bold">{entry.totalScore}</TableCell>
-                    <TableCell className="text-center">{(entry.totalScore / entry.duration).toFixed(1)}</TableCell>
-                    <TableCell className="text-right">{entry.duration}{t.minutes}</TableCell>
+                    <TableCell className="font-medium">#{entry.position}</TableCell>
+                    <TableCell>{entry.start_time ? new Date(entry.start_time).toLocaleDateString(t.locale) : '-'}</TableCell>
+                    <TableCell className="text-center font-bold">{entry.score}</TableCell>
+                    <TableCell className="text-center">{Number(entry.points_per_minute).toFixed(1)}</TableCell>
+                    <TableCell className="text-right">{Math.floor(entry.duration / 60000)}{t.minutes}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    {user ? t.noRecords : t.loginToViewRankings}
+                    {t.noRecords}
                   </TableCell>
                 </TableRow>
               )}

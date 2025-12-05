@@ -149,6 +149,66 @@ export type Database = {
         }
         Relationships: []
       }
+      rankings_flappy_bird: {
+        Row: {
+          duration: number
+          game_type: string | null
+          points_per_minute: number
+          position: number
+          score: number
+          start_time: string | null
+          user_id: string | null
+        }
+        Insert: {
+          duration?: number
+          game_type?: string | null
+          points_per_minute?: number
+          position: number
+          score?: number
+          start_time?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          duration?: number
+          game_type?: string | null
+          points_per_minute?: number
+          position?: number
+          score?: number
+          start_time?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rankings_neurolink: {
+        Row: {
+          duration: number
+          game_type: string | null
+          points_per_second: number
+          position: number
+          score: number
+          start_time: string | null
+          user_id: string | null
+        }
+        Insert: {
+          duration?: number
+          game_type?: string | null
+          points_per_second?: number
+          position: number
+          score?: number
+          start_time?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          duration?: number
+          game_type?: string | null
+          points_per_second?: number
+          position?: number
+          score?: number
+          start_time?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       rankings_orabge_squeeze: {
         Row: {
           juice_used: number
@@ -229,8 +289,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      rebuild_rankings_flappy_bird: { Args: never; Returns: undefined }
       rebuild_rankings_force: { Args: never; Returns: undefined }
       rebuild_rankings_force_positions: { Args: never; Returns: undefined }
+      rebuild_rankings_neurolink: { Args: never; Returns: undefined }
       update_rankings: { Args: never; Returns: undefined }
     }
     Enums: {
