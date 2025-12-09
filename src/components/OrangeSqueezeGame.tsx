@@ -35,6 +35,11 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
     if (startTime === null) setStartTime(Date.now());
   }, [startTime]);
 
+  // Notificar stats updates en un efecto separado (evita setState durante render)
+  useEffect(() => {
+    onStatsUpdate?.({ orangesUsed: orangesSqueezed, juiceUsed: glassesCompleted });
+  }, [orangesSqueezed, glassesCompleted, onStatsUpdate]);
+
   // Lógica de exprimir naranja
   useEffect(() => {
     const fingerSum = rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3;
@@ -53,42 +58,34 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
       setShowOrangeMessage(true);
       setTimeout(() => setShowOrangeMessage(false), 2000);
 
-      setOrangesSqueezed(prev => {
-        const newCount = prev + 1;
-        const newGlasses = Math.floor(newCount / 4);
+      const newCount = orangesSqueezed + 1;
+      const newGlasses = Math.floor(newCount / 4);
 
-        if (newGlasses > glassesCompleted) {
-          setGlassesCompleted(newGlasses);
-          playDrinkSound();
+      setOrangesSqueezed(newCount);
 
-          // Actualizar estadísticas en tiempo real
-          onStatsUpdate?.({ orangesUsed: newCount, juiceUsed: newGlasses });
+      if (newGlasses > glassesCompleted) {
+        setGlassesCompleted(newGlasses);
+        playDrinkSound();
 
-          if (newGlasses >= targetGlasses && startTime) {
-            const totalTimeMinutes = (currentTime - startTime) / (1000 * 60);
-            const timePerGlass = totalTimeMinutes / newGlasses;
-            const timePerOrange = totalTimeMinutes / newCount;
-            const orangesPerMinute = newCount / totalTimeMinutes;
-            const averageFingerClosure = fingerSum / 3;
+        if (newGlasses >= targetGlasses && startTime) {
+          const totalTimeMinutes = (currentTime - startTime) / (1000 * 60);
+          const timePerGlass = totalTimeMinutes / newGlasses;
+          const timePerOrange = totalTimeMinutes / newCount;
+          const orangesPerMinute = newCount / totalTimeMinutes;
+          const averageFingerClosure = fingerSum / 3;
 
-            onComplete({
-              juice_used: newGlasses,
-              orange_used: newCount,
-              timePerGlass,
-              timePerOrange,
-              orangesPerMinute,
-              averageFingerClosure
-            });
-          }
-        } else {
-          // Actualizar estadísticas aunque no se complete un vaso
-          onStatsUpdate?.({ orangesUsed: newCount, juiceUsed: glassesCompleted });
+          onComplete({
+            juice_used: newGlasses,
+            orange_used: newCount,
+            timePerGlass,
+            timePerOrange,
+            orangesPerMinute,
+            averageFingerClosure
+          });
         }
-
-        return newCount;
-      });
+      }
     }
-  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, targetGlasses, canSqueeze, startTime, onComplete, onStatsUpdate]);
+  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, orangesSqueezed, targetGlasses, canSqueeze, startTime, onComplete]);
 
   const currentOrangesInGlass = orangesSqueezed % 4;
   const progressPercent = (currentOrangesInGlass / 4) * 100;
