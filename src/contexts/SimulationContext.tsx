@@ -102,13 +102,39 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, []);
 
+  // Helper to validate and transform MQTT hand data
+  const parseHandData = (hand: any): HandData | null => {
+    if (!hand || typeof hand !== 'object') return null;
+    
+    return {
+      active: Boolean(hand.active),
+      angles: {
+        thumb1: Number(hand.angles?.thumb1) || 0,
+        thumb2: Number(hand.angles?.thumb2) || 0,
+        thumb3: Number(hand.angles?.thumb3) || 0,
+        finger1: Number(hand.angles?.finger1) || 0,
+        finger2: Number(hand.angles?.finger2) || 0,
+        finger3: Number(hand.angles?.finger3) || 0,
+      },
+      effort: Number(hand.effort) || 0,
+    };
+  };
+
   // MQTT Connection Effect
   useEffect(() => {
     // Configurar callbacks de MQTT
     mqttService.onData((data) => {
       console.log('📊 Real data received from MQTT:', data);
-      setIsReceivingRealData(true);
-      updateSimulationData(data.leftHand, data.rightHand);
+      
+      const parsedLeft = parseHandData(data?.leftHand);
+      const parsedRight = parseHandData(data?.rightHand);
+      
+      if (parsedLeft && parsedRight) {
+        setIsReceivingRealData(true);
+        updateSimulationData(parsedLeft, parsedRight);
+      } else {
+        console.warn('⚠️ Invalid MQTT data format, ignoring:', data);
+      }
     });
 
     mqttService.onStatus((status, message) => {
