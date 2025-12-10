@@ -114,7 +114,7 @@ const MQTTConfig: React.FC<MQTTConfigProps> = ({ onConnectionChange }) => {
           <CardHeader className="px-0 pt-0">
             <CardTitle className="text-sm">HiveMQ Cloud</CardTitle>
             <CardDescription className="text-xs">
-              c178ec237d6346ae962b54e2b3bc490d.s1.eu.hivemq.cloud:8883
+              7e8350d563654f49b9e95c47ac4bbb21.s1.eu.hivemq.cloud:8884
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-0">
