@@ -1,16 +1,31 @@
 import mqtt, { MqttClient } from 'mqtt';
 
+// Datos crudos del ESP32 (solo 2 ángulos por mano)
+export interface MQTTRawHandData {
+  active: boolean;
+  mcp_finger: number; // MCP de los dedos
+  mcp_thumb: number;  // MCP del pulgar
+  effort: number;
+}
+
+// Datos procesados con todos los ángulos calculados
 export interface MQTTHandData {
   active: boolean;
   angles: {
-    thumb1: number;
-    thumb2: number;
-    thumb3: number;
-    finger1: number;
-    finger2: number;
-    finger3: number;
+    thumb1: number; // MCP pulgar
+    thumb2: number; // IP pulgar (calculado: 1.25 * MCP)
+    thumb3: number; // Reservado
+    finger1: number; // MCP dedos
+    finger2: number; // PIP dedos (calculado: 2 * MCP)
+    finger3: number; // DIP dedos (calculado: 0.66 * PIP)
   };
   effort: number;
+}
+
+export interface MQTTRawMessage {
+  leftHand: MQTTRawHandData;
+  rightHand: MQTTRawHandData;
+  timestamp: string;
 }
 
 export interface MQTTMessage {
@@ -21,11 +36,14 @@ export interface MQTTMessage {
 
 export class MQTTService {
   private client: MqttClient | null = null;
-  private brokerUrl = 'wss://c178ec237d6346ae962b54e2b3bc490d.s1.eu.hivemq.cloud:8884/mqtt';
+  private brokerUrl = 'wss://7e8350d563654f49b9e95c47ac4bbb21.s1.eu.hivemq.cloud:8884/mqtt';
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private lastDataTimestamp: number = 0;
-  private dataTimeoutMs = 60000; // 60 segundos sin datos = desconectado
+  private dataTimeoutMs = 60000;
+  
+  private dataTopic = 'esp32/data';
+  private controlTopic = 'esp32/control';
   
   private onDataCallback?: (data: MQTTMessage) => void;
   private onStatusCallback?: (status: 'connected' | 'disconnected' | 'error', message?: string) => void;
@@ -34,8 +52,37 @@ export class MQTTService {
     console.log('🔌 MQTT Service initialized');
   }
 
-  connect(username: string, password: string, topic: string = 'sensor/data') {
+  // Calcula los ángulos derivados a partir de los MCP
+  private calculateAngles(rawHand: MQTTRawHandData): MQTTHandData {
+    const mcp_finger = rawHand.mcp_finger || 0;
+    const mcp_thumb = rawHand.mcp_thumb || 0;
+    
+    // Fórmulas para dedos: PIP = 2 * MCP, DIP = 0.66 * PIP
+    const pip_finger = 2 * mcp_finger;
+    const dip_finger = 0.66 * pip_finger;
+    
+    // Fórmula para pulgar: IP = 1.25 * MCP
+    const ip_thumb = 1.25 * mcp_thumb;
+
+    return {
+      active: rawHand.active,
+      angles: {
+        thumb1: mcp_thumb,
+        thumb2: ip_thumb,
+        thumb3: 0,
+        finger1: mcp_finger,
+        finger2: pip_finger,
+        finger3: dip_finger,
+      },
+      effort: rawHand.effort || 0,
+    };
+  }
+
+  connect(username: string, password: string, topic: string = 'esp32/data') {
     console.log('🔄 Connecting to HiveMQ Cloud...');
+    
+    // Actualizar topic de datos si se proporciona uno diferente
+    this.dataTopic = topic;
     
     try {
       this.client = mqtt.connect(this.brokerUrl, {
@@ -55,12 +102,13 @@ export class MQTTService {
         this.onStatusCallback?.('connected', 'Conectado a datos reales');
         
         if (this.client) {
-          this.client.subscribe(topic, (err) => {
+          // Suscribirse al topic de datos
+          this.client.subscribe(this.dataTopic, (err) => {
             if (err) {
-              console.error('❌ Error subscribing to topic:', err);
+              console.error('❌ Error subscribing to data topic:', err);
               this.onStatusCallback?.('error', `Error al suscribirse: ${err.message}`);
             } else {
-              console.log(`📡 Subscribed to topic: ${topic}`);
+              console.log(`📡 Subscribed to data topic: ${this.dataTopic}`);
             }
           });
         }
@@ -69,14 +117,23 @@ export class MQTTService {
       this.client.on('message', (receivedTopic, message) => {
         console.log(`📨 Message received on topic ${receivedTopic}`);
         
-        try {
-          const data = JSON.parse(message.toString()) as MQTTMessage;
-          this.lastDataTimestamp = Date.now();
-          
-          console.log('📊 Data parsed:', data);
-          this.onDataCallback?.(data);
-        } catch (error) {
-          console.error('❌ Error parsing MQTT message:', error);
+        if (receivedTopic === this.dataTopic) {
+          try {
+            const rawData = JSON.parse(message.toString()) as MQTTRawMessage;
+            this.lastDataTimestamp = Date.now();
+            
+            // Procesar y calcular ángulos derivados
+            const processedData: MQTTMessage = {
+              leftHand: this.calculateAngles(rawData.leftHand),
+              rightHand: this.calculateAngles(rawData.rightHand),
+              timestamp: rawData.timestamp,
+            };
+            
+            console.log('📊 Data processed:', processedData);
+            this.onDataCallback?.(processedData);
+          } catch (error) {
+            console.error('❌ Error parsing MQTT message:', error);
+          }
         }
       });
 
@@ -109,6 +166,36 @@ export class MQTTService {
     } catch (error) {
       console.error('❌ Error creating MQTT client:', error);
       this.onStatusCallback?.('error', 'Error al crear cliente MQTT');
+    }
+  }
+
+  // Enviar comando de inicio de terapia
+  startTherapy() {
+    if (this.client?.connected) {
+      this.client.publish(this.controlTopic, 'start', (err) => {
+        if (err) {
+          console.error('❌ Error sending start command:', err);
+        } else {
+          console.log('🚀 Start command sent to ESP32');
+        }
+      });
+    } else {
+      console.warn('⚠️ Cannot send start: MQTT not connected');
+    }
+  }
+
+  // Enviar comando de parada de terapia
+  stopTherapy() {
+    if (this.client?.connected) {
+      this.client.publish(this.controlTopic, 'stop', (err) => {
+        if (err) {
+          console.error('❌ Error sending stop command:', err);
+        } else {
+          console.log('🛑 Stop command sent to ESP32');
+        }
+      });
+    } else {
+      console.warn('⚠️ Cannot send stop: MQTT not connected');
     }
   }
 

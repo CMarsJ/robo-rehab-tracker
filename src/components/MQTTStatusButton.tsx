@@ -15,7 +15,7 @@ const MQTTStatusButton: React.FC = () => {
   const { toast } = useToast();
   const [username, setUsername] = useState(localStorage.getItem('mqtt_username') || 'ESP32');
   const [password, setPassword] = useState(localStorage.getItem('mqtt_password') || 'Juanesteban1');
-  const [topic, setTopic] = useState(localStorage.getItem('mqtt_topic') || 'sensor/data');
+  const [topic, setTopic] = useState(localStorage.getItem('mqtt_topic') || 'esp32/data');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -115,7 +115,7 @@ const MQTTStatusButton: React.FC = () => {
           
           <div className="text-xs text-muted-foreground">
             <p className="font-medium">HiveMQ Cloud</p>
-            <p className="text-[10px] break-all">c178ec237d6346ae962b54e2b3bc490d.s1.eu.hivemq.cloud:8883</p>
+            <p className="text-[10px] break-all">7e8350d563654f49b9e95c47ac4bbb21.s1.eu.hivemq.cloud:8884</p>
           </div>
 
           <div className="space-y-3">
@@ -150,7 +150,7 @@ const MQTTStatusButton: React.FC = () => {
               <Input
                 id="topic"
                 type="text"
-                placeholder="sensor/data"
+                placeholder="esp32/data"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 disabled={isConnected}
