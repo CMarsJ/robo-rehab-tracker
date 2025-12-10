@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SessionService } from '@/services/sessionService';
 import { EffortDataPoint } from '@/types/database';
 import TherapyOverlay from '@/components/TherapyOverlay';
+import { mqttService } from '@/services/mqttService';
 
 interface TherapyTimerProps {
   onSessionComplete?: () => void;
@@ -83,6 +84,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           setStartTime(null);
           setPauseStartTime(null);
           setTotalPausedTime(0);
+          
+          // Enviar comando stop al ESP32
+          mqttService.stopTherapy();
           
           playVictorySound();
           
@@ -180,6 +184,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
       
+      // Enviar comando start al ESP32
+      mqttService.startTherapy();
+      
       const initialTimeLeft = duration[0] * 60;
       setTimeLeft(initialTimeLeft);
       setStartTime(Date.now());
@@ -208,6 +215,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   };
 
   const handleCancel = async () => {
+    // Enviar comando stop al ESP32
+    mqttService.stopTherapy();
+    
     if (currentSessionId && user) {
       try {
         await SessionService.updateSessionState(currentSessionId, 'cancelled');
