@@ -21,9 +21,9 @@ interface MQTTConfigProps {
 
 const MQTTConfig: React.FC<MQTTConfigProps> = ({ onConnectionChange }) => {
   const { toast } = useToast();
-  const [username, setUsername] = useState(localStorage.getItem('mqtt_username') || 'ESP32');
-  const [password, setPassword] = useState(localStorage.getItem('mqtt_password') || 'Juanesteban1');
-  const [topic, setTopic] = useState(localStorage.getItem('mqtt_topic') || 'sensor/data');
+  const [username, setUsername] = useState(localStorage.getItem('mqtt_username') || 'Monitoreo');
+  const [password, setPassword] = useState(localStorage.getItem('mqtt_password') || 'Nosemeolvida1');
+  const [topic, setTopic] = useState(localStorage.getItem('mqtt_topic') || 'esp32/data');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
