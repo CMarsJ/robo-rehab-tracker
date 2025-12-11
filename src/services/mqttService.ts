@@ -58,7 +58,7 @@ export class MQTTService {
     const mcp_thumb = rawHand.mcp_thumb || 0;
     
     // Fórmulas para dedos: PIP = 2 * MCP, DIP = 0.66 * PIP
-    const pip_finger = 2 * mcp_finger;
+    const pip_finger = 0.8 * mcp_finger;
     const dip_finger = 0.66 * pip_finger;
     
     // Fórmula para pulgar: IP = 1.25 * MCP
