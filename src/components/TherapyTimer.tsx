@@ -180,6 +180,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   };
 
   const startTimerNow = async () => {
+    console.log('⏱️ startTimerNow called, isActive:', isActive, 'user:', !!user);
     if (!isActive && user) {
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
@@ -188,6 +189,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       mqttService.startTherapy();
       
       const initialTimeLeft = duration[0] * 60;
+      console.log('⏱️ Setting timeLeft to:', initialTimeLeft);
       setTimeLeft(initialTimeLeft);
       setStartTime(Date.now());
       setPauseStartTime(null);
@@ -199,6 +201,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       clearEffortHistory();
       setSampleCounter(0);
       setSessionEffortData([]);
+      console.log('⏱️ Timer started successfully');
+    } else {
+      console.log('⚠️ Timer not started - isActive:', isActive, 'user:', !!user);
     }
   };
 

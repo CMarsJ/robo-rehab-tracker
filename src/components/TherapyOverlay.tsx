@@ -83,9 +83,15 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   // --- Lógica de inicio de terapia ---
   const handleStartTherapy = async () => {
-    onStartTimer();
+    console.log('🎯 handleStartTherapy called, isActive:', isActive);
     setGameMode('timer');
     setGameCompleted(false);
+    
+    // Iniciar el temporizador primero
+    if (!isActive) {
+      console.log('⏱️ Starting timer...');
+      onStartTimer();
+    }
     
     // Usar sesión existente si ya fue creada por el temporizador
     const existingId = typeof window !== 'undefined' ? localStorage.getItem('currentSessionId') : null;
