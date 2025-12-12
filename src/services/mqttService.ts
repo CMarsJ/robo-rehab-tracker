@@ -119,20 +119,34 @@ export class MQTTService {
         
         if (receivedTopic === this.dataTopic) {
           try {
-            const rawData = JSON.parse(message.toString()) as MQTTRawMessage;
+            const rawData = JSON.parse(message.toString());
+            console.log('📥 Raw MQTT data:', rawData);
+            
+            // Validar estructura del mensaje
+            if (!rawData || typeof rawData !== 'object') {
+              console.warn('⚠️ Mensaje MQTT inválido: no es un objeto');
+              return;
+            }
+            
+            if (!rawData.leftHand || !rawData.rightHand) {
+              console.warn('⚠️ Mensaje MQTT incompleto: falta leftHand o rightHand', rawData);
+              return;
+            }
+            
             this.lastDataTimestamp = Date.now();
             
             // Procesar y calcular ángulos derivados
             const processedData: MQTTMessage = {
               leftHand: this.calculateAngles(rawData.leftHand),
               rightHand: this.calculateAngles(rawData.rightHand),
-              timestamp: rawData.timestamp,
+              timestamp: rawData.timestamp || new Date().toISOString(),
             };
             
             console.log('📊 Data processed:', processedData);
             this.onDataCallback?.(processedData);
           } catch (error) {
             console.error('❌ Error parsing MQTT message:', error);
+            console.error('📄 Raw message:', message.toString());
           }
         }
       });
