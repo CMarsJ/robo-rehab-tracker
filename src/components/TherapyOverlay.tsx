@@ -302,7 +302,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const renderTimerControls = () => (
     <div className="flex flex-col items-center mt-4">
       <div className="text-3xl font-bold text-primary mb-1">
-        {isActive ? formatTime(timeLeft) : `${duration}:00`}
+        {isActive ? formatTime(timeLeft) : formatTime(duration * 60)}
       </div>
       <div className="text-sm text-muted-foreground mb-4">
         {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
