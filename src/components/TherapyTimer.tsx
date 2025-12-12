@@ -177,6 +177,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 
   const handleStart = async () => {
     setShowOverlay(true);
+    if (!isActive) {
+      await startTimerNow();
+    }
   };
 
   const startTimerNow = async () => {
@@ -197,7 +200,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       setIsActive(true);
       setIsPaused(false);
       setIsTherapyActive(true);
-      setShowOverlay(true);
       clearEffortHistory();
       setSampleCounter(0);
       setSessionEffortData([]);
@@ -206,7 +208,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       console.log('⚠️ Timer not started - isActive:', isActive, 'user:', !!user);
     }
   };
-
   const handlePause = () => {
     if (isPaused) {
       if (pauseStartTime) {
