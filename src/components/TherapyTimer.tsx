@@ -63,6 +63,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     playNote(523.25, now + 0.9, 0.5);
   };
 
+  // Efecto separado para el temporizador - solo depende de estados del timer
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -79,13 +80,12 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           setIsActive(false);
           setIsPaused(false);
           setIsTherapyActive(false);
-          setTimeout(() => setShowOverlay(false), 500); // dar tiempo a Overlay para guardar datos
+          setTimeout(() => setShowOverlay(false), 500);
           setSampleCounter(0);
           setStartTime(null);
           setPauseStartTime(null);
           setTotalPausedTime(0);
           
-          // Enviar comando stop al ESP32
           mqttService.stopTherapy();
           
           playVictorySound();
@@ -105,8 +105,19 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           }
         }
       }, 1000);
+    }
 
-      const sampleInterval = setInterval(() => {
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, isPaused, startTime, totalPausedTime, duration, currentSessionId, user]);
+
+  // Efecto separado para muestreo de esfuerzo - depende de datos de manos
+  useEffect(() => {
+    let sampleInterval: NodeJS.Timeout | null = null;
+
+    if (isActive && !isPaused) {
+      sampleInterval = setInterval(() => {
         setSampleCounter(prev => {
           const newCounter = prev + 1;
           if (newCounter >= 60 && (leftHand.active || rightHand.active)) {
@@ -123,17 +134,12 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           return newCounter;
         });
       }, 100);
-
-      return () => {
-        if (interval) clearInterval(interval);
-        clearInterval(sampleInterval);
-      };
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (sampleInterval) clearInterval(sampleInterval);
     };
-  }, [isActive, isPaused, startTime, totalPausedTime, addNotification, t, onSessionComplete, setIsTherapyActive, patientName, leftHand, rightHand, addEffortData, duration, currentSessionId, user]);
+  }, [isActive, isPaused, leftHand, rightHand, addEffortData]);
 
   const startSession = async () => {
     if (!user) return null;
