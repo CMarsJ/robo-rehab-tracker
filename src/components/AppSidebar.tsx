@@ -134,6 +134,22 @@ const AppSidebar = () => {
         <Button onClick={handleLogout} variant="outline" className="mt-3 w-full">
           {t.logout}
         </Button>
+        
+        {/* Logo empresa creadora */}
+        <div className="mt-4 pt-3 border-t border-border/50 flex justify-center">
+          <a 
+            href="https://uis.edu.co/es/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:scale-105 transition-transform"
+          >
+            <img 
+              src="/logoUIS.png" 
+              alt="UIS Logo" 
+              className="h-8 w-auto"
+            />
+          </a>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

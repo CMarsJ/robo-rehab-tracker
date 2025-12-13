@@ -384,7 +384,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-3">
-        <Button onClick={handleStartTherapy} className="w-full h-14 text-base bg-primary hover:bg-primary/90" disabled={isPaused || isActive}>
+        <Button onClick={handleStartTherapy} className="w-full h-14 text-base bg-primary hover:bg-primary/90">
           🧠 Terapia Guiada
         </Button>
 

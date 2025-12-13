@@ -63,7 +63,17 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     playNote(523.25, now + 0.9, 0.5);
   };
 
-  // Efecto separado para el temporizador - solo depende de estados del timer
+  // Refs para datos de manos (evita reiniciar el timer cuando cambian)
+  const leftHandRef = React.useRef(leftHand);
+  const rightHandRef = React.useRef(rightHand);
+  
+  // Actualizar refs cuando cambian los datos
+  useEffect(() => {
+    leftHandRef.current = leftHand;
+    rightHandRef.current = rightHand;
+  }, [leftHand, rightHand]);
+
+  // Timer principal - sin dependencias de datos MQTT
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -87,7 +97,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           setTotalPausedTime(0);
           
           mqttService.stopTherapy();
-          
           playVictorySound();
           
           if (currentSessionId && user) {
@@ -112,7 +121,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     };
   }, [isActive, isPaused, startTime, totalPausedTime, duration, currentSessionId, user]);
 
-  // Efecto separado para muestreo de esfuerzo - depende de datos de manos
+  // Muestreo de esfuerzo - separado del timer principal
   useEffect(() => {
     let sampleInterval: NodeJS.Timeout | null = null;
 
@@ -120,15 +129,18 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
       sampleInterval = setInterval(() => {
         setSampleCounter(prev => {
           const newCounter = prev + 1;
-          if (newCounter >= 60 && (leftHand.active || rightHand.active)) {
+          const left = leftHandRef.current;
+          const right = rightHandRef.current;
+          
+          if (newCounter >= 60 && (left.active || right.active)) {
             const effortPoint: EffortDataPoint = {
               timestamp: Date.now(),
-              value: rightHand.effort,
+              value: right.effort,
               hand: 'right'
             };
             
             setSessionEffortData(prevData => [...prevData, effortPoint]);
-            addEffortData(rightHand.effort, leftHand.effort);
+            addEffortData(right.effort, left.effort);
             return 0;
           }
           return newCounter;
@@ -139,7 +151,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     return () => {
       if (sampleInterval) clearInterval(sampleInterval);
     };
-  }, [isActive, isPaused, leftHand, rightHand, addEffortData]);
+  }, [isActive, isPaused, addEffortData]);
 
   const startSession = async () => {
     if (!user) return null;
@@ -182,10 +194,8 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   };
 
   const handleStart = async () => {
+    // Solo mostrar el overlay, el timer inicia cuando el usuario selecciona una opción
     setShowOverlay(true);
-    if (!isActive) {
-      await startTimerNow();
-    }
   };
 
   const startTimerNow = async () => {
