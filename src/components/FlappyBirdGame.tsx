@@ -33,7 +33,10 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const pipeIdRef = useRef(0);
 
-  // Inicializar juego f
+  // Referencia para rastrear colisiones activas
+  const collidingPipesRef = useRef<Set<number>>(new Set());
+
+  // Inicializar juego
   const initGame = useCallback(() => {
     setScore(0);
     setBirdY(250);
@@ -41,6 +44,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
     setGameOver(false);
     setGameStarted(true);
     setGameStartTime(new Date());
+    collidingPipesRef.current.clear();
     
     // Crear primer tubo
     const firstPipe: Pipe = {
@@ -120,18 +124,15 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
       const birdRadius = 20;
       const birdX = 100;
 
-      // Verificar colisión con bordes
-      if (birdY <= birdRadius || birdY >= gameHeight - birdRadius) {
-        setGameOver(true);
-        saveGameData();
-        return;
-      }
-
       // Verificar colisión con tubos y puntuación
       setPipes(prev => prev.map(pipe => {
         // Verificar si el ave pasó el tubo
         if (!pipe.passed && pipe.x + 60 < birdX) {
-          setScore(s => s + 1);
+          // Solo dar punto si no hubo colisión con este tubo
+          if (!collidingPipesRef.current.has(pipe.id)) {
+            setScore(s => s + 1);
+          }
+          collidingPipesRef.current.delete(pipe.id);
           return { ...pipe, passed: true };
         }
 
@@ -142,9 +143,18 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
         if (birdX + birdRadius > pipeLeft && birdX - birdRadius < pipeRight) {
           // Verificar colisión con tubo superior o inferior
           if (birdY - birdRadius < pipe.topHeight || birdY + birdRadius > gameHeight - pipe.bottomHeight) {
-            setGameOver(true);
-            saveGameData();
+            // Si no estaba colisionando con este tubo, restar punto
+            if (!collidingPipesRef.current.has(pipe.id)) {
+              collidingPipesRef.current.add(pipe.id);
+              setScore(s => Math.max(0, s - 1)); // No bajar de 0
+            }
+          } else {
+            // Ya no está colisionando con este tubo
+            collidingPipesRef.current.delete(pipe.id);
           }
+        } else {
+          // Fuera del rango del tubo
+          collidingPipesRef.current.delete(pipe.id);
         }
 
         return pipe;
