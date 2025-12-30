@@ -135,16 +135,26 @@ export class SessionService {
 
   static async updateSessionWithTherapyData(sessionId: string, therapyData: any): Promise<boolean> {
     try {
+      console.log('📤 Actualizando sesión con datos:', {
+        sessionId,
+        state: therapyData.state,
+        score: therapyData.score,
+        hasStats: !!therapyData.stats,
+        hasDetails: !!therapyData.details,
+        hasExtraDate: !!therapyData.extra_date,
+        extraDateLength: Array.isArray(therapyData.extra_date) ? therapyData.extra_date.length : 0
+      });
+
       const { error } = await supabase
         .from('sessions')
         .update({
           state: therapyData.state,
-          score: therapyData.score,
-          orange_used: therapyData.orange_used,
-          juice_used: therapyData.juice_used,
-          stats: therapyData.stats,
-          details: therapyData.details,
-          extra_date: therapyData.extra_date
+          score: therapyData.score || 0,
+          orange_used: therapyData.orange_used || 0,
+          juice_used: therapyData.juice_used || 0,
+          stats: therapyData.stats || {},
+          details: therapyData.details || {},
+          extra_date: therapyData.extra_date || []
         })
         .eq('id', sessionId);
 
@@ -153,7 +163,7 @@ export class SessionService {
         return false;
       }
 
-      console.log('Datos de terapia actualizados correctamente ✅');
+      console.log('✅ Datos de terapia actualizados correctamente');
       return true;
     } catch (error) {
       console.error('Error en updateSessionWithTherapyData:', error);

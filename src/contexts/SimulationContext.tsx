@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { mqttService } from '@/services/mqttService';
 
 interface HandAngles {
@@ -14,6 +14,13 @@ interface HandData {
   active: boolean;
   angles: HandAngles;
   effort: number;
+}
+
+// Registro de cambios MQTT con timestamp
+export interface MQTTDataRecord {
+  timestamp: string;
+  leftHand: HandData;
+  rightHand: HandData;
 }
 
 interface SimulationContextType {
@@ -32,7 +39,33 @@ interface SimulationContextType {
   isReceivingRealData: boolean;
   enableSimulator: boolean;
   setEnableSimulator: (enabled: boolean) => void;
+  // Nuevo: registro de datos MQTT
+  mqttDataLog: MQTTDataRecord[];
+  clearMqttDataLog: () => void;
+  getMqttDataLog: () => MQTTDataRecord[];
 }
+
+// Función helper para limitar decimales a 4 dígitos
+const roundTo4Decimals = (value: number): number => {
+  return Math.round(value * 10000) / 10000;
+};
+
+// Función para redondear ángulos de mano
+const roundHandAngles = (angles: HandAngles): HandAngles => ({
+  thumb1: roundTo4Decimals(angles.thumb1),
+  thumb2: roundTo4Decimals(angles.thumb2),
+  thumb3: roundTo4Decimals(angles.thumb3),
+  finger1: roundTo4Decimals(angles.finger1),
+  finger2: roundTo4Decimals(angles.finger2),
+  finger3: roundTo4Decimals(angles.finger3),
+});
+
+// Función para redondear datos de mano completos
+const roundHandData = (hand: HandData): HandData => ({
+  active: hand.active,
+  angles: roundHandAngles(hand.angles),
+  effort: roundTo4Decimals(hand.effort),
+});
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
@@ -70,6 +103,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [mqttMessage, setMqttMessage] = useState('No conectado');
   const [isReceivingRealData, setIsReceivingRealData] = useState(false);
   const [enableSimulator, setEnableSimulator] = useState(false);
+  
+  // Registro de datos MQTT con timestamps
+  const mqttDataLogRef = useRef<MQTTDataRecord[]>([]);
+  const [mqttDataLog, setMqttDataLog] = useState<MQTTDataRecord[]>([]);
+  const lastDataRef = useRef<string>('');
 
   // Cargar datos del localStorage al inicializar
   useEffect(() => {
@@ -106,7 +144,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const parseHandData = (hand: any): HandData | null => {
     if (!hand || typeof hand !== 'object') return null;
     
-    return {
+    return roundHandData({
       active: Boolean(hand.active),
       angles: {
         thumb1: Number(hand.angles?.thumb1) || 0,
@@ -117,7 +155,42 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         finger3: Number(hand.angles?.finger3) || 0,
       },
       effort: Number(hand.effort) || 0,
-    };
+    });
+  };
+
+  // Función para registrar datos MQTT con timestamp
+  const addMqttDataRecord = (left: HandData, right: HandData) => {
+    // Crear hash simple para detectar cambios
+    const dataHash = JSON.stringify({ left, right });
+    
+    // Solo registrar si los datos cambiaron
+    if (dataHash !== lastDataRef.current) {
+      lastDataRef.current = dataHash;
+      
+      const record: MQTTDataRecord = {
+        timestamp: new Date().toISOString(),
+        leftHand: roundHandData(left),
+        rightHand: roundHandData(right),
+      };
+      
+      mqttDataLogRef.current = [...mqttDataLogRef.current, record];
+      setMqttDataLog([...mqttDataLogRef.current]);
+      
+      console.log('📝 MQTT data logged:', record.timestamp);
+    }
+  };
+
+  // Limpiar registro de datos MQTT
+  const clearMqttDataLog = () => {
+    mqttDataLogRef.current = [];
+    setMqttDataLog([]);
+    lastDataRef.current = '';
+    console.log('🗑️ MQTT data log cleared');
+  };
+
+  // Obtener registro de datos MQTT
+  const getMqttDataLog = (): MQTTDataRecord[] => {
+    return mqttDataLogRef.current;
   };
 
   // MQTT Connection Effect
@@ -132,6 +205,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (parsedLeft && parsedRight) {
         setIsReceivingRealData(true);
         updateSimulationData(parsedLeft, parsedRight);
+        
+        // Registrar datos MQTT con timestamp cuando hay terapia activa
+        addMqttDataRecord(parsedLeft, parsedRight);
       } else {
         console.warn('⚠️ Invalid MQTT data format, ignoring:', data);
       }
@@ -175,8 +251,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     if (autoMode && enableSimulator && !isReceivingRealData) {
       interval = setInterval(() => {
-        const randomLeftHand: HandData = {
-          active: Math.random() > 0.3, // 70% chance of being active
+        const randomLeftHand: HandData = roundHandData({
+          active: Math.random() > 0.3,
           angles: {
             thumb1: Math.floor(Math.random() * 90),
             thumb2: Math.floor(Math.random() * 90),
@@ -186,10 +262,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             finger3: Math.floor(Math.random() * 90)
           },
           effort: Math.floor(Math.random() * 100)
-        };
+        });
 
-        const randomRightHand: HandData = {
-          active: Math.random() > 0.3, // 70% chance of being active
+        const randomRightHand: HandData = roundHandData({
+          active: Math.random() > 0.3,
           angles: {
             thumb1: Math.floor(Math.random() * 90),
             thumb2: Math.floor(Math.random() * 90),
@@ -199,10 +275,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             finger3: Math.floor(Math.random() * 90)
           },
           effort: Math.floor(Math.random() * 100)
-        };
+        });
 
         updateSimulationData(randomLeftHand, randomRightHand);
-      }, 30000); // 30 segundos
+      }, 30000);
     }
 
     return () => {
@@ -211,16 +287,19 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [autoMode, enableSimulator, isReceivingRealData]);
 
   const updateSimulationData = (newLeftHand: HandData, newRightHand: HandData) => {
-    setLeftHand(newLeftHand);
-    setRightHand(newRightHand);
+    const roundedLeft = roundHandData(newLeftHand);
+    const roundedRight = roundHandData(newRightHand);
+    
+    setLeftHand(roundedLeft);
+    setRightHand(roundedRight);
     
     // Guardar en localStorage
-    localStorage.setItem('leftHandData', JSON.stringify(newLeftHand));
-    localStorage.setItem('rightHandData', JSON.stringify(newRightHand));
+    localStorage.setItem('leftHandData', JSON.stringify(roundedLeft));
+    localStorage.setItem('rightHandData', JSON.stringify(roundedRight));
     
     console.log('Datos simulados actualizados:', {
-      leftHand: newLeftHand,
-      rightHand: newRightHand
+      leftHand: roundedLeft,
+      rightHand: roundedRight
     });
   };
 
@@ -228,7 +307,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const now = new Date();
     const timeString = `${now.getMinutes()}:${now.getSeconds().toString().padStart(2, '0')}`;
     
-    const newData = { time: timeString, paretica, noParetica };
+    const newData = { 
+      time: timeString, 
+      paretica: roundTo4Decimals(paretica), 
+      noParetica: roundTo4Decimals(noParetica) 
+    };
     
     setEffortHistory(prev => {
       const updated = [...prev, newData];
@@ -260,7 +343,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       mqttMessage,
       isReceivingRealData,
       enableSimulator,
-      setEnableSimulator
+      setEnableSimulator,
+      mqttDataLog,
+      clearMqttDataLog,
+      getMqttDataLog
     }}>
       {children}
     </SimulationContext.Provider>

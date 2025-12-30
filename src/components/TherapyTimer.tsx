@@ -12,6 +12,11 @@ import { EffortDataPoint } from '@/types/database';
 import TherapyOverlay from '@/components/TherapyOverlay';
 import { mqttService } from '@/services/mqttService';
 
+// Función helper para limitar decimales a 4 dígitos
+const roundTo4Decimals = (value: number): number => {
+  return Math.round(value * 10000) / 10000;
+};
+
 interface TherapyTimerProps {
   onSessionComplete?: () => void;
 }
@@ -30,7 +35,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [sessionEffortData, setSessionEffortData] = useState<EffortDataPoint[]>([]);
   
   const { addNotification } = useApp();
-  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory } = useSimulation();
+  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory, clearMqttDataLog } = useSimulation();
   const { patientName } = useConfig();
   const { user } = useAuth();
   const t = useTranslation();
@@ -135,12 +140,12 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           if (newCounter >= 60 && (left.active || right.active)) {
             const effortPoint: EffortDataPoint = {
               timestamp: Date.now(),
-              value: right.effort,
+              value: roundTo4Decimals(right.effort),
               hand: 'right'
             };
             
             setSessionEffortData(prevData => [...prevData, effortPoint]);
-            addEffortData(right.effort, left.effort);
+            addEffortData(roundTo4Decimals(right.effort), roundTo4Decimals(left.effort));
             return 0;
           }
           return newCounter;
@@ -201,6 +206,9 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const startTimerNow = async () => {
     console.log('⏱️ startTimerNow called, isActive:', isActive, 'user:', !!user);
     if (!isActive && user) {
+      // Limpiar log de MQTT al iniciar nueva sesión
+      clearMqttDataLog();
+      
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
       
@@ -259,6 +267,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     setPauseStartTime(null);
     setTotalPausedTime(0);
     clearEffortHistory();
+    clearMqttDataLog();
     setSampleCounter(0);
     setSessionEffortData([]);
   };
