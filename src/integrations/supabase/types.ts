@@ -56,66 +56,6 @@ export type Database = {
         }
         Relationships: []
       }
-      "Non-Paretical_Hand_Data": {
-        Row: {
-          An_DIP_D: number | null
-          An_MCP_D: number | null
-          An_MCP_F: number | null
-          An_PIP_F: number | null
-          id: number
-          Update_Time: string
-          user_id: string | null
-        }
-        Insert: {
-          An_DIP_D?: number | null
-          An_MCP_D?: number | null
-          An_MCP_F?: number | null
-          An_PIP_F?: number | null
-          id?: number
-          Update_Time?: string
-          user_id?: string | null
-        }
-        Update: {
-          An_DIP_D?: number | null
-          An_MCP_D?: number | null
-          An_MCP_F?: number | null
-          An_PIP_F?: number | null
-          id?: number
-          Update_Time?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      Paretical_Hand_Data_duplicate: {
-        Row: {
-          An_DIP_D: number | null
-          An_MCP_D: number | null
-          An_MCP_F: number | null
-          An_PIP_F: number | null
-          id: number
-          Update_Time: string
-          user_id: string | null
-        }
-        Insert: {
-          An_DIP_D?: number | null
-          An_MCP_D?: number | null
-          An_MCP_F?: number | null
-          An_PIP_F?: number | null
-          id?: number
-          Update_Time?: string
-          user_id?: string | null
-        }
-        Update: {
-          An_DIP_D?: number | null
-          An_MCP_D?: number | null
-          An_MCP_F?: number | null
-          An_PIP_F?: number | null
-          id?: number
-          Update_Time?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null

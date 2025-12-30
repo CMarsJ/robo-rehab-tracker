@@ -7,9 +7,15 @@ import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
 import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
-import { useSimulation } from '@/contexts/SimulationContext';
+import { useSimulation, MQTTDataRecord } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
 import { SessionService } from '@/services/sessionService';
+
+// Función helper para limitar decimales a 4 dígitos
+const roundTo4Decimals = (value: number | null): number | null => {
+  if (value === null) return null;
+  return Math.round(value * 10000) / 10000;
+};
 
 interface TherapyOverlayProps {
   timeLeft: number;
@@ -38,7 +44,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [gameCompleted, setGameCompleted] = useState(false);
 
   const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap } = useGameConfig();
-  const { leftHand, rightHand, isTherapyActive } = useSimulation();
+  const { leftHand, rightHand, isTherapyActive, getMqttDataLog, clearMqttDataLog } = useSimulation();
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
@@ -137,91 +143,101 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     try { localStorage.removeItem('currentSessionId'); } catch {}
   };
   const saveTherapyData = async (state: 'completed' | 'cancelled') => {
-    if (!currentSessionId) return;
+    if (!currentSessionId) {
+      console.warn('⚠️ No hay sessionId para guardar datos');
+      return;
+    }
 
     console.log(`📤 Enviando datos de terapia a Supabase (estado: ${state})...`);
+
+    // Obtener el registro de datos MQTT con timestamps
+    const mqttLog = getMqttDataLog();
+    console.log(`📝 Total registros MQTT: ${mqttLog.length}`);
+
+    // Función para redondear arrays de tiempos
+    const roundTimes = (times: number[]): number[] => 
+      times.map(t => roundTo4Decimals(t) || 0);
 
     // Recopilar todos los datos según la estructura de la tabla
     const therapyData = {
       state: state,
       duration: duration,
-      score: attempts.length, // Número de intentos como score
+      score: attempts.length,
       orange_used: orangesUsed,
       juice_used: juiceUsed,
       stats: {
-        // Stats: datos de apertura y cierre con promedios y mejores tiempos
         hand_metrics: {
           closing: {
             attempts: closingTimes.length,
-            fastest_time_ms: fastestClosing,
-            average_time_ms: averageClosing,
-            all_times: closingTimes
+            fastest_time_ms: roundTo4Decimals(fastestClosing),
+            average_time_ms: roundTo4Decimals(averageClosing),
+            all_times: roundTimes(closingTimes)
           },
           opening: {
             attempts: openingTimes.length,
-            fastest_time_ms: fastestOpening,
-            average_time_ms: averageOpening,
-            all_times: openingTimes
+            fastest_time_ms: roundTo4Decimals(fastestOpening),
+            average_time_ms: roundTo4Decimals(averageOpening),
+            all_times: roundTimes(openingTimes)
           }
         },
         game_metrics: {
           total_oranges: orangesUsed,
           total_glasses: juiceUsed,
-          completion_rate: gameMode === 'orange-squeeze' ? (juiceUsed / targetGlasses) * 100 : 0
+          completion_rate: gameMode === 'orange-squeeze' && targetGlasses > 0 
+            ? roundTo4Decimals((juiceUsed / targetGlasses) * 100) 
+            : 0
+        },
+        // Incluir último estado de manos
+        current_hand_state: {
+          left_hand: {
+            active: leftHand.active,
+            effort: roundTo4Decimals(leftHand.effort),
+            angles: leftHand.angles
+          },
+          right_hand: {
+            active: rightHand.active,
+            effort: roundTo4Decimals(rightHand.effort),
+            angles: rightHand.angles
+          }
         }
       },
       details: {
-        // Historial completo de aperturas y cierres de la mano
         attempts_history: attempts.map((attempt, index) => ({
           attempt_number: index + 1,
-          closing_time_ms: attempt.closingTime,
-          opening_time_ms: attempt.openingTime,
-          total_time_ms: attempt.totalTime,
-          timestamp: new Date().toISOString()
+          closing_time_ms: roundTo4Decimals(attempt.closingTime),
+          opening_time_ms: roundTo4Decimals(attempt.openingTime),
+          total_time_ms: roundTo4Decimals(attempt.totalTime)
         })),
         raw_data: {
-          all_closing_times: closingTimes,
-          all_opening_times: openingTimes,
+          all_closing_times: roundTimes(closingTimes),
+          all_opening_times: roundTimes(openingTimes),
           total_attempts: attempts.length
-        }
-      },
-      extra_data: {
-        // Vector con datos de configuración de los juegos
-        game_configurations: {
-          orange_squeeze: {
-            target_glasses: targetGlasses,
-            oranges_per_glass: 4
-          },
-          neurolink: {
-            enemy_speed: enemySpeed,
-            shot_speed: shotSpeed,
-            base_enemy_count: baseEnemyCount
-          },
-          flappy_bird: {
-            pipe_gap: flappyPipeGap
-          }
         },
-        therapy_session: {
+        therapy_info: {
           mode: gameMode,
           duration_minutes: duration,
           therapy_type: gameMode === 'timer' ? 'terapia_guiada' : gameMode,
-          start_time: new Date().toISOString(),
-          therapy_active: isTherapyActive,
-          hands_active: {
-            left_hand: leftHand.active,
-            right_hand: rightHand.active
-          }
-        },
-        performance_summary: {
-          completion_status: state,
-          total_session_time: duration * 60 * 1000, // en ms
-          effective_therapy_time: (duration * 60 * 1000) - (timeLeft * 1000) // tiempo realmente usado
+          is_therapy_active: isTherapyActive
         }
-      }
+      },
+      // extra_date: Vector JSON con registro de fecha/hora de datos MQTT
+      extra_date: mqttLog.length > 0 ? mqttLog : [{
+        timestamp: new Date().toISOString(),
+        leftHand: leftHand,
+        rightHand: rightHand,
+        note: 'No hubo cambios de datos MQTT durante la sesión'
+      }]
     };
 
-    await SessionService.updateSessionWithTherapyData(currentSessionId, therapyData);
-    console.log(`✅ Datos de terapia ${state === 'completed' ? 'completada' : 'cancelada'} enviados correctamente a Supabase`);
+    const success = await SessionService.updateSessionWithTherapyData(currentSessionId, therapyData);
+    
+    if (success) {
+      console.log(`✅ Datos de terapia ${state === 'completed' ? 'completada' : 'cancelada'} enviados correctamente a Supabase`);
+      // Limpiar el log de MQTT después de guardar
+      clearMqttDataLog();
+    } else {
+      console.error('❌ Error al guardar datos de terapia');
+    }
   };
 
   const startGame = async (mode: Exclude<GameMode, 'selection' | 'timer'>) => {
