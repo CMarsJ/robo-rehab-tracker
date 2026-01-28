@@ -98,6 +98,13 @@ const History = () => {
     !!dateTo ||
     (durationFilterEnabled && maxDuration !== 60);
 
+  // Hook MUST be called before any conditional returns
+  useEffect(() => {
+    if (user) {
+      fetchSessions();
+    }
+  }, [user]);
+
   // Redirect if not authenticated
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
