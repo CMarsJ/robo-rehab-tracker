@@ -2,101 +2,106 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target, Eye, EyeOff, Search, Filter, X } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { SessionService, SessionResponse } from '@/services/sessionService';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 
 const History = () => {
   const t = useTranslation();
   const { user, loading } = useAuth();
   const [sessions, setSessions] = useState<SessionResponse[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<SessionResponse[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
-  
+
   // Filter states
-  const [selectedTherapyType, setSelectedTherapyType] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTherapyTypes, setSelectedTherapyTypes] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
-  const [maxDuration, setMaxDuration] = useState<number>(60);
-  const [durationFilterEnabled, setDurationFilterEnabled] = useState<boolean>(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
-  // All therapy types available
-  const allTherapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
+  // Therapy types we want to show in history
+  const therapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
 
-  // Get active therapy types based on filter
-  const getActiveTherapyTypes = () => {
-    if (selectedTherapyType === 'all') return allTherapyTypes;
-    return [selectedTherapyType];
-  };
-
+  // Hook MUST be called before any conditional returns
   useEffect(() => {
     if (user) {
       fetchSessions();
     }
   }, [user]);
 
-  // Refetch when filters change
-  const applyFilters = async () => {
-    setLoadingData(true);
-    setSessions([]);
-    setDurationFilterEnabled(true);
-    
-    const filters = {
-      dateFrom: dateFrom,
-      dateTo: dateTo,
-      // Al aplicar filtros, siempre interpretamos la duración seleccionada como filtro exacto
-      duration: maxDuration,
-    };
+  // Apply filters when sessions or filters change
+  useEffect(() => {
+    applyFilters();
+  }, [sessions, searchTerm, selectedTherapyTypes, dateFrom, dateTo]);
 
-    try {
-      const newSessions = await SessionService.getUserSessions(10, 0, getActiveTherapyTypes(), filters);
-      setSessions(newSessions);
-      setHasMore(newSessions.length >= 10);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar las sesiones');
-    } finally {
-      setLoadingData(false);
+  const applyFilters = () => {
+    let filtered = [...sessions];
+
+    // Filter by therapy type
+    if (selectedTherapyTypes.length > 0) {
+      filtered = filtered.filter(session => selectedTherapyTypes.includes(session.therapy_type));
     }
+
+    // Filter by date range
+    if (dateFrom) {
+      filtered = filtered.filter(session => {
+        const sessionDate = new Date(session.start_time);
+        return sessionDate >= dateFrom;
+      });
+    }
+    if (dateTo) {
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(session => {
+        const sessionDate = new Date(session.start_time);
+        return sessionDate <= endOfDay;
+      });
+    }
+
+    // Filter by search term (search in therapy type name)
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(session => {
+        const therapyName = getSessionTitle(session.therapy_type).toLowerCase();
+        const dateStr = formatDate(session.start_time).toLowerCase();
+        return therapyName.includes(search) || dateStr.includes(search);
+      });
+    }
+
+    setFilteredSessions(filtered);
   };
 
-  const clearFilters = async () => {
-    setSelectedTherapyType('all');
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedTherapyTypes([]);
     setDateFrom(undefined);
     setDateTo(undefined);
-    setMaxDuration(60);
-    setDurationFilterEnabled(false);
-    setLoadingData(true);
-    setSessions([]);
-
-    try {
-      const newSessions = await SessionService.getUserSessions(10, 0, allTherapyTypes, undefined);
-      setSessions(newSessions);
-      setHasMore(newSessions.length >= 10);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar las sesiones');
-    } finally {
-      setLoadingData(false);
-    }
   };
 
-  const hasActiveFilters =
-    selectedTherapyType !== 'all' ||
-    !!dateFrom ||
-    !!dateTo ||
-    (durationFilterEnabled && maxDuration !== 60);
+  const hasActiveFilters = searchTerm || selectedTherapyTypes.length > 0 || dateFrom || dateTo;
+
+  const toggleTherapyType = (type: string) => {
+    setSelectedTherapyTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
 
   // Redirect if not authenticated
   if (!loading && !user) {
@@ -127,13 +132,7 @@ const History = () => {
       const offset = loadMore ? sessions.length : 0;
       const limit = 10;
 
-      const filters = {
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        duration: durationFilterEnabled ? maxDuration : undefined,
-      };
-
-      const newSessions = await SessionService.getUserSessions(limit, offset, getActiveTherapyTypes(), filters);
+      const newSessions = await SessionService.getUserSessions(limit, offset, therapyTypes);
       
       if (loadMore) {
         setSessions(prev => [...prev, ...newSessions]);
@@ -267,7 +266,6 @@ const History = () => {
             {t.guidedTherapySummary}
           </h4>
           
-          {/* 3 datos principales arriba */}
           <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
             <div className="text-center bg-white/60 dark:bg-gray-800/60 rounded-md p-3">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -289,7 +287,6 @@ const History = () => {
             </div>
           </div>
 
-          {/* Tabla de intentos */}
           {attempts.length > 0 && (
             <div className="mt-4">
               <div className="overflow-x-auto rounded-lg border dark:border-gray-700">
@@ -365,7 +362,6 @@ const History = () => {
             </div>
           </div>
           
-          {/* Tabla de intentos */}
           {attempts.length > 0 && (
             <div className="mt-4">
               <div className="overflow-x-auto rounded-lg border dark:border-gray-700">
@@ -445,7 +441,6 @@ const History = () => {
             )}
           </div>
 
-          {/* Tabla de intentos */}
           {attempts.length > 0 && (
             <div className="mt-4">
               <div className="overflow-x-auto rounded-lg border dark:border-gray-700">
@@ -521,10 +516,10 @@ const History = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Filter className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">{(t as any).filters || 'Filtros'}</CardTitle>
+              <CardTitle className="text-lg">Filtros</CardTitle>
               {hasActiveFilters && (
                 <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
-                  {t.active}
+                  Activos
                 </span>
               )}
             </div>
@@ -533,33 +528,68 @@ const History = () => {
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
             >
-              {showFilters ? (t as any).hideFilters || 'Ocultar' : (t as any).showFilters || 'Mostrar'}
+              {showFilters ? 'Ocultar' : 'Mostrar'}
             </Button>
           </div>
         </CardHeader>
         
         {showFilters && (
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Buscar por nombre o fecha..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Therapy Type Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{(t as any).therapyType || 'Tipo de terapia'}</label>
-                <Select value={selectedTherapyType} onValueChange={setSelectedTherapyType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={(t as any).selectType || 'Seleccionar tipo'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{(t as any).allTypes || 'Todos'}</SelectItem>
-                    <SelectItem value="terapia_guiada">{t.guidedTherapyTitle}</SelectItem>
-                    <SelectItem value="orange-squeeze">{t.orangeGameTitle}</SelectItem>
-                    <SelectItem value="neurolink">{t.neuroLinkTitle}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Tipo de terapia</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-guided"
+                      checked={selectedTherapyTypes.includes('terapia_guiada')}
+                      onCheckedChange={() => toggleTherapyType('terapia_guiada')}
+                    />
+                    <label htmlFor="filter-guided" className="text-sm flex items-center gap-2 cursor-pointer">
+                      <Brain className="w-4 h-4 text-blue-500" />
+                      {t.guidedTherapyTitle}
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-orange"
+                      checked={selectedTherapyTypes.includes('orange-squeeze')}
+                      onCheckedChange={() => toggleTherapyType('orange-squeeze')}
+                    />
+                    <label htmlFor="filter-orange" className="text-sm flex items-center gap-2 cursor-pointer">
+                      <Trophy className="w-4 h-4 text-orange-500" />
+                      {t.orangeGameTitle}
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-neurolink"
+                      checked={selectedTherapyTypes.includes('neurolink')}
+                      onCheckedChange={() => toggleTherapyType('neurolink')}
+                    />
+                    <label htmlFor="filter-neurolink" className="text-sm flex items-center gap-2 cursor-pointer">
+                      <Target className="w-4 h-4 text-purple-500" />
+                      {t.neuroLinkTitle}
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Date From */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">{(t as any).dateFrom || 'Desde'}</label>
+                <Label className="text-sm font-medium">Desde</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -570,10 +600,10 @@ const History = () => {
                       )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "PPP", { locale: es }) : (t as any).selectDate || 'Seleccionar fecha'}
+                      {dateFrom ? format(dateFrom, "PPP", { locale: es }) : 'Seleccionar fecha'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-50 bg-background" align="start">
                     <CalendarComponent
                       mode="single"
                       selected={dateFrom}
@@ -587,7 +617,7 @@ const History = () => {
 
               {/* Date To */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">{(t as any).dateTo || 'Hasta'}</label>
+                <Label className="text-sm font-medium">Hasta</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -598,10 +628,10 @@ const History = () => {
                       )}
                     >
                       <Calendar className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "PPP", { locale: es }) : (t as any).selectDate || 'Seleccionar fecha'}
+                      {dateTo ? format(dateTo, "PPP", { locale: es }) : 'Seleccionar fecha'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-50 bg-background" align="start">
                     <CalendarComponent
                       mode="single"
                       selected={dateTo}
@@ -612,36 +642,17 @@ const History = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-
-              {/* Max Duration */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {t.duration}: {maxDuration} min
-                </label>
-                <Slider
-                  value={[maxDuration]}
-                  onValueChange={(value) => setMaxDuration(value[0])}
-                  min={5}
-                  max={60}
-                  step={5}
-                  className="mt-4"
-                />
-              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-2">
-              <Button onClick={applyFilters} className="flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                {(t as any).applyFilters || 'Aplicar filtros'}
-              </Button>
-              {hasActiveFilters && (
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <div className="flex justify-end pt-2">
                 <Button variant="outline" onClick={clearFilters} className="flex items-center gap-2">
                   <X className="w-4 h-4" />
-                  {(t as any).clearFilters || 'Limpiar filtros'}
+                  Limpiar filtros
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>
@@ -652,15 +663,22 @@ const History = () => {
         </Alert>
       )}
 
-      {sessions.length === 0 && !loadingData ? (
+      {/* Results count */}
+      {hasActiveFilters && (
+        <div className="text-sm text-muted-foreground">
+          Mostrando {filteredSessions.length} de {sessions.length} sesiones
+        </div>
+      )}
+
+      {filteredSessions.length === 0 && !loadingData ? (
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             {hasActiveFilters ? (
               <>
-                <h3 className="text-lg font-semibold mb-2">{(t as any).noResultsFound || 'No se encontraron resultados'}</h3>
+                <h3 className="text-lg font-semibold mb-2">No se encontraron resultados</h3>
                 <p className="text-muted-foreground">
-                  {(t as any).noSessionsMatchFilters || 'No hay sesiones que coincidan con los filtros seleccionados. Intenta ajustar los criterios de búsqueda.'}
+                  No hay sesiones que coincidan con los filtros seleccionados.
                 </p>
                 <Button 
                   variant="outline" 
@@ -668,7 +686,7 @@ const History = () => {
                   className="mt-4"
                 >
                   <X className="w-4 h-4 mr-2" />
-                  {(t as any).clearFilters || 'Limpiar filtros'}
+                  Limpiar filtros
                 </Button>
               </>
             ) : (
@@ -684,7 +702,7 @@ const History = () => {
       ) : (
         <div className="space-y-4">
           <div className="grid gap-4">
-            {sessions.map((session) => (
+            {filteredSessions.map((session) => (
               <Card key={session.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -705,25 +723,17 @@ const History = () => {
                             <Calendar className="w-4 h-4" />
                             {formatDate(session.start_time)}
                           </span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStateColor(session.state)}`}>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-xs font-medium",
+                            getStateColor(session.state)
+                          )}>
                             {getStateText(session.state)}
                           </span>
                         </div>
                       </div>
                     </div>
-
-                    <div className="text-right space-y-1">
-                      {session.score !== undefined && session.score > 0 && (
-                        <div className="text-2xl font-bold text-primary">
-                          {session.score}
-                        </div>
-                      )}
-                      <div className="text-sm text-muted-foreground">
-                        ID: {session.id.slice(0, 8)}...
-                      </div>
-                    </div>
                   </div>
-
+                  
                   {renderSessionSummary(session)}
                 </CardContent>
               </Card>
@@ -731,21 +741,14 @@ const History = () => {
           </div>
 
           {hasMore && (
-            <div className="flex justify-center pt-4">
-              <Button 
+            <div className="text-center pt-4">
+              <Button
+                variant="outline"
                 onClick={() => fetchSessions(true)}
                 disabled={loadingMore}
-                variant="outline"
-                size="lg"
               >
                 {loadingMore ? 'Cargando...' : 'Cargar más sesiones'}
               </Button>
-            </div>
-          )}
-
-          {!hasMore && sessions.length > 0 && (
-            <div className="text-center text-muted-foreground py-4">
-              No hay más sesiones para mostrar
             </div>
           )}
         </div>
