@@ -2,11 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target, Eye, EyeOff } from 'lucide-react';
+import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target, Eye, EyeOff, Search, Filter, X } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { SessionService, SessionResponse } from '@/services/sessionService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Slider } from '@/components/ui/slider';
 
 const History = () => {
   const t = useTranslation();
@@ -17,9 +24,79 @@ const History = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
+  
+  // Filter states
+  const [selectedTherapyType, setSelectedTherapyType] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [maxDuration, setMaxDuration] = useState<number>(60);
+  const [durationFilterEnabled, setDurationFilterEnabled] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Therapy types we want to show in history
-  const therapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
+  // All therapy types available
+  const allTherapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
+
+  // Get active therapy types based on filter
+  const getActiveTherapyTypes = () => {
+    if (selectedTherapyType === 'all') return allTherapyTypes;
+    return [selectedTherapyType];
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchSessions();
+    }
+  }, [user]);
+
+  // Refetch when filters change
+  const applyFilters = async () => {
+    setLoadingData(true);
+    setSessions([]);
+    setDurationFilterEnabled(true);
+    
+    const filters = {
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      // Al aplicar filtros, siempre interpretamos la duración seleccionada como filtro exacto
+      duration: maxDuration,
+    };
+
+    try {
+      const newSessions = await SessionService.getUserSessions(10, 0, getActiveTherapyTypes(), filters);
+      setSessions(newSessions);
+      setHasMore(newSessions.length >= 10);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar las sesiones');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const clearFilters = async () => {
+    setSelectedTherapyType('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setMaxDuration(60);
+    setDurationFilterEnabled(false);
+    setLoadingData(true);
+    setSessions([]);
+
+    try {
+      const newSessions = await SessionService.getUserSessions(10, 0, allTherapyTypes, undefined);
+      setSessions(newSessions);
+      setHasMore(newSessions.length >= 10);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar las sesiones');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const hasActiveFilters =
+    selectedTherapyType !== 'all' ||
+    !!dateFrom ||
+    !!dateTo ||
+    (durationFilterEnabled && maxDuration !== 60);
 
   // Redirect if not authenticated
   if (!loading && !user) {
@@ -38,12 +115,6 @@ const History = () => {
     );
   }
 
-  useEffect(() => {
-    if (user) {
-      fetchSessions();
-    }
-  }, [user]);
-
   const fetchSessions = async (loadMore = false) => {
     try {
       if (loadMore) {
@@ -56,7 +127,13 @@ const History = () => {
       const offset = loadMore ? sessions.length : 0;
       const limit = 10;
 
-      const newSessions = await SessionService.getUserSessions(limit, offset, therapyTypes);
+      const filters = {
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        duration: durationFilterEnabled ? maxDuration : undefined,
+      };
+
+      const newSessions = await SessionService.getUserSessions(limit, offset, getActiveTherapyTypes(), filters);
       
       if (loadMore) {
         setSessions(prev => [...prev, ...newSessions]);
@@ -438,20 +515,170 @@ const History = () => {
         </p>
       </div>
 
+      {/* Filters Panel */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">{(t as any).filters || 'Filtros'}</CardTitle>
+              {hasActiveFilters && (
+                <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                  {t.active}
+                </span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              {showFilters ? (t as any).hideFilters || 'Ocultar' : (t as any).showFilters || 'Mostrar'}
+            </Button>
+          </div>
+        </CardHeader>
+        
+        {showFilters && (
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Therapy Type Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{(t as any).therapyType || 'Tipo de terapia'}</label>
+                <Select value={selectedTherapyType} onValueChange={setSelectedTherapyType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={(t as any).selectType || 'Seleccionar tipo'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{(t as any).allTypes || 'Todos'}</SelectItem>
+                    <SelectItem value="terapia_guiada">{t.guidedTherapyTitle}</SelectItem>
+                    <SelectItem value="orange-squeeze">{t.orangeGameTitle}</SelectItem>
+                    <SelectItem value="neurolink">{t.neuroLinkTitle}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date From */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{(t as any).dateFrom || 'Desde'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateFrom && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "PPP", { locale: es }) : (t as any).selectDate || 'Seleccionar fecha'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Date To */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{(t as any).dateTo || 'Hasta'}</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateTo && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "PPP", { locale: es }) : (t as any).selectDate || 'Seleccionar fecha'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Max Duration */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {t.duration}: {maxDuration} min
+                </label>
+                <Slider
+                  value={[maxDuration]}
+                  onValueChange={(value) => setMaxDuration(value[0])}
+                  min={5}
+                  max={60}
+                  step={5}
+                  className="mt-4"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2">
+              <Button onClick={applyFilters} className="flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                {(t as any).applyFilters || 'Aplicar filtros'}
+              </Button>
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={clearFilters} className="flex items-center gap-2">
+                  <X className="w-4 h-4" />
+                  {(t as any).clearFilters || 'Limpiar filtros'}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      {sessions.length === 0 ? (
+      {sessions.length === 0 && !loadingData ? (
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t.noSessionsRecorded}</h3>
-            <p className="text-muted-foreground">
-              {t.completeFirstSession}
-            </p>
+            {hasActiveFilters ? (
+              <>
+                <h3 className="text-lg font-semibold mb-2">{(t as any).noResultsFound || 'No se encontraron resultados'}</h3>
+                <p className="text-muted-foreground">
+                  {(t as any).noSessionsMatchFilters || 'No hay sesiones que coincidan con los filtros seleccionados. Intenta ajustar los criterios de búsqueda.'}
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={clearFilters}
+                  className="mt-4"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  {(t as any).clearFilters || 'Limpiar filtros'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold mb-2">{t.noSessionsRecorded}</h3>
+                <p className="text-muted-foreground">
+                  {t.completeFirstSession}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (

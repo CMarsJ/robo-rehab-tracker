@@ -86,7 +86,17 @@ export class SessionService {
     }
   }
 
-  static async getUserSessions(limit = 10, offset = 0, therapyTypes?: string[]): Promise<SessionResponse[]> {
+  static async getUserSessions(
+    limit = 10, 
+    offset = 0, 
+    therapyTypes?: string[],
+    filters?: {
+      dateFrom?: Date;
+      dateTo?: Date;
+      /** Filtra por duración exacta en minutos (5,10,...,60) */
+      duration?: number;
+    }
+  ): Promise<SessionResponse[]> {
     try {
       const userId = await this.getUserId();
       if (!userId) return [];
@@ -100,6 +110,21 @@ export class SessionService {
 
       if (therapyTypes && therapyTypes.length > 0) {
         query = query.in('therapy_type', therapyTypes);
+      }
+
+      if (filters?.dateFrom) {
+        query = query.gte('start_time', filters.dateFrom.toISOString());
+      }
+
+      if (filters?.dateTo) {
+        // Add 1 day to include the entire end date
+        const endDate = new Date(filters.dateTo);
+        endDate.setDate(endDate.getDate() + 1);
+        query = query.lt('start_time', endDate.toISOString());
+      }
+
+      if (filters?.duration !== undefined) {
+        query = query.eq('duration', filters.duration);
       }
 
       const { data, error } = await query;

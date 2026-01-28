@@ -138,7 +138,19 @@ export const translations = {
     logout: 'Cerrar sesión',
     days: 'días',
     completedThisWeek: 'completado esta semana',
-    completedThisMonth: 'completado este mes'
+    completedThisMonth: 'completado este mes',
+    // Filters
+    filters: 'Filtros',
+    hideFilters: 'Ocultar',
+    showFilters: 'Mostrar',
+    therapyType: 'Tipo de terapia',
+    selectType: 'Seleccionar tipo',
+    allTypes: 'Todos',
+    dateFrom: 'Desde',
+    dateTo: 'Hasta',
+    selectDate: 'Seleccionar fecha',
+    applyFilters: 'Aplicar filtros',
+    clearFilters: 'Limpiar filtros'
   },
   en: {
     dashboard: 'Bilateral Therapy',
@@ -254,7 +266,19 @@ export const translations = {
     logout: 'Logout',
     days: 'days',
     completedThisWeek: 'completed this week',
-    completedThisMonth: 'completed this month'
+    completedThisMonth: 'completed this month',
+    // Filters
+    filters: 'Filters',
+    hideFilters: 'Hide',
+    showFilters: 'Show',
+    therapyType: 'Therapy type',
+    selectType: 'Select type',
+    allTypes: 'All',
+    dateFrom: 'From',
+    dateTo: 'To',
+    selectDate: 'Select date',
+    applyFilters: 'Apply filters',
+    clearFilters: 'Clear filters'
   },
   pt: {
     dashboard: 'Terapia Bilateral',
@@ -370,7 +394,19 @@ export const translations = {
     logout: 'Sair',
     days: 'dias',
     completedThisWeek: 'completado esta semana',
-    completedThisMonth: 'completado este mês'
+    completedThisMonth: 'completado este mês',
+    // Filters
+    filters: 'Filtros',
+    hideFilters: 'Ocultar',
+    showFilters: 'Mostrar',
+    therapyType: 'Tipo de terapia',
+    selectType: 'Selecionar tipo',
+    allTypes: 'Todos',
+    dateFrom: 'De',
+    dateTo: 'Até',
+    selectDate: 'Selecionar data',
+    applyFilters: 'Aplicar filtros',
+    clearFilters: 'Limpar filtros'
   },
   ru: {
     dashboard: 'Двусторонняя терапия',
@@ -486,7 +522,19 @@ export const translations = {
     logout: 'Выйти',
     days: 'дней',
     completedThisWeek: 'завершено на этой неделе',
-    completedThisMonth: 'завершено в этом месяце'
+    completedThisMonth: 'завершено в этом месяце',
+    // Filters
+    filters: 'Фильтры',
+    hideFilters: 'Скрыть',
+    showFilters: 'Показать',
+    therapyType: 'Тип терапии',
+    selectType: 'Выбрать тип',
+    allTypes: 'Все',
+    dateFrom: 'От',
+    dateTo: 'До',
+    selectDate: 'Выбрать дату',
+    applyFilters: 'Применить фильтры',
+    clearFilters: 'Сбросить фильтры'
   }
 };
 
