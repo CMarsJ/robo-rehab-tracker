@@ -135,8 +135,8 @@ const AppSidebar = () => {
           {t.logout}
         </Button>
         
-        {/* Logo empresa creadora */}
-        <div className="mt-4 pt-3 border-t border-border/50 flex justify-center">
+        {/* Logos institucionales */}
+        <div className="mt-4 pt-3 border-t border-border/50 flex justify-center items-center gap-3">
           <a 
             href="https://uis.edu.co/es/" 
             target="_blank" 
@@ -146,6 +146,18 @@ const AppSidebar = () => {
             <img 
               src="/logoUIS.png" 
               alt="UIS Logo" 
+              className="h-8 w-auto"
+            />
+          </a>
+          <a 
+            href="https://e3t.uis.edu.co/eisi/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:scale-105 transition-transform"
+          >
+            <img 
+              src="/LOGOE3T.png" 
+              alt="E3T Logo" 
               className="h-8 w-auto"
             />
           </a>
