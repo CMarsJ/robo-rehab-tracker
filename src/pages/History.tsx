@@ -21,6 +21,13 @@ const History = () => {
   // Therapy types we want to show in history
   const therapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
 
+  // Hook MUST be called before any conditional returns
+  useEffect(() => {
+    if (user) {
+      fetchSessions();
+    }
+  }, [user]);
+
   // Redirect if not authenticated
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
@@ -37,12 +44,6 @@ const History = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (user) {
-      fetchSessions();
-    }
-  }, [user]);
 
   const fetchSessions = async (loadMore = false) => {
     try {
