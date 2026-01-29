@@ -93,29 +93,20 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setGameMode('timer');
     setGameCompleted(false);
     
-    // Iniciar el temporizador primero
+    // Iniciar el temporizador - este crea la sesión en Supabase
     if (!isActive) {
       console.log('⏱️ Starting timer...');
-      onStartTimer();
-    }
-    
-    // Usar sesión existente si ya fue creada por el temporizador
-    const existingId = typeof window !== 'undefined' ? localStorage.getItem('currentSessionId') : null;
-    if (existingId) {
-      setCurrentSessionId(existingId);
-      return;
-    }
-    
-    // Crear sesión en Supabase
-    const session = await SessionService.createSession({
-      therapy_type: 'terapia_guiada',
-      duration: duration,
-      state: 'active'
-    });
-
-    if (session) {
-      setCurrentSessionId(session.id);
-      try { localStorage.setItem('currentSessionId', session.id); } catch {}
+      await onStartTimer();
+      
+      // Esperar un momento para que localStorage se actualice
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Obtener el ID de sesión creado por el timer
+      const sessionId = localStorage.getItem('currentSessionId');
+      if (sessionId) {
+        setCurrentSessionId(sessionId);
+        console.log('✅ Sesión obtenida del timer:', sessionId);
+      }
     }
   };
   const handleCancelTherapy = async () => {
