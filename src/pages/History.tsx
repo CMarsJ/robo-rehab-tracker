@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target, Eye, EyeOff, Search, Filter, X } from 'lucide-react';
+import { FileText, Calendar, Trophy, Clock, Activity, Brain, Target, Eye, EyeOff, Filter, X, Gamepad2 } from 'lucide-react';
 import { useTranslation } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -28,14 +28,15 @@ const History = () => {
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
 
   // Filter states
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedTherapyTypes, setSelectedTherapyTypes] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [durationMin, setDurationMin] = useState<string>('');
+  const [durationMax, setDurationMax] = useState<string>('');
   const [showFilters, setShowFilters] = useState(true);
 
   // Therapy types we want to show in history
-  const therapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink'];
+  const therapyTypes = ['terapia_guiada', 'orange-squeeze', 'neurolink', 'flappy-bird'];
 
   // Hook MUST be called before any conditional returns
   useEffect(() => {
@@ -47,7 +48,7 @@ const History = () => {
   // Apply filters when sessions or filters change
   useEffect(() => {
     applyFilters();
-  }, [sessions, searchTerm, selectedTherapyTypes, dateFrom, dateTo]);
+  }, [sessions, selectedTherapyTypes, dateFrom, dateTo, durationMin, durationMax]);
 
   const applyFilters = () => {
     let filtered = [...sessions];
@@ -73,27 +74,29 @@ const History = () => {
       });
     }
 
-    // Filter by search term (search in therapy type name)
-    if (searchTerm.trim()) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(session => {
-        const therapyName = getSessionTitle(session.therapy_type).toLowerCase();
-        const dateStr = formatDate(session.start_time).toLowerCase();
-        return therapyName.includes(search) || dateStr.includes(search);
-      });
+    // Filter by duration range (in minutes)
+    const minDuration = durationMin ? parseInt(durationMin, 10) : null;
+    const maxDuration = durationMax ? parseInt(durationMax, 10) : null;
+    
+    if (minDuration !== null && !isNaN(minDuration)) {
+      filtered = filtered.filter(session => session.duration >= minDuration);
+    }
+    if (maxDuration !== null && !isNaN(maxDuration)) {
+      filtered = filtered.filter(session => session.duration <= maxDuration);
     }
 
     setFilteredSessions(filtered);
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
     setSelectedTherapyTypes([]);
     setDateFrom(undefined);
     setDateTo(undefined);
+    setDurationMin('');
+    setDurationMax('');
   };
 
-  const hasActiveFilters = searchTerm || selectedTherapyTypes.length > 0 || dateFrom || dateTo;
+  const hasActiveFilters = selectedTherapyTypes.length > 0 || dateFrom || dateTo || durationMin || durationMax;
 
   const toggleTherapyType = (type: string) => {
     setSelectedTherapyTypes(prev => 
@@ -180,6 +183,8 @@ const History = () => {
         return <Target className="w-6 h-6 text-purple-500" />;
       case 'terapia_guiada':
         return <Brain className="w-6 h-6 text-blue-500" />;
+      case 'flappy-bird':
+        return <Gamepad2 className="w-6 h-6 text-green-500" />;
       default:
         return <Activity className="w-6 h-6 text-gray-500" />;
     }
@@ -193,6 +198,8 @@ const History = () => {
         return t.neuroLinkTitle;
       case 'terapia_guiada':
         return t.guidedTherapyTitle;
+      case 'flappy-bird':
+        return 'Flappy Bird';
       default:
         return t.therapySession;
     }
@@ -535,17 +542,6 @@ const History = () => {
         
         {showFilters && (
           <CardContent className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Buscar por nombre o fecha..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Therapy Type Filter */}
               <div className="space-y-3">
@@ -582,6 +578,17 @@ const History = () => {
                     <label htmlFor="filter-neurolink" className="text-sm flex items-center gap-2 cursor-pointer">
                       <Target className="w-4 h-4 text-purple-500" />
                       {t.neuroLinkTitle}
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-flappy"
+                      checked={selectedTherapyTypes.includes('flappy-bird')}
+                      onCheckedChange={() => toggleTherapyType('flappy-bird')}
+                    />
+                    <label htmlFor="filter-flappy" className="text-sm flex items-center gap-2 cursor-pointer">
+                      <Gamepad2 className="w-4 h-4 text-green-500" />
+                      Flappy Bird
                     </label>
                   </div>
                 </div>
@@ -641,6 +648,30 @@ const History = () => {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+            </div>
+
+            {/* Duration Range Filter */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Duración mínima (minutos)</Label>
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={durationMin}
+                  onChange={(e) => setDurationMin(e.target.value)}
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Duración máxima (minutos)</Label>
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={durationMax}
+                  onChange={(e) => setDurationMax(e.target.value)}
+                  min="0"
+                />
               </div>
             </div>
 
