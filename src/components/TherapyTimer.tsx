@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { SessionService } from '@/services/sessionService';
 import { EffortDataPoint } from '@/types/database';
 import TherapyOverlay from '@/components/TherapyOverlay';
-import { mqttService } from '@/services/mqttService';
+import { bleService } from '@/services/bleService';
 
 // Función helper para limitar decimales a 4 dígitos
 const roundTo4Decimals = (value: number): number => {
@@ -35,7 +35,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [sessionEffortData, setSessionEffortData] = useState<EffortDataPoint[]>([]);
   
   const { addNotification } = useApp();
-  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory, clearMqttDataLog } = useSimulation();
+  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory, clearBleDataLog } = useSimulation();
   const { patientName } = useConfig();
   const { user } = useAuth();
   const t = useTranslation();
@@ -101,7 +101,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           setPauseStartTime(null);
           setTotalPausedTime(0);
           
-          mqttService.stopTherapy();
+          bleService.stopTherapy();
           playVictorySound();
           
           if (currentSessionId && user) {
@@ -206,14 +206,14 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const startTimerNow = async () => {
     console.log('⏱️ startTimerNow called, isActive:', isActive, 'user:', !!user);
     if (!isActive && user) {
-      // Limpiar log de MQTT al iniciar nueva sesión
-      clearMqttDataLog();
+      // Limpiar log de BLE al iniciar nueva sesión
+      clearBleDataLog();
       
       const sessionId = await startSession();
       setCurrentSessionId(sessionId);
       
       // Enviar comando start al ESP32
-      mqttService.startTherapy();
+      bleService.startTherapy();
       
       const initialTimeLeft = duration[0] * 60;
       console.log('⏱️ Setting timeLeft to:', initialTimeLeft);
@@ -246,7 +246,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 
   const handleCancel = async () => {
     // Enviar comando stop al ESP32
-    mqttService.stopTherapy();
+    bleService.stopTherapy();
     
     if (currentSessionId && user) {
       try {
@@ -267,7 +267,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
     setPauseStartTime(null);
     setTotalPausedTime(0);
     clearEffortHistory();
-    clearMqttDataLog();
+    clearBleDataLog();
     setSampleCounter(0);
     setSessionEffortData([]);
   };

@@ -207,7 +207,7 @@ const DataSimulator = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Estado MQTT */}
+                {/* Estado BLE */}
                 <div className="space-y-2">
                   {isReceivingRealData && (
                     <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">

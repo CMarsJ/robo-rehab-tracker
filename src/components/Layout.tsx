@@ -5,7 +5,7 @@ import AppSidebar from '@/components/AppSidebar';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import LanguageSelector from '@/components/LanguageSelector';
 import DataSimulator from '@/components/DataSimulator';
-import MQTTStatusButton from '@/components/MQTTStatusButton';
+import BLEStatusButton from '@/components/BLEStatusButton';
 import { useApp } from '@/contexts/AppContext';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </Button>
                 <NotificationDropdown />
                 <LanguageSelector />
-                <MQTTStatusButton />
+                <BLEStatusButton />
               </div>
             </div>
           </header>
