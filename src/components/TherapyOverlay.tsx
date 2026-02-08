@@ -7,7 +7,7 @@ import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
 import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
-import { useSimulation, MQTTDataRecord } from '@/contexts/SimulationContext';
+import { useSimulation, BLEDataRecord } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
 import { SessionService } from '@/services/sessionService';
 
@@ -44,7 +44,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [gameCompleted, setGameCompleted] = useState(false);
 
   const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap } = useGameConfig();
-  const { leftHand, rightHand, isTherapyActive, getMqttDataLog, clearMqttDataLog } = useSimulation();
+  const { leftHand, rightHand, isTherapyActive, getBleDataLog, clearBleDataLog } = useSimulation();
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
@@ -141,9 +141,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
     console.log(`📤 Enviando datos de terapia a Supabase (estado: ${state})...`);
 
-    // Obtener el registro de datos MQTT con timestamps
-    const mqttLog = getMqttDataLog();
-    console.log(`📝 Total registros MQTT: ${mqttLog.length}`);
+    // Obtener el registro de datos BLE con timestamps
+    const bleLog = getBleDataLog();
+    console.log(`📝 Total registros BLE: ${bleLog.length}`);
 
     // Función para redondear arrays de tiempos
     const roundTimes = (times: number[]): number[] => 
@@ -211,12 +211,12 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           is_therapy_active: isTherapyActive
         }
       },
-      // extra_date: Vector JSON con registro de fecha/hora de datos MQTT
-      extra_date: mqttLog.length > 0 ? mqttLog : [{
+      // extra_date: Vector JSON con registro de fecha/hora de datos BLE
+      extra_date: bleLog.length > 0 ? bleLog : [{
         timestamp: new Date().toISOString(),
         leftHand: leftHand,
         rightHand: rightHand,
-        note: 'No hubo cambios de datos MQTT durante la sesión'
+        note: 'No hubo cambios de datos BLE durante la sesión'
       }]
     };
 
@@ -224,8 +224,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     
     if (success) {
       console.log(`✅ Datos de terapia ${state === 'completed' ? 'completada' : 'cancelada'} enviados correctamente a Supabase`);
-      // Limpiar el log de MQTT después de guardar
-      clearMqttDataLog();
+      // Limpiar el log de BLE después de guardar
+      clearBleDataLog();
     } else {
       console.error('❌ Error al guardar datos de terapia');
     }

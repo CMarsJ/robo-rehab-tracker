@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { mqttService } from '@/services/mqttService';
+import { bleService } from '@/services/bleService';
 
 interface HandAngles {
   thumb1: number;
@@ -16,12 +16,15 @@ interface HandData {
   effort: number;
 }
 
-// Registro de cambios MQTT con timestamp
-export interface MQTTDataRecord {
+// Registro de cambios BLE con timestamp
+export interface BLEDataRecord {
   timestamp: string;
   leftHand: HandData;
   rightHand: HandData;
 }
+
+// Mantener export del alias para compatibilidad
+export type MQTTDataRecord = BLEDataRecord;
 
 interface SimulationContextType {
   leftHand: HandData;
@@ -34,15 +37,22 @@ interface SimulationContextType {
   clearEffortHistory: () => void;
   autoMode: boolean;
   setAutoMode: (active: boolean) => void;
-  mqttStatus: 'connected' | 'disconnected' | 'error';
-  mqttMessage: string;
+  bleStatus: 'connected' | 'disconnected' | 'error';
+  bleMessage: string;
   isReceivingRealData: boolean;
   enableSimulator: boolean;
   setEnableSimulator: (enabled: boolean) => void;
-  // Nuevo: registro de datos MQTT
-  mqttDataLog: MQTTDataRecord[];
+  isEmergency: boolean;
+  // Registro de datos BLE
+  bleDataLog: BLEDataRecord[];
+  clearBleDataLog: () => void;
+  getBleDataLog: () => BLEDataRecord[];
+  // Aliases para compatibilidad
+  mqttStatus: 'connected' | 'disconnected' | 'error';
+  mqttMessage: string;
+  mqttDataLog: BLEDataRecord[];
   clearMqttDataLog: () => void;
-  getMqttDataLog: () => MQTTDataRecord[];
+  getMqttDataLog: () => BLEDataRecord[];
 }
 
 // Función helper para limitar decimales a 4 dígitos
@@ -72,41 +82,28 @@ const SimulationContext = createContext<SimulationContextType | undefined>(undef
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [leftHand, setLeftHand] = useState<HandData>({
     active: false,
-    angles: {
-      thumb1: 45,
-      thumb2: 30,
-      thumb3: 25,
-      finger1: 60,
-      finger2: 55,
-      finger3: 50
-    },
+    angles: { thumb1: 45, thumb2: 30, thumb3: 25, finger1: 60, finger2: 55, finger3: 50 },
     effort: 75
   });
 
   const [rightHand, setRightHand] = useState<HandData>({
     active: false,
-    angles: {
-      thumb1: 35,
-      thumb2: 25,
-      thumb3: 20,
-      finger1: 40,
-      finger2: 35,
-      finger3: 30
-    },
+    angles: { thumb1: 35, thumb2: 25, thumb3: 20, finger1: 40, finger2: 35, finger3: 30 },
     effort: 45
   });
 
   const [isTherapyActive, setIsTherapyActive] = useState(false);
   const [effortHistory, setEffortHistory] = useState<Array<{ time: string; paretica: number; noParetica: number; }>>([]);
   const [autoMode, setAutoMode] = useState(false);
-  const [mqttStatus, setMqttStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
-  const [mqttMessage, setMqttMessage] = useState('No conectado');
+  const [bleStatus, setBleStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [bleMessage, setBleMessage] = useState('No conectado');
   const [isReceivingRealData, setIsReceivingRealData] = useState(false);
   const [enableSimulator, setEnableSimulator] = useState(false);
+  const [isEmergency, setIsEmergency] = useState(false);
   
-  // Registro de datos MQTT con timestamps
-  const mqttDataLogRef = useRef<MQTTDataRecord[]>([]);
-  const [mqttDataLog, setMqttDataLog] = useState<MQTTDataRecord[]>([]);
+  // Registro de datos BLE con timestamps
+  const bleDataLogRef = useRef<BLEDataRecord[]>([]);
+  const [bleDataLog, setBleDataLog] = useState<BLEDataRecord[]>([]);
   const lastDataRef = useRef<string>('');
 
   // Cargar datos del localStorage al inicializar
@@ -116,34 +113,19 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const savedEffortHistory = localStorage.getItem('effortHistory');
     
     if (savedLeftHand) {
-      try {
-        setLeftHand(JSON.parse(savedLeftHand));
-      } catch (e) {
-        console.error('Error loading left hand data:', e);
-      }
+      try { setLeftHand(JSON.parse(savedLeftHand)); } catch (e) { console.error('Error loading left hand data:', e); }
     }
-    
     if (savedRightHand) {
-      try {
-        setRightHand(JSON.parse(savedRightHand));
-      } catch (e) {
-        console.error('Error loading right hand data:', e);
-      }
+      try { setRightHand(JSON.parse(savedRightHand)); } catch (e) { console.error('Error loading right hand data:', e); }
     }
-
     if (savedEffortHistory) {
-      try {
-        setEffortHistory(JSON.parse(savedEffortHistory));
-      } catch (e) {
-        console.error('Error loading effort history:', e);
-      }
+      try { setEffortHistory(JSON.parse(savedEffortHistory)); } catch (e) { console.error('Error loading effort history:', e); }
     }
   }, []);
 
-  // Helper to validate and transform MQTT hand data
+  // Helper to validate and transform BLE hand data
   const parseHandData = (hand: any): HandData | null => {
     if (!hand || typeof hand !== 'object') return null;
-    
     return roundHandData({
       active: Boolean(hand.active),
       angles: {
@@ -158,97 +140,80 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  // Función para registrar datos MQTT con timestamp
-  const addMqttDataRecord = (left: HandData, right: HandData) => {
-    // Crear hash simple para detectar cambios
+  // Función para registrar datos BLE con timestamp
+  const addBleDataRecord = (left: HandData, right: HandData) => {
     const dataHash = JSON.stringify({ left, right });
-    
-    // Solo registrar si los datos cambiaron
     if (dataHash !== lastDataRef.current) {
       lastDataRef.current = dataHash;
-      
-      const record: MQTTDataRecord = {
+      const record: BLEDataRecord = {
         timestamp: new Date().toISOString(),
         leftHand: roundHandData(left),
         rightHand: roundHandData(right),
       };
-      
-      mqttDataLogRef.current = [...mqttDataLogRef.current, record];
-      setMqttDataLog([...mqttDataLogRef.current]);
-      
-      console.log('📝 MQTT data logged:', record.timestamp);
+      bleDataLogRef.current = [...bleDataLogRef.current, record];
+      setBleDataLog([...bleDataLogRef.current]);
+      console.log('📝 BLE data logged:', record.timestamp);
     }
   };
 
-  // Limpiar registro de datos MQTT
-  const clearMqttDataLog = () => {
-    mqttDataLogRef.current = [];
-    setMqttDataLog([]);
+  const clearBleDataLog = () => {
+    bleDataLogRef.current = [];
+    setBleDataLog([]);
     lastDataRef.current = '';
-    console.log('🗑️ MQTT data log cleared');
+    console.log('🗑️ BLE data log cleared');
   };
 
-  // Obtener registro de datos MQTT
-  const getMqttDataLog = (): MQTTDataRecord[] => {
-    return mqttDataLogRef.current;
+  const getBleDataLog = (): BLEDataRecord[] => {
+    return bleDataLogRef.current;
   };
 
-  // MQTT Connection Effect
+  // BLE Connection Effect
   useEffect(() => {
-    // Configurar callbacks de MQTT
-    mqttService.onData((data) => {
-      console.log('📊 Real data received from MQTT:', data);
-      
+    bleService.onData((data) => {
+      console.log('📊 Real data received from BLE:', data);
       const parsedLeft = parseHandData(data?.leftHand);
       const parsedRight = parseHandData(data?.rightHand);
       
       if (parsedLeft && parsedRight) {
         setIsReceivingRealData(true);
         updateSimulationData(parsedLeft, parsedRight);
-        
-        // Registrar datos MQTT con timestamp cuando hay terapia activa
-        addMqttDataRecord(parsedLeft, parsedRight);
+        addBleDataRecord(parsedLeft, parsedRight);
       } else {
-        console.warn('⚠️ Invalid MQTT data format, ignoring:', data);
+        console.warn('⚠️ Invalid BLE data format, ignoring:', data);
       }
     });
 
-    mqttService.onStatus((status, message) => {
-      console.log(`📡 MQTT Status: ${status} - ${message}`);
-      setMqttStatus(status);
-      setMqttMessage(message || '');
+    bleService.onStatus((status, message) => {
+      console.log(`📡 BLE Status: ${status} - ${message}`);
+      setBleStatus(status);
+      setBleMessage(message || '');
     });
 
-    // Intentar conectar con credenciales guardadas
-    const savedUsername = localStorage.getItem('mqtt_username');
-    const savedPassword = localStorage.getItem('mqtt_password');
-    const savedTopic = localStorage.getItem('mqtt_topic') || 'rehab/hand-data';
-
-    if (savedUsername && savedPassword) {
-      console.log('🔄 Connecting with saved credentials...');
-      mqttService.connect(savedUsername, savedPassword, savedTopic);
-    }
+    bleService.onEmergency((emergency) => {
+      setIsEmergency(emergency);
+      if (emergency) {
+        console.warn('🚨 EMERGENCY STATE ACTIVE');
+      }
+    });
 
     // Check de datos reales cada 10 segundos
     const checkInterval = setInterval(() => {
-      const receiving = mqttService.isReceivingData();
+      const receiving = bleService.isReceivingData();
       setIsReceivingRealData(receiving);
-      
-      if (!receiving && mqttService.isConnected()) {
+      if (!receiving && bleService.isConnected()) {
         console.log('⚠️ Connected but not receiving data');
       }
     }, 10000);
 
     return () => {
       clearInterval(checkInterval);
-      mqttService.disconnect();
+      bleService.disconnect();
     };
   }, []);
 
   // Auto mode effect - solo si no hay datos reales y el simulador está habilitado
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-
     if (autoMode && enableSimulator && !isReceivingRealData) {
       interval = setInterval(() => {
         const randomLeftHand: HandData = roundHandData({
@@ -263,7 +228,6 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           },
           effort: Math.floor(Math.random() * 100)
         });
-
         const randomRightHand: HandData = roundHandData({
           active: Math.random() > 0.3,
           angles: {
@@ -276,46 +240,27 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           },
           effort: Math.floor(Math.random() * 100)
         });
-
         updateSimulationData(randomLeftHand, randomRightHand);
       }, 30000);
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => { if (interval) clearInterval(interval); };
   }, [autoMode, enableSimulator, isReceivingRealData]);
 
   const updateSimulationData = (newLeftHand: HandData, newRightHand: HandData) => {
     const roundedLeft = roundHandData(newLeftHand);
     const roundedRight = roundHandData(newRightHand);
-    
     setLeftHand(roundedLeft);
     setRightHand(roundedRight);
-    
-    // Guardar en localStorage
     localStorage.setItem('leftHandData', JSON.stringify(roundedLeft));
     localStorage.setItem('rightHandData', JSON.stringify(roundedRight));
-    
-    console.log('Datos simulados actualizados:', {
-      leftHand: roundedLeft,
-      rightHand: roundedRight
-    });
   };
 
   const addEffortData = (paretica: number, noParetica: number) => {
     const now = new Date();
     const timeString = `${now.getMinutes()}:${now.getSeconds().toString().padStart(2, '0')}`;
-    
-    const newData = { 
-      time: timeString, 
-      paretica: roundTo4Decimals(paretica), 
-      noParetica: roundTo4Decimals(noParetica) 
-    };
-    
+    const newData = { time: timeString, paretica: roundTo4Decimals(paretica), noParetica: roundTo4Decimals(noParetica) };
     setEffortHistory(prev => {
       const updated = [...prev, newData];
-      // Mantener solo los últimos 10 puntos de datos
       const trimmed = updated.slice(-10);
       localStorage.setItem('effortHistory', JSON.stringify(trimmed));
       return trimmed;
@@ -339,14 +284,21 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       clearEffortHistory,
       autoMode,
       setAutoMode,
-      mqttStatus,
-      mqttMessage,
+      bleStatus,
+      bleMessage,
       isReceivingRealData,
       enableSimulator,
       setEnableSimulator,
-      mqttDataLog,
-      clearMqttDataLog,
-      getMqttDataLog
+      isEmergency,
+      bleDataLog,
+      clearBleDataLog,
+      getBleDataLog,
+      // Aliases para compatibilidad con código existente
+      mqttStatus: bleStatus,
+      mqttMessage: bleMessage,
+      mqttDataLog: bleDataLog,
+      clearMqttDataLog: clearBleDataLog,
+      getMqttDataLog: getBleDataLog,
     }}>
       {children}
     </SimulationContext.Provider>
