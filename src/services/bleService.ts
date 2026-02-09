@@ -9,9 +9,8 @@ const BLE_DEVICE_NAME = 'ESP32_IMU_BLE';
 
 // Datos recibidos del ESP32 vía BLE
 export interface BLERawData {
-  hand: number;
-  finger: number;
-  timestamp: number;
+  angle: number;
+  time: number;
 }
 
 // Datos procesados con todos los ángulos calculados
@@ -60,28 +59,27 @@ export class BLEService {
     return 'bluetooth' in navigator;
   }
 
-  // Calcula los ángulos derivados a partir de los datos del sensor
-  private calculateAngles(hand: number, finger: number): BLEHandData {
-    const mcp_finger = finger || 0;
-    const mcp_thumb = hand || 0;
+  // Calcula los ángulos derivados a partir del ángulo del sensor
+  private calculateAngles(angle: number): BLEHandData {
+    const mcp = angle || 0;
 
     // Fórmulas: PIP = 0.8 * MCP, DIP = 0.66 * PIP
-    const pip_finger = 0.8 * mcp_finger;
-    const dip_finger = 0.66 * pip_finger;
+    const pip = 0.8 * mcp;
+    const dip = 0.66 * pip;
     // Pulgar: IP = 1.25 * MCP
-    const ip_thumb = 1.25 * mcp_thumb;
+    const ip_thumb = 1.25 * mcp;
 
     return {
-      active: mcp_finger > 0 || mcp_thumb > 0,
+      active: mcp > 0,
       angles: {
-        thumb1: mcp_thumb,
+        thumb1: mcp,
         thumb2: ip_thumb,
         thumb3: 0,
-        finger1: mcp_finger,
-        finger2: pip_finger,
-        finger3: dip_finger,
+        finger1: mcp,
+        finger2: pip,
+        finger3: dip,
       },
-      effort: Math.min(100, Math.max(0, (mcp_finger + mcp_thumb) / 1.8)),
+      effort: Math.min(100, Math.max(0, mcp / 0.9)),
     };
   }
 
@@ -186,8 +184,8 @@ export class BLEService {
 
       this.lastDataTimestamp = Date.now();
 
-      // Procesar datos - el dispositivo envía hand y finger para la mano parética
-      const processedHand = this.calculateAngles(rawData.hand, rawData.finger);
+      // Procesar datos - el dispositivo envía {angle, time}
+      const processedHand = this.calculateAngles(rawData.angle);
 
       const processedData: BLEMessage = {
         leftHand: {
@@ -196,9 +194,7 @@ export class BLEService {
           effort: 0,
         },
         rightHand: processedHand,
-        timestamp: rawData.timestamp
-          ? new Date(rawData.timestamp).toISOString()
-          : new Date().toISOString(),
+        timestamp: new Date().toISOString(),
       };
 
       console.log('📊 Data procesada:', processedData);
