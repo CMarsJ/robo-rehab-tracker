@@ -68,7 +68,11 @@ const BLEStatusButton: React.FC = () => {
 
   const handleEmergency = async () => {
     await bleService.sendEmergency();
-    toast({ title: '🚨 Emergencia', description: 'Comando enviado', variant: 'destructive' });
+    toast({ 
+      title: isEmergency ? '✅ Emergencia desactivada' : '🚨 Emergencia activada', 
+      description: isEmergency ? 'Terapia puede reanudarse' : 'Terapia pausada', 
+      variant: isEmergency ? 'default' : 'destructive' 
+    });
   };
 
   const getStatusEmoji = () => {

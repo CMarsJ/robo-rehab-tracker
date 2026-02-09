@@ -35,10 +35,35 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
   const [sessionEffortData, setSessionEffortData] = useState<EffortDataPoint[]>([]);
   
   const { addNotification } = useApp();
-  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory, clearBleDataLog } = useSimulation();
+  const { setIsTherapyActive, leftHand, rightHand, addEffortData, clearEffortHistory, clearBleDataLog, isEmergency } = useSimulation();
   const { patientName } = useConfig();
   const { user } = useAuth();
   const t = useTranslation();
+
+  // Auto-pausar cuando se activa emergencia BLE
+  const prevEmergencyRef = React.useRef(false);
+  useEffect(() => {
+    if (isEmergency && !prevEmergencyRef.current && isActive && !isPaused) {
+      // Emergencia activada: pausar terapia
+      handlePause();
+      bleService.stopTherapy();
+      addNotification({
+        title: '🚨 Emergencia',
+        message: 'Terapia pausada por emergencia BLE',
+        type: 'warning'
+      });
+    } else if (!isEmergency && prevEmergencyRef.current && isActive && isPaused) {
+      // Emergencia desactivada: reanudar terapia
+      handlePause();
+      bleService.startTherapy();
+      addNotification({
+        title: '✅ Emergencia resuelta',
+        message: 'Terapia reanudada',
+        type: 'success'
+      });
+    }
+    prevEmergencyRef.current = isEmergency;
+  }, [isEmergency, isActive, isPaused]);
 
   const playVictorySound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
