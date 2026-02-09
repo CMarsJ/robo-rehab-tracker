@@ -1,10 +1,9 @@
 // Servicio Web Bluetooth para comunicación con ESP32_IMU_BLE
 
 // UUIDs del dispositivo BLE
-const BLE_SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
-const BLE_DATA_CHAR_UUID = '12345678-1234-1234-1234-123456789ab1';
-const BLE_CONTROL_CHAR_UUID = '12345678-1234-1234-1234-123456789ab2';
-const BLE_EMERGENCY_CHAR_UUID = '12345678-1234-1234-1234-123456789ab3';
+const BLE_SERVICE_UUID = '12345678-1234-1234-1234-1234567890ab';
+const BLE_CONTROL_CHAR_UUID = '12345678-1234-1234-1234-1234567890ac';
+const BLE_DATA_CHAR_UUID = '12345678-1234-1234-1234-1234567890ad';
 const BLE_DEVICE_NAME = 'ESP32_IMU_BLE';
 
 // Datos recibidos del ESP32 vía BLE
@@ -157,22 +156,6 @@ export class BLEService {
       console.error('❌ Error configurando CONTROL characteristic:', e);
     }
 
-    // 3. EMERGENCY (Read + Notify) - estado de emergencia
-    try {
-      this.emergencyCharacteristic = await service.getCharacteristic(BLE_EMERGENCY_CHAR_UUID);
-      await this.emergencyCharacteristic.startNotifications();
-      this.emergencyCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
-        this.handleEmergencyNotification(event);
-      });
-      // Leer estado inicial
-      const value = await this.emergencyCharacteristic.readValue();
-      const emergencyText = new TextDecoder().decode(value);
-      this.emergencyState = emergencyText === '1';
-      this.onEmergencyCallback?.(this.emergencyState);
-      console.log('🚨 Suscrito a notificaciones de EMERGENCY, estado inicial:', this.emergencyState);
-    } catch (e) {
-      console.error('❌ Error configurando EMERGENCY characteristic:', e);
-    }
   }
 
   private handleDataNotification(event: any): void {
