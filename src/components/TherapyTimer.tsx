@@ -119,7 +119,6 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
         if (newTimeLeft <= 0) {
           setIsActive(false);
           setIsPaused(false);
-          setIsTherapyActive(false);
           setTimeout(() => setShowOverlay(false), 500);
           setSampleCounter(0);
           setStartTime(null);
@@ -129,19 +128,24 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
           bleService.stopTherapy();
           playVictorySound();
           
-          if (currentSessionId && user) {
-            finishSession();
-          }
-          
-          addNotification({
-            title: `¡Felicidades ${patientName}!`,
-            message: t.sessionCompleted,
-            type: 'success'
-          });
-          
-          if (onSessionComplete) {
-            onSessionComplete();
-          }
+          // Defer context updates to avoid setState-during-render warning
+          setTimeout(() => {
+            setIsTherapyActive(false);
+            
+            if (currentSessionId && user) {
+              finishSession();
+            }
+            
+            addNotification({
+              title: `¡Felicidades ${patientName}!`,
+              message: t.sessionCompleted,
+              type: 'success'
+            });
+            
+            if (onSessionComplete) {
+              onSessionComplete();
+            }
+          }, 0);
         }
       }, 1000);
     }
