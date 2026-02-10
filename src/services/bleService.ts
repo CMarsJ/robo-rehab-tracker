@@ -8,9 +8,17 @@ const BLE_EMERGENCY_CHAR_UUID = '12345678-1234-1234-1234-123456789ab3';
 const BLE_DEVICE_NAME = 'ESP32_IMU_BLE';
 
 // Datos recibidos del ESP32 vía BLE
+export interface BLERawHandData {
+  active: boolean;
+  mcp_finger: number;
+  mcp_thumb: number;
+  effort: number;
+}
+
 export interface BLERawData {
-  angle: number;
-  time: number;
+  leftHand: BLERawHandData;
+  rightHand: BLERawHandData;
+  timestamp: string;
 }
 
 // Datos procesados con todos los ángulos calculados
@@ -59,27 +67,28 @@ export class BLEService {
     return 'bluetooth' in navigator;
   }
 
-  // Calcula los ángulos derivados a partir del ángulo del sensor
-  private calculateAngles(angle: number): BLEHandData {
-    const mcp = angle || 0;
+  // Calcula los ángulos derivados a partir de mcp_finger y mcp_thumb
+  private calculateAngles(rawHand: BLERawHandData): BLEHandData {
+    const mcp_finger = rawHand.mcp_finger || 0;
+    const mcp_thumb = rawHand.mcp_thumb || 0;
 
     // Fórmulas: PIP = 0.8 * MCP, DIP = 0.66 * PIP
-    const pip = 0.8 * mcp;
-    const dip = 0.66 * pip;
+    const pip_finger = 0.8 * mcp_finger;
+    const dip_finger = 0.66 * pip_finger;
     // Pulgar: IP = 1.25 * MCP
-    const ip_thumb = 1.25 * mcp;
+    const ip_thumb = 1.25 * mcp_thumb;
 
     return {
-      active: mcp > 0,
+      active: Boolean(rawHand.active),
       angles: {
-        thumb1: mcp,
+        thumb1: mcp_thumb,
         thumb2: ip_thumb,
         thumb3: 0,
-        finger1: mcp,
-        finger2: pip,
-        finger3: dip,
+        finger1: mcp_finger,
+        finger2: pip_finger,
+        finger3: dip_finger,
       },
-      effort: Math.min(100, Math.max(0, mcp / 0.9)),
+      effort: Math.min(100, Math.max(0, (rawHand.effort || 0) * 100)),
     };
   }
 
@@ -184,16 +193,13 @@ export class BLEService {
 
       this.lastDataTimestamp = Date.now();
 
-      // Procesar datos - el dispositivo envía {angle, time}
-      const processedHand = this.calculateAngles(rawData.angle);
+      // Procesar ambas manos desde el JSON del ESP32
+      const processedLeft = this.calculateAngles(rawData.leftHand);
+      const processedRight = this.calculateAngles(rawData.rightHand);
 
       const processedData: BLEMessage = {
-        leftHand: {
-          active: false,
-          angles: { thumb1: 0, thumb2: 0, thumb3: 0, finger1: 0, finger2: 0, finger3: 0 },
-          effort: 0,
-        },
-        rightHand: processedHand,
+        leftHand: processedLeft,
+        rightHand: processedRight,
         timestamp: new Date().toISOString(),
       };
 
