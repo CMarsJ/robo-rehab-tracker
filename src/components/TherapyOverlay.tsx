@@ -43,13 +43,13 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [gameMode, setGameMode] = useState<GameMode>('selection');
   const [gameCompleted, setGameCompleted] = useState(false);
 
-  const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap } = useGameConfig();
+  const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap, restRepetitions, restLevels, restDuration } = useGameConfig();
   const { leftHand, rightHand, isTherapyActive, getBleDataLog, clearBleDataLog } = useSimulation();
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
 
-  // Estados para tiempos de apertura/cierre
+  // Estados para tiempos de apertura/cierre - MANO DERECHA (parética)
   const [closingTimes, setClosingTimes] = useState<number[]>([]);
   const [fastestClosing, setFastestClosing] = useState<number | null>(null);
   const [averageClosing, setAverageClosing] = useState<number | null>(null);
@@ -59,25 +59,37 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [averageOpening, setAverageOpening] = useState<number | null>(null);
 
   const [attempts, setAttempts] = useState<{ closingTime: number; openingTime: number; totalTime: number }[]>([]);
+
+  // Estados para tiempos de apertura/cierre - MANO IZQUIERDA (no parética)
+  const [leftClosingTimes, setLeftClosingTimes] = useState<number[]>([]);
+  const [leftFastestClosing, setLeftFastestClosing] = useState<number | null>(null);
+  const [leftAverageClosing, setLeftAverageClosing] = useState<number | null>(null);
+
+  const [leftOpeningTimes, setLeftOpeningTimes] = useState<number[]>([]);
+  const [leftFastestOpening, setLeftFastestOpening] = useState<number | null>(null);
+  const [leftAverageOpening, setLeftAverageOpening] = useState<number | null>(null);
+
+  const [leftAttempts, setLeftAttempts] = useState<{ closingTime: number; openingTime: number; totalTime: number }[]>([]);
+
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [orangesUsed, setOrangesUsed] = useState(0);
   const [juiceUsed, setJuiceUsed] = useState(0);
 
+  // Rest countdown state
+  const [isResting, setIsResting] = useState(false);
+  const [restTimeLeft, setRestTimeLeft] = useState(0);
+  const [completedRepsForRest, setCompletedRepsForRest] = useState(0);
+  const [completedLevelsForRest, setCompletedLevelsForRest] = useState(0);
+
+  // Refs for right hand tracking
   const openTimestamp = useRef<number | null>(null);
   const closedTimestamp = useRef<number | null>(null);
   const lastState = useRef<'open' | 'closed' | null>(null);
 
-  const handleGameComplete = (gameData?: any) => {
-    setGameCompleted(true);
-    
-    // Si hay datos de juego, actualizar estadísticas
-    if (gameData) {
-      if (gameMode === 'orange-squeeze') {
-        setOrangesUsed(gameData.orange_used || 0);
-        setJuiceUsed(gameData.juice_used || 0);
-      }
-    }
-  };
+  // Refs for left hand tracking
+  const leftOpenTimestamp = useRef<number | null>(null);
+  const leftClosedTimestamp = useRef<number | null>(null);
+  const leftLastState = useRef<'open' | 'closed' | null>(null);
 
   // Función para actualizar datos de juegos desde componentes hijos
   const updateGameStats = (gameType: string, stats: any) => {
@@ -125,6 +137,23 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setAverageClosing(null);
     setFastestOpening(null);
     setAverageOpening(null);
+    // Left hand reset
+    setLeftClosingTimes([]);
+    setLeftOpeningTimes([]);
+    setLeftAttempts([]);
+    setLeftFastestClosing(null);
+    setLeftAverageClosing(null);
+    setLeftFastestOpening(null);
+    setLeftAverageOpening(null);
+    leftOpenTimestamp.current = null;
+    leftClosedTimestamp.current = null;
+    leftLastState.current = null;
+    // Rest reset
+    setIsResting(false);
+    setRestTimeLeft(0);
+    setCompletedRepsForRest(0);
+    setCompletedLevelsForRest(0);
+    // General reset
     setCurrentSessionId(null);
     setOrangesUsed(0);
     setJuiceUsed(0);
@@ -158,18 +187,40 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       juice_used: juiceUsed,
       stats: {
         hand_metrics: {
-          closing: {
-            attempts: closingTimes.length,
-            fastest_time_ms: roundTo4Decimals(fastestClosing),
-            average_time_ms: roundTo4Decimals(averageClosing),
-            all_times: roundTimes(closingTimes)
+          right_hand: {
+            closing: {
+              attempts: closingTimes.length,
+              fastest_time_ms: roundTo4Decimals(fastestClosing),
+              average_time_ms: roundTo4Decimals(averageClosing),
+              all_times: roundTimes(closingTimes)
+            },
+            opening: {
+              attempts: openingTimes.length,
+              fastest_time_ms: roundTo4Decimals(fastestOpening),
+              average_time_ms: roundTo4Decimals(averageOpening),
+              all_times: roundTimes(openingTimes)
+            }
           },
-          opening: {
-            attempts: openingTimes.length,
-            fastest_time_ms: roundTo4Decimals(fastestOpening),
-            average_time_ms: roundTo4Decimals(averageOpening),
-            all_times: roundTimes(openingTimes)
+          left_hand: {
+            closing: {
+              attempts: leftClosingTimes.length,
+              fastest_time_ms: roundTo4Decimals(leftFastestClosing),
+              average_time_ms: roundTo4Decimals(leftAverageClosing),
+              all_times: roundTimes(leftClosingTimes)
+            },
+            opening: {
+              attempts: leftOpeningTimes.length,
+              fastest_time_ms: roundTo4Decimals(leftFastestOpening),
+              average_time_ms: roundTo4Decimals(leftAverageOpening),
+              all_times: roundTimes(leftOpeningTimes)
+            }
           }
+        },
+        rest_metrics: {
+          total_rests_triggered: Math.floor(completedRepsForRest / restRepetitions),
+          rest_duration_config: restDuration,
+          rest_repetitions_config: restRepetitions,
+          rest_levels_config: restLevels,
         },
         game_metrics: {
           total_oranges: orangesUsed,
@@ -178,7 +229,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             ? roundTo4Decimals((juiceUsed / targetGlasses) * 100) 
             : 0
         },
-        // Incluir último estado de manos
         current_hand_state: {
           left_hand: {
             active: leftHand.active,
@@ -193,16 +243,25 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         }
       },
       details: {
-        attempts_history: attempts.map((attempt, index) => ({
+        right_hand_attempts: attempts.map((attempt, index) => ({
+          attempt_number: index + 1,
+          closing_time_ms: roundTo4Decimals(attempt.closingTime),
+          opening_time_ms: roundTo4Decimals(attempt.openingTime),
+          total_time_ms: roundTo4Decimals(attempt.totalTime)
+        })),
+        left_hand_attempts: leftAttempts.map((attempt, index) => ({
           attempt_number: index + 1,
           closing_time_ms: roundTo4Decimals(attempt.closingTime),
           opening_time_ms: roundTo4Decimals(attempt.openingTime),
           total_time_ms: roundTo4Decimals(attempt.totalTime)
         })),
         raw_data: {
-          all_closing_times: roundTimes(closingTimes),
-          all_opening_times: roundTimes(openingTimes),
-          total_attempts: attempts.length
+          right_closing_times: roundTimes(closingTimes),
+          right_opening_times: roundTimes(openingTimes),
+          right_total_attempts: attempts.length,
+          left_closing_times: roundTimes(leftClosingTimes),
+          left_opening_times: roundTimes(leftOpeningTimes),
+          left_total_attempts: leftAttempts.length
         },
         therapy_info: {
           mode: gameMode,
@@ -256,9 +315,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }
   }, [timeLeft, isActive, currentSessionId]);
 
-  // --- Registro de tiempos de mano ---
+  // --- Registro de tiempos de mano DERECHA (parética) ---
   useEffect(() => {
-    if (!isTherapyActive) return;
+    if (!isTherapyActive || isResting) return;
 
     const isOpen = rightHand.angles.finger2 < 20;
     const isClosed = rightHand.angles.finger2 > 70;
@@ -283,7 +342,12 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           setAverageClosing(updated.reduce((a, b) => a + b, 0) / updated.length);
           return updated;
         });
-        setAttempts(prev => [...prev, { closingTime: closing, openingTime: 0, totalTime: closing }]);
+        setAttempts(prev => {
+          const updated = [...prev, { closingTime: closing, openingTime: 0, totalTime: closing }];
+          // Check if rest should trigger based on completed reps
+          setCompletedRepsForRest(prevReps => prevReps + 1);
+          return updated;
+        });
         closedTimestamp.current = now;
         openTimestamp.current = null;
       }
@@ -307,51 +371,172 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
       lastState.current = currentState;
     }
-  }, [rightHand, isTherapyActive]);
+  }, [rightHand, isTherapyActive, isResting]);
+
+  // --- Registro de tiempos de mano IZQUIERDA (no parética) ---
+  useEffect(() => {
+    if (!isTherapyActive || isResting) return;
+
+    const isOpen = leftHand.angles.finger2 < 20;
+    const isClosed = leftHand.angles.finger2 > 70;
+    const now = performance.now();
+    const currentState: 'open' | 'closed' | 'neutral' = isOpen ? 'open' : isClosed ? 'closed' : 'neutral';
+
+    if (currentState === 'neutral') return;
+
+    if (leftLastState.current === null) {
+      if (currentState === 'open') leftOpenTimestamp.current = now;
+      if (currentState === 'closed') leftClosedTimestamp.current = now;
+      leftLastState.current = currentState;
+      return;
+    }
+
+    if (leftLastState.current !== currentState) {
+      if (leftLastState.current === 'open' && currentState === 'closed' && leftOpenTimestamp.current !== null) {
+        const closing = now - leftOpenTimestamp.current;
+        setLeftClosingTimes(prev => {
+          const updated = [...prev, closing];
+          setLeftFastestClosing(Math.min(...updated));
+          setLeftAverageClosing(updated.reduce((a, b) => a + b, 0) / updated.length);
+          return updated;
+        });
+        setLeftAttempts(prev => [...prev, { closingTime: closing, openingTime: 0, totalTime: closing }]);
+        leftClosedTimestamp.current = now;
+        leftOpenTimestamp.current = null;
+      }
+
+      if (leftLastState.current === 'closed' && currentState === 'open' && leftClosedTimestamp.current !== null) {
+        const opening = now - leftClosedTimestamp.current;
+        setLeftOpeningTimes(prev => {
+          const updated = [...prev, opening];
+          setLeftFastestOpening(Math.min(...updated));
+          setLeftAverageOpening(updated.reduce((a, b) => a + b, 0) / updated.length);
+          return updated;
+        });
+        setLeftAttempts(prev => {
+          if (prev.length === 0) return prev;
+          const last = prev[prev.length - 1];
+          return [...prev.slice(0, -1), { ...last, openingTime: opening, totalTime: last.closingTime + opening }];
+        });
+        leftOpenTimestamp.current = now;
+        leftClosedTimestamp.current = null;
+      }
+
+      leftLastState.current = currentState;
+    }
+  }, [leftHand, isTherapyActive, isResting]);
+
+  // --- Rest trigger: repeticiones ---
+  useEffect(() => {
+    if (completedRepsForRest > 0 && completedRepsForRest % restRepetitions === 0 && !isResting && isActive && !isPaused) {
+      triggerRest();
+    }
+  }, [completedRepsForRest, restRepetitions, isResting, isActive, isPaused]);
+
+  // --- Rest trigger: niveles de juego ---
+  useEffect(() => {
+    if (completedLevelsForRest > 0 && completedLevelsForRest % restLevels === 0 && !isResting && isActive && !isPaused) {
+      triggerRest();
+    }
+  }, [completedLevelsForRest, restLevels, isResting, isActive, isPaused]);
+
+  const triggerRest = () => {
+    setIsResting(true);
+    setRestTimeLeft(restDuration);
+    onPause(); // Pause the main therapy timer
+  };
+
+  // --- Rest countdown timer ---
+  useEffect(() => {
+    if (!isResting || restTimeLeft <= 0) return;
+
+    const interval = setInterval(() => {
+      setRestTimeLeft(prev => {
+        if (prev <= 1) {
+          setIsResting(false);
+          // Resume therapy
+          setTimeout(() => onPause(), 0); // Unpause
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isResting, restTimeLeft]);
+
+  // Track game level completions
+  const handleGameComplete = (gameData?: any) => {
+    setGameCompleted(true);
+    setCompletedLevelsForRest(prev => prev + 1);
+    
+    if (gameData) {
+      if (gameMode === 'orange-squeeze') {
+        setOrangesUsed(gameData.orange_used || 0);
+        setJuiceUsed(gameData.juice_used || 0);
+      }
+    }
+  };
 
   const formatMs = (ms: number | null) => (ms === null ? '-' : (ms / 1000).toFixed(2) + 's');
 
   // --- Renderizado ---
-  const renderTimerControls = () => (
-    <div className="flex flex-col items-center mt-4">
-      <div className="text-3xl font-bold text-primary mb-1">
-        {isActive ? formatTime(timeLeft) : formatTime(duration * 60)}
-      </div>
-      <div className="text-sm text-muted-foreground mb-4">
-        {isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
-      </div>
+  const renderRestOverlay = () => (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center">
+      <Card className="w-80 text-center">
+        <CardHeader>
+          <CardTitle className="text-xl">⏸️ Tiempo de Descanso</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-5xl font-bold text-primary">
+            {Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}
+          </div>
+          <p className="text-muted-foreground">
+            Relájate. La sesión se reanudará automáticamente.
+          </p>
+          <div className="text-xs text-muted-foreground">
+            Repeticiones completadas: {completedRepsForRest} | Niveles: {completedLevelsForRest}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
-      <div className="flex gap-4">
-        <Button onClick={onPause} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg" size="lg" disabled={!isActive}>
-          {isPaused ? <><Play className="w-6 h-6 mr-2" /> Reanudar</> : <><Pause className="w-6 h-6 mr-2" /> Pausar</>}
-        </Button>
-        <Button onClick={handleCancelTherapy} variant="destructive" className="px-6 py-3 text-lg" size="lg">
-          <X className="w-6 h-6 mr-2" /> Cancelar
-        </Button>
-      </div>
-
-      {(closingTimes.length > 0 || openingTimes.length > 0) && (
+  const renderAttemptsTable = (
+    title: string,
+    attemptsData: { closingTime: number; openingTime: number; totalTime: number }[],
+    closingData: number[],
+    openingData: number[],
+    fastClose: number | null,
+    avgClose: number | null,
+    fastOpen: number | null,
+    avgOpen: number | null,
+    colorClass: string
+  ) => (
+    <>
+      {(closingData.length > 0 || openingData.length > 0) && (
         <div className="mt-4 text-sm text-center bg-muted/20 p-3 rounded-lg space-y-2">
+          <p className={`font-semibold text-base ${colorClass}`}>{title}</p>
           <div>
             <p className="font-semibold">✊ Cierre (abierta → cerrada)</p>
-            <p>Intentos: {closingTimes.length}</p>
-            <p>⚡ Mejor: {formatMs(fastestClosing)}</p>
-            <p>📊 Promedio: {formatMs(averageClosing)}</p>
+            <p>Intentos: {closingData.length}</p>
+            <p>⚡ Mejor: {formatMs(fastClose)}</p>
+            <p>📊 Promedio: {formatMs(avgClose)}</p>
           </div>
           <div className="pt-2 border-t">
             <p className="font-semibold">🖐️ Apertura (cerrada → abierta)</p>
-            <p>Intentos: {openingTimes.length}</p>
-            <p>⚡ Mejor: {formatMs(fastestOpening)}</p>
-            <p>📊 Promedio: {formatMs(averageOpening)}</p>
+            <p>Intentos: {openingData.length}</p>
+            <p>⚡ Mejor: {formatMs(fastOpen)}</p>
+            <p>📊 Promedio: {formatMs(avgOpen)}</p>
           </div>
         </div>
       )}
 
-      {attempts.length > 0 && (
+      {attemptsData.length > 0 && (
         <div className="mt-4 w-full max-w-xl">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Historial de intentos</CardTitle>
+              <CardTitle className="text-base">{title} - Historial</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -365,7 +550,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {attempts.map((a, i) => (
+                    {attemptsData.map((a, i) => (
                       <tr key={i} className="border-t">
                         <td className="px-2 py-1">{i + 1}</td>
                         <td className="px-2 py-1">{(a.closingTime / 1000).toFixed(2)}</td>
@@ -379,6 +564,42 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             </CardContent>
           </Card>
         </div>
+      )}
+    </>
+  );
+
+  const renderTimerControls = () => (
+    <div className="flex flex-col items-center mt-4">
+      <div className="text-3xl font-bold text-primary mb-1">
+        {isActive ? formatTime(timeLeft) : formatTime(duration * 60)}
+      </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        {isResting ? '⏸️ Descansando...' : isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
+      </div>
+
+      <div className="flex gap-4">
+        <Button onClick={onPause} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg" size="lg" disabled={!isActive || isResting}>
+          {isPaused ? <><Play className="w-6 h-6 mr-2" /> Reanudar</> : <><Pause className="w-6 h-6 mr-2" /> Pausar</>}
+        </Button>
+        <Button onClick={handleCancelTherapy} variant="destructive" className="px-6 py-3 text-lg" size="lg" disabled={isResting}>
+          <X className="w-6 h-6 mr-2" /> Cancelar
+        </Button>
+      </div>
+
+      {/* Right hand (paretic) stats and table */}
+      {renderAttemptsTable(
+        '🦾 Mano Parética (Derecha)',
+        attempts, closingTimes, openingTimes,
+        fastestClosing, averageClosing, fastestOpening, averageOpening,
+        'text-medical-orange'
+      )}
+
+      {/* Left hand (non-paretic) stats and table */}
+      {renderAttemptsTable(
+        '✋ Mano No Parética (Izquierda)',
+        leftAttempts, leftClosingTimes, leftOpeningTimes,
+        leftFastestClosing, leftAverageClosing, leftFastestOpening, leftAverageOpening,
+        'text-medical-green'
       )}
     </div>
   );
@@ -428,7 +649,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-lg p-6 relative overflow-y-auto w-[95vw] h-[90vh]">
+      {isResting && renderRestOverlay()}
+      <div className={`bg-background rounded-lg p-6 relative overflow-y-auto w-[95vw] h-[90vh] ${isResting ? 'pointer-events-none opacity-50' : ''}`}>
         {gameMode === 'selection' ? (
           <div className="flex items-center justify-center h-full">{renderGameSelection()}</div>
         ) : gameMode === 'timer' ? (

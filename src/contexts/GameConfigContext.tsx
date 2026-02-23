@@ -15,6 +15,12 @@ interface GameConfigContextType {
   setDarkMode: (mode: boolean) => void;
   flappyPipeGap: number;
   setFlappyPipeGap: (gap: number) => void;
+  restRepetitions: number;
+  setRestRepetitions: (reps: number) => void;
+  restLevels: number;
+  setRestLevels: (levels: number) => void;
+  restDuration: number;
+  setRestDuration: (seconds: number) => void;
 }
 
 const GameConfigContext = createContext<GameConfigContextType | undefined>(undefined);
@@ -26,6 +32,9 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [baseEnemyCount, setBaseEnemyCountState] = useState(6);
   const [darkMode, setDarkModeState] = useState(false);
   const [flappyPipeGap, setFlappyPipeGapState] = useState(120);
+  const [restRepetitions, setRestRepetitionsState] = useState(10);
+  const [restLevels, setRestLevelsState] = useState(3);
+  const [restDuration, setRestDurationState] = useState(30);
 
   useEffect(() => {
     const saved = localStorage.getItem('orangeJuiceGoal');
@@ -62,6 +71,15 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const gap = parseInt(savedFlappyPipeGap);
       setFlappyPipeGapState(Math.max(80, Math.min(200, gap)));
     }
+
+    const savedRestReps = localStorage.getItem('restRepetitions');
+    if (savedRestReps) setRestRepetitionsState(Math.max(1, parseInt(savedRestReps) || 10));
+
+    const savedRestLevels = localStorage.getItem('restLevels');
+    if (savedRestLevels) setRestLevelsState(Math.max(1, parseInt(savedRestLevels) || 3));
+
+    const savedRestDuration = localStorage.getItem('restDuration');
+    if (savedRestDuration) setRestDurationState(Math.max(5, parseInt(savedRestDuration) || 30));
   }, []);
 
   const setOrangeJuiceGoal = (goal: number) => {
@@ -100,8 +118,25 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const calculateOrangeGoalForTime = (minutes: number) => {
-    // Siempre retornar mínimo 1 vaso, sin importar los minutos
     return Math.max(1, orangeJuiceGoal);
+  };
+
+  const setRestRepetitions = (reps: number) => {
+    const valid = Math.max(1, reps);
+    setRestRepetitionsState(valid);
+    localStorage.setItem('restRepetitions', valid.toString());
+  };
+
+  const setRestLevels = (levels: number) => {
+    const valid = Math.max(1, levels);
+    setRestLevelsState(valid);
+    localStorage.setItem('restLevels', valid.toString());
+  };
+
+  const setRestDuration = (seconds: number) => {
+    const valid = Math.max(5, Math.min(300, seconds));
+    setRestDurationState(valid);
+    localStorage.setItem('restDuration', valid.toString());
   };
 
   return (
@@ -118,7 +153,13 @@ export const GameConfigProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       darkMode,
       setDarkMode,
       flappyPipeGap,
-      setFlappyPipeGap
+      setFlappyPipeGap,
+      restRepetitions,
+      setRestRepetitions,
+      restLevels,
+      setRestLevels,
+      restDuration,
+      setRestDuration,
     }}>
       {children}
     </GameConfigContext.Provider>
