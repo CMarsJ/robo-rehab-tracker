@@ -17,13 +17,16 @@ import { useToast } from '@/hooks/use-toast';
 const Configuration = () => {
   const t = useTranslation();
   const { isAuthenticated, authenticate, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
-  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed, baseEnemyCount, setBaseEnemyCount } = useGameConfig();
+  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed, baseEnemyCount, setBaseEnemyCount, restRepetitions, setRestRepetitions, restLevels, setRestLevels, restDuration, setRestDuration } = useGameConfig();
   const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
   const [localPatientName, setLocalPatientName] = useState(patientName);
   const [localTherapistName, setLocalTherapistName] = useState(therapistName);
   const [localEnemySpeed, setLocalEnemySpeed] = useState(enemySpeed);
   const [localShotSpeed, setLocalShotSpeed] = useState(shotSpeed);
   const [localBaseEnemyCount, setLocalBaseEnemyCount] = useState(baseEnemyCount);
+  const [localRestRepetitions, setLocalRestRepetitions] = useState(restRepetitions);
+  const [localRestLevels, setLocalRestLevels] = useState(restLevels);
+  const [localRestDuration, setLocalRestDuration] = useState(restDuration);
   const [authError, setAuthError] = useState<string>('');
   const { user } = useAuth();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -54,6 +57,18 @@ const Configuration = () => {
   useEffect(() => {
     setLocalBaseEnemyCount(baseEnemyCount);
   }, [baseEnemyCount]);
+
+  useEffect(() => {
+    setLocalRestRepetitions(restRepetitions);
+  }, [restRepetitions]);
+
+  useEffect(() => {
+    setLocalRestLevels(restLevels);
+  }, [restLevels]);
+
+  useEffect(() => {
+    setLocalRestDuration(restDuration);
+  }, [restDuration]);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -90,6 +105,15 @@ const Configuration = () => {
         if (settings.numero_base_enemigos) setLocalBaseEnemyCount(settings.numero_base_enemigos);
         if (settings.configuracion_inicio?.orange_juice_goal) {
           setLocalOrangeGoal(settings.configuracion_inicio.orange_juice_goal.toString());
+        }
+        if (settings.configuracion_inicio?.rest_repetitions) {
+          setLocalRestRepetitions(settings.configuracion_inicio.rest_repetitions);
+        }
+        if (settings.configuracion_inicio?.rest_levels) {
+          setLocalRestLevels(settings.configuracion_inicio.rest_levels);
+        }
+        if (settings.configuracion_inicio?.rest_duration) {
+          setLocalRestDuration(settings.configuracion_inicio.rest_duration);
         }
       }
     };
@@ -450,6 +474,111 @@ const Configuration = () => {
               Guardar Configuración NeuroLink
             </Button>
           </div>
+        </CardContent>
+      </Card>
+      {/* Configuración de Descanso */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">⏸️ Configuración de Descanso</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Repeticiones para descanso: {localRestRepetitions}</Label>
+              <Slider
+                min={1}
+                max={50}
+                step={1}
+                value={[localRestRepetitions]}
+                onValueChange={(v) => setLocalRestRepetitions(v[0])}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Número de ciclos abrir/cerrar antes de activar descanso automático
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Niveles (rondas de juego) para descanso: {localRestLevels}</Label>
+              <Slider
+                min={1}
+                max={10}
+                step={1}
+                value={[localRestLevels]}
+                onValueChange={(v) => setLocalRestLevels(v[0])}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Número de rondas completadas en juegos antes de activar descanso
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Duración del descanso: {localRestDuration}s</Label>
+              <Slider
+                min={5}
+                max={300}
+                step={5}
+                value={[localRestDuration]}
+                onValueChange={(v) => setLocalRestDuration(v[0])}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Tiempo de descanso en segundos (5s - 300s)
+              </p>
+            </div>
+          </div>
+
+          <Button onClick={async () => {
+            if (!user) return;
+            try {
+              const { data: existing } = await supabase
+                .from('game_settings')
+                .select('id, configuracion_inicio')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+              const restConfig = {
+                rest_repetitions: localRestRepetitions,
+                rest_levels: localRestLevels,
+                rest_duration: localRestDuration,
+              };
+
+              const currentConfig = (existing as any)?.configuracion_inicio || {};
+              const updatedConfig = { ...currentConfig, ...restConfig };
+
+              if (existing) {
+                const { error } = await supabase
+                  .from('game_settings')
+                  .update({ configuracion_inicio: updatedConfig })
+                  .eq('user_id', user.id);
+                if (error) throw error;
+              } else {
+                const { error } = await supabase
+                  .from('game_settings')
+                  .insert({ user_id: user.id, configuracion_inicio: updatedConfig });
+                if (error) throw error;
+              }
+
+              setRestRepetitions(localRestRepetitions);
+              setRestLevels(localRestLevels);
+              setRestDuration(localRestDuration);
+
+              toast({
+                title: '✅ Configuración de descanso guardada',
+                description: 'Los parámetros de descanso se guardaron correctamente',
+              });
+            } catch (error) {
+              console.error('Error saving rest config:', error);
+              toast({
+                title: '❌ Error',
+                description: 'No se pudo guardar la configuración de descanso',
+                variant: 'destructive',
+              });
+            }
+          }}>
+            Guardar Configuración de Descanso
+          </Button>
         </CardContent>
       </Card>
     </div>
