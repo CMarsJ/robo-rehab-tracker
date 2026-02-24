@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface FlappyBirdGameProps {
   onComplete: () => void;
+  onRoundComplete?: () => void;
+  isResting?: boolean;
 }
 
 interface Pipe {
@@ -18,7 +20,7 @@ interface Pipe {
   passed: boolean;
 }
 
-const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
+const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, isResting = false }) => {
   const { flappyPipeGap } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
   const { user } = useAuth();
@@ -60,7 +62,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
 
   // Control del ave basado en suma de ángulos A4 + A5 + A6 de la mano paretica
   useEffect(() => {
-    if (!gameStarted || gameOver) return;
+    if (!gameStarted || gameOver || isResting) return;
 
     const updateBirdPosition = () => {
       // Determinar cuál mano es la paretica (usar la mano izquierda por defecto)
@@ -81,11 +83,11 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
 
     const interval = setInterval(updateBirdPosition, 50);
     return () => clearInterval(interval);
-  }, [gameStarted, gameOver, gameHeight, leftHand, rightHand]);
+  }, [gameStarted, gameOver, gameHeight, leftHand, rightHand, isResting]);
 
   // Movimiento de tubos
   useEffect(() => {
-    if (!gameStarted || gameOver) return;
+    if (!gameStarted || gameOver || isResting) return;
 
     const movePipes = () => {
       setPipes(prev => {
@@ -114,11 +116,11 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
 
     const interval = setInterval(movePipes, 50);
     return () => clearInterval(interval);
-  }, [gameStarted, gameOver, gameWidth, gameHeight, flappyPipeGap]);
+  }, [gameStarted, gameOver, gameWidth, gameHeight, flappyPipeGap, isResting]);
 
   // Detección de colisiones y puntuación
   useEffect(() => {
-    if (!gameStarted || gameOver) return;
+    if (!gameStarted || gameOver || isResting) return;
 
     const checkCollisions = () => {
       const birdRadius = 20;
@@ -131,6 +133,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
           // Solo dar punto si no hubo colisión con este tubo
           if (!collidingPipesRef.current.has(pipe.id)) {
             setScore(s => s + 1);
+            onRoundComplete?.();
           }
           collidingPipesRef.current.delete(pipe.id);
           return { ...pipe, passed: true };
@@ -163,7 +166,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete }) => {
 
     const interval = setInterval(checkCollisions, 50);
     return () => clearInterval(interval);
-  }, [gameStarted, gameOver, birdY, gameHeight]);
+  }, [gameStarted, gameOver, birdY, gameHeight, isResting, onRoundComplete]);
 
   // Guardar datos del juego en Supabase
   const saveGameData = useCallback(async () => {

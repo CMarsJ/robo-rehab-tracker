@@ -48,6 +48,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
+  const isRepetitionMode = gameMode === 'timer' || gameMode === 'orange-squeeze';
+  const isRoundMode = gameMode === 'neurolink' || gameMode === 'flappy-bird';
 
   // Estados para tiempos de apertura/cierre - MANO DERECHA (parética)
   const [closingTimes, setClosingTimes] = useState<number[]>([]);
@@ -80,6 +82,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [restTimeLeft, setRestTimeLeft] = useState(0);
   const [completedRepsForRest, setCompletedRepsForRest] = useState(0);
   const [completedLevelsForRest, setCompletedLevelsForRest] = useState(0);
+  const [currentRound, setCurrentRound] = useState(0);
+  const lastRestTriggeredAtReps = useRef(0);
+  const lastRestTriggeredAtLevels = useRef(0);
 
   // Refs for right hand tracking
   const openTimestamp = useRef<number | null>(null);
@@ -153,6 +158,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     setRestTimeLeft(0);
     setCompletedRepsForRest(0);
     setCompletedLevelsForRest(0);
+    setCurrentRound(0);
+    lastRestTriggeredAtReps.current = 0;
+    lastRestTriggeredAtLevels.current = 0;
     // General reset
     setCurrentSessionId(null);
     setOrangesUsed(0);
@@ -344,8 +352,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         });
         setAttempts(prev => {
           const updated = [...prev, { closingTime: closing, openingTime: 0, totalTime: closing }];
-          // Check if rest should trigger based on completed reps
-          setCompletedRepsForRest(prevReps => prevReps + 1);
           return updated;
         });
         closedTimestamp.current = now;
@@ -365,13 +371,18 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           const last = prev[prev.length - 1];
           return [...prev.slice(0, -1), { ...last, openingTime: opening, totalTime: last.closingTime + opening }];
         });
+
+        if (isRepetitionMode) {
+          setCompletedRepsForRest(prevReps => prevReps + 1);
+        }
+
         openTimestamp.current = now;
         closedTimestamp.current = null;
       }
 
       lastState.current = currentState;
     }
-  }, [rightHand, isTherapyActive, isResting]);
+  }, [rightHand, isTherapyActive, isResting, isRepetitionMode]);
 
   // --- Registro de tiempos de mano IZQUIERDA (no parética) ---
   useEffect(() => {
@@ -428,22 +439,46 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   // --- Rest trigger: repeticiones ---
   useEffect(() => {
-    if (completedRepsForRest > 0 && completedRepsForRest % restRepetitions === 0 && !isResting && isActive && !isPaused) {
-      triggerRest();
+    if (!isRepetitionMode) return;
+
+    if (
+      completedRepsForRest > 0 &&
+      completedRepsForRest % restRepetitions === 0 &&
+      completedRepsForRest !== lastRestTriggeredAtReps.current &&
+      !isResting &&
+      isActive &&
+      !isPaused
+    ) {
+      if (triggerRest('reps')) {
+        lastRestTriggeredAtReps.current = completedRepsForRest;
+      }
     }
-  }, [completedRepsForRest, restRepetitions, isResting, isActive, isPaused]);
+  }, [completedRepsForRest, restRepetitions, isResting, isActive, isPaused, isRepetitionMode]);
 
   // --- Rest trigger: niveles de juego ---
   useEffect(() => {
-    if (completedLevelsForRest > 0 && completedLevelsForRest % restLevels === 0 && !isResting && isActive && !isPaused) {
-      triggerRest();
-    }
-  }, [completedLevelsForRest, restLevels, isResting, isActive, isPaused]);
+    if (!isRoundMode) return;
 
-  const triggerRest = () => {
+    if (
+      completedLevelsForRest > 0 &&
+      completedLevelsForRest % restLevels === 0 &&
+      completedLevelsForRest !== lastRestTriggeredAtLevels.current &&
+      !isResting &&
+      isActive &&
+      !isPaused
+    ) {
+      if (triggerRest('levels')) {
+        lastRestTriggeredAtLevels.current = completedLevelsForRest;
+      }
+    }
+  }, [completedLevelsForRest, restLevels, isResting, isActive, isPaused, isRoundMode]);
+
+  const triggerRest = (source: 'reps' | 'levels'): boolean => {
+    console.log(`🛏️ Rest triggered by ${source}. Descanso #${currentRound + 1}`);
     setIsResting(true);
     setRestTimeLeft(restDuration);
     onPause(); // Pause the main therapy timer
+    return true;
   };
 
   // --- Rest countdown timer ---
@@ -454,6 +489,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       setRestTimeLeft(prev => {
         if (prev <= 1) {
           setIsResting(false);
+          // Increment round counter
+          setCurrentRound(prevRound => {
+            console.log(`🔄 Round ${prevRound + 1} completed. Moving to round ${prevRound + 2}/${restLevels}`);
+            return prevRound + 1;
+          });
           // Resume therapy
           setTimeout(() => onPause(), 0); // Unpause
           return 0;
@@ -463,18 +503,19 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isResting, restTimeLeft]);
+  }, [isResting, restTimeLeft, restLevels]);
 
-  // Track game level completions
+  // Track game progress and completion
+  const handleGameRoundProgress = () => {
+    setCompletedLevelsForRest(prev => prev + 1);
+  };
+
   const handleGameComplete = (gameData?: any) => {
     setGameCompleted(true);
-    setCompletedLevelsForRest(prev => prev + 1);
-    
-    if (gameData) {
-      if (gameMode === 'orange-squeeze') {
-        setOrangesUsed(gameData.orange_used || 0);
-        setJuiceUsed(gameData.juice_used || 0);
-      }
+
+    if (gameData && gameMode === 'orange-squeeze') {
+      setOrangesUsed(gameData.orange_used || 0);
+      setJuiceUsed(gameData.juice_used || 0);
     }
   };
 
@@ -495,7 +536,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
             Relájate. La sesión se reanudará automáticamente.
           </p>
           <div className="text-xs text-muted-foreground">
-            Repeticiones completadas: {completedRepsForRest} | Niveles: {completedLevelsForRest}
+            {isRepetitionMode
+              ? `Repeticiones completadas: ${completedRepsForRest}`
+              : `Rondas completadas: ${completedLevelsForRest}`} | Descanso #{currentRound + 1}
           </div>
         </CardContent>
       </Card>
@@ -641,8 +684,8 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           onStatsUpdate={(stats) => updateGameStats('orange-squeeze', stats)}
         />
       );
-      case 'neurolink': return <NeuroLinkGame onComplete={handleGameComplete} />;
-      case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} />;
+      case 'neurolink': return <NeuroLinkGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} isResting={isResting} />;
+      case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} isResting={isResting} />;
       default: return null;
     }
   };
