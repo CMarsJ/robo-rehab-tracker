@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, subWeeks, subMonths } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, subWeeks, subMonths, eachDayOfInterval, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Hand metrics extracted from a single session
@@ -8,63 +8,79 @@ interface SessionHandMetrics {
   closing: { all_times: number[]; attempts: number; average_time_ms: number | null; fastest_time_ms: number | null };
 }
 
+// ── Daily adherence entry ──
+export interface DailyAdherenceEntry {
+  date: Date;
+  dayLabel: string;   // "L", "M", etc.
+  dateLabel: number;   // day of month
+  completed: boolean;
+}
+
+// ── Therapy trend entry for pie chart ──
+export interface TherapyTrendEntry {
+  name: string;
+  count: number;
+  percent: number;
+  color: string;
+}
+
 // ── New unified report data model ──
 
 export interface RehabReportData {
   periodLabel: string;
   periodType: 'weekly' | 'monthly';
+  periodStart: string;
+  periodEnd: string;
 
   // §1 Resumen del Período
   summary: {
-    totalScheduled: number;   // completed + cancelled
+    totalScheduled: number;
     totalCompleted: number;
     totalCancelled: number;
-    adherencePercent: number;  // completed / scheduled * 100
+    adherencePercent: number;
     adherenceLevel: 'adecuada' | 'moderada' | 'baja';
   };
 
-  // §2 Distribución de Terapias (apertura vs cierre counted from hand_metrics)
-  therapyDistribution: {
-    openingCount: number;
-    closingCount: number;
-    openingPercent: number;
-    closingPercent: number;
+  // §1 daily adherence mini calendar
+  dailyAdherence: DailyAdherenceEntry[];
+
+  // §2 Tendencias en los Tipos de Terapia (replaces old §2 + §3)
+  therapyTrends: {
+    entries: TherapyTrendEntry[];
     analysis: string;
+    volumeByHand: {
+      rightHand: { totalSessions: number; totalTimeMin: number };
+      leftHand: { totalSessions: number; totalTimeMin: number };
+    };
   };
 
-  // §3 Volumen Total
-  volumeByHand: {
-    rightHand: { totalSessions: number; totalTimeMin: number };
-    leftHand: { totalSessions: number; totalTimeMin: number };
-  };
-
-  // §4 Indicadores Temporales Promedio
+  // §3 Indicadores Temporales Promedio (was §4)
   avgIndicators: {
     rightHand: { avgOpeningSec: number; avgClosingSec: number };
     leftHand: { avgOpeningSec: number; avgClosingSec: number };
     analysis: string;
   };
 
-  // §5 Mejor Desempeño
+  // §4 Mejor Desempeño (was §5)
   bestPerformance: {
     rightHand: { bestOpeningSec: number | null; bestOpeningDate: string | null; bestClosingSec: number | null; bestClosingDate: string | null };
     leftHand: { bestOpeningSec: number | null; bestOpeningDate: string | null; bestClosingSec: number | null; bestClosingDate: string | null };
   };
 
-  // §6 Sesiones Canceladas
+  // §5 Sesiones Canceladas (was §6)
   cancelledAnalysis: {
     total: number;
     percent: number;
-    distribution: string; // "inicio" | "mitad" | "final"
+    distribution: string;
   };
 
-  // §7 Índice Global de Rendimiento
+  // §6 Índice Global de Rendimiento (was §7)
   performanceIndex: {
     rightHand: number;
     leftHand: number;
   };
 
-  // §8 Conclusión automática
+  // §7 Conclusión automática (was §8)
   conclusion: string;
 }
 
@@ -74,12 +90,27 @@ export interface MonthlyReportData extends RehabReportData {}
 
 // ── Helpers ──
 
+const THERAPY_LABELS: Record<string, string> = {
+  'terapia_guiada': 'Terapia Guiada',
+  'orange-squeeze': 'Orange Squeeze',
+  'flappy_bird': 'Flappy Bird',
+  'neurolink': 'NeuroLink',
+  'therapy': 'Terapia',
+};
+
+const THERAPY_COLORS: Record<string, string> = {
+  'terapia_guiada': 'hsl(210, 70%, 50%)',
+  'orange-squeeze': 'hsl(30, 90%, 55%)',
+  'flappy_bird': 'hsl(140, 60%, 45%)',
+  'neurolink': 'hsl(270, 60%, 55%)',
+  'therapy': 'hsl(0, 60%, 55%)',
+};
+
 function extractHandMetrics(stats: any): { right: SessionHandMetrics | null; left: SessionHandMetrics | null } {
   if (!stats?.hand_metrics) return { right: null, left: null };
 
   const hm = stats.hand_metrics;
 
-  // New format: hand_metrics.right_hand / left_hand
   if (hm.right_hand || hm.left_hand) {
     return {
       right: hm.right_hand ?? null,
@@ -87,7 +118,6 @@ function extractHandMetrics(stats: any): { right: SessionHandMetrics | null; lef
     };
   }
 
-  // Legacy format: hand_metrics.opening / closing (right hand only)
   if (hm.opening || hm.closing) {
     return {
       right: { opening: hm.opening ?? { all_times: [], attempts: 0, average_time_ms: null, fastest_time_ms: null }, closing: hm.closing ?? { all_times: [], attempts: 0, average_time_ms: null, fastest_time_ms: null } },
@@ -108,17 +138,50 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' | 'monthly'): RehabReportData {
+function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' | 'monthly', periodStart: Date, periodEnd: Date): RehabReportData {
   const completed = sessions.filter(s => s.state === 'completed');
   const cancelled = sessions.filter(s => s.state === 'cancelled');
   const total = sessions.length;
   const adherencePct = total > 0 ? round2((completed.length / total) * 100) : 0;
 
-  // §2 – count total opening / closing attempts across all sessions
-  let totalOpeningAttempts = 0;
-  let totalClosingAttempts = 0;
+  // Daily adherence mini calendar
+  const allDays = eachDayOfInterval({ start: periodStart, end: periodEnd });
+  const dailyAdherence: DailyAdherenceEntry[] = allDays.map(day => {
+    const hasSession = completed.some(s => s.start_time && isSameDay(new Date(s.start_time), day));
+    return {
+      date: day,
+      dayLabel: format(day, 'EEEEE', { locale: es }).toUpperCase(),
+      dateLabel: day.getDate(),
+      completed: hasSession,
+    };
+  });
 
-  // Accumulators for §3, §4, §5
+  // Therapy type distribution for pie chart
+  const typeCounts: Record<string, number> = {};
+  completed.forEach(s => {
+    const t = s.therapy_type || 'therapy';
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  });
+  const totalCompleted = completed.length;
+  const trendEntries: TherapyTrendEntry[] = Object.entries(typeCounts).map(([key, count]) => ({
+    name: THERAPY_LABELS[key] || key,
+    count,
+    percent: totalCompleted > 0 ? round2((count / totalCompleted) * 100) : 0,
+    color: THERAPY_COLORS[key] || 'hsl(200, 50%, 50%)',
+  })).sort((a, b) => b.count - a.count);
+
+  // Trend analysis
+  let trendAnalysis = 'Sin datos suficientes para análisis.';
+  if (trendEntries.length > 0) {
+    const top = trendEntries[0];
+    if (top.percent > 60) {
+      trendAnalysis = `Predominio de ${top.name} (${top.percent}%) → se recomienda diversificar las modalidades de terapia.`;
+    } else {
+      trendAnalysis = `Distribución equilibrada entre modalidades de terapia.`;
+    }
+  }
+
+  // Volume accumulators
   let rightTotalTime = 0;
   let leftTotalTime = 0;
   let rightSessionCount = 0;
@@ -129,7 +192,6 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
   const leftOpeningTimes: number[] = [];
   const leftClosingTimes: number[] = [];
 
-  // §5 best per session (we track per-session averages with date)
   let bestRightOpening: { val: number; date: string } | null = null;
   let bestRightClosing: { val: number; date: string } | null = null;
   let bestLeftOpening: { val: number; date: string } | null = null;
@@ -144,8 +206,6 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
         rightSessionCount++;
         rightTotalTime += session.duration || 0;
       }
-      totalOpeningAttempts += right.opening?.attempts || 0;
-      totalClosingAttempts += right.closing?.attempts || 0;
 
       if (right.opening?.all_times) rightOpeningTimes.push(...right.opening.all_times);
       if (right.closing?.all_times) rightClosingTimes.push(...right.closing.all_times);
@@ -167,8 +227,6 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
         leftSessionCount++;
         leftTotalTime += session.duration || 0;
       }
-      totalOpeningAttempts += left.opening?.attempts || 0;
-      totalClosingAttempts += left.closing?.attempts || 0;
 
       if (left.opening?.all_times) leftOpeningTimes.push(...left.opening.all_times);
       if (left.closing?.all_times) leftClosingTimes.push(...left.closing.all_times);
@@ -186,27 +244,14 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
     }
   });
 
-  // §2 distribution
-  const totalAttempts = totalOpeningAttempts + totalClosingAttempts;
-  const openPct = totalAttempts > 0 ? round2((totalOpeningAttempts / totalAttempts) * 100) : 0;
-  const closePct = totalAttempts > 0 ? round2((totalClosingAttempts / totalAttempts) * 100) : 0;
-
-  let distAnalysis = 'Sin datos suficientes para análisis.';
-  if (totalAttempts > 0) {
-    if (closePct > 60) distAnalysis = 'Predominio de cierre > 60% → posible sesgo hacia patrón flexor.';
-    else if (openPct > 60) distAnalysis = 'Predominio de apertura > 60% → posible sesgo hacia patrón extensor.';
-    else distAnalysis = 'Balance 45–55% → estimulación equilibrada.';
-  }
-
-  // §4 averages (ms → s)
+  // Averages (ms → s)
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length / 1000 : 0;
   const rAvgOpen = round2(avg(rightOpeningTimes));
   const rAvgClose = round2(avg(rightClosingTimes));
   const lAvgOpen = round2(avg(leftOpeningTimes));
   const lAvgClose = round2(avg(leftClosingTimes));
 
-  // §4 interpretation
-  let avgAnalysis = '';
+  // Interpretation
   const analyses: string[] = [];
   if (rAvgOpen > 0 && rAvgClose > 0) {
     const diffR = Math.abs(rAvgOpen - rAvgClose) / Math.max(rAvgOpen, rAvgClose) * 100;
@@ -222,11 +267,11 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
     const avgR = (rAvgOpen + rAvgClose) / 2;
     const avgL = (lAvgOpen + lAvgClose) / 2;
     const interHandDiff = Math.abs(avgR - avgL) / Math.max(avgR, avgL) * 100;
-    if (interHandDiff > 25) analyses.push(`Diferencia entre manos > 25% → asimetría funcional relevante.`);
+    if (interHandDiff > 25) analyses.push('Diferencia entre manos > 25% → asimetría funcional relevante.');
   }
-  avgAnalysis = analyses.length > 0 ? analyses.join(' ') : 'Sin diferencias significativas detectadas.';
+  const avgAnalysis = analyses.length > 0 ? analyses.join(' ') : 'Sin diferencias significativas detectadas.';
 
-  // §6 cancelled distribution
+  // Cancelled distribution
   let cancelDist = 'N/A';
   if (cancelled.length > 0 && sessions.length > 1) {
     const sorted = [...sessions].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
@@ -240,16 +285,16 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
     else cancelDist = 'Concentradas al final del periodo';
   }
 
-  // §7 performance index
+  // Performance index
   const perfRight = rAvgOpen > 0 || rAvgClose > 0 ? round2((rAvgOpen + rAvgClose) / 2) : 0;
   const perfLeft = lAvgOpen > 0 || lAvgClose > 0 ? round2((lAvgOpen + lAvgClose) / 2) : 0;
 
-  // §8 conclusion
+  // Conclusion
   const conclusionParts: string[] = [];
   conclusionParts.push(`Durante el periodo evaluado se registró una adherencia del ${adherencePct}%.`);
-  if (totalAttempts > 0) {
-    const dominant = openPct > closePct ? 'apertura' : 'cierre';
-    conclusionParts.push(`Con predominio de terapias de ${dominant} (${Math.max(openPct, closePct)}%).`);
+  if (trendEntries.length > 0) {
+    const top = trendEntries[0];
+    conclusionParts.push(`Con predominio de ${top.name} (${top.percent}%).`);
   }
   if (rAvgOpen > 0 && lAvgOpen > 0) {
     const faster = rAvgOpen < lAvgOpen ? 'derecha' : 'izquierda';
@@ -262,6 +307,8 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
   return {
     periodLabel,
     periodType,
+    periodStart: periodStart.toISOString(),
+    periodEnd: periodEnd.toISOString(),
     summary: {
       totalScheduled: total,
       totalCompleted: completed.length,
@@ -269,16 +316,14 @@ function buildReport(sessions: any[], periodLabel: string, periodType: 'weekly' 
       adherencePercent: adherencePct,
       adherenceLevel: adherenceLevel(adherencePct),
     },
-    therapyDistribution: {
-      openingCount: totalOpeningAttempts,
-      closingCount: totalClosingAttempts,
-      openingPercent: openPct,
-      closingPercent: closePct,
-      analysis: distAnalysis,
-    },
-    volumeByHand: {
-      rightHand: { totalSessions: rightSessionCount, totalTimeMin: rightTotalTime },
-      leftHand: { totalSessions: leftSessionCount, totalTimeMin: leftTotalTime },
+    dailyAdherence,
+    therapyTrends: {
+      entries: trendEntries,
+      analysis: trendAnalysis,
+      volumeByHand: {
+        rightHand: { totalSessions: rightSessionCount, totalTimeMin: rightTotalTime },
+        leftHand: { totalSessions: leftSessionCount, totalTimeMin: leftTotalTime },
+      },
     },
     avgIndicators: {
       rightHand: { avgOpeningSec: rAvgOpen, avgClosingSec: rAvgClose },
@@ -336,7 +381,7 @@ export class ReportService {
       if (!sessions || sessions.length === 0) return null;
 
       const label = `${format(weekStart, "dd 'de' MMMM", { locale: es })} – ${format(weekEnd, "dd 'de' MMMM yyyy", { locale: es })}`;
-      return buildReport(sessions, label, 'weekly');
+      return buildReport(sessions, label, 'weekly', weekStart, weekEnd);
     } catch (error) {
       console.error('Error getting weekly report:', error);
       return null;
@@ -364,7 +409,7 @@ export class ReportService {
       if (!sessions || sessions.length === 0) return null;
 
       const label = format(targetDate, "MMMM yyyy", { locale: es });
-      return buildReport(sessions, label, 'monthly');
+      return buildReport(sessions, label, 'monthly', monthStart, monthEnd);
     } catch (error) {
       console.error('Error getting monthly report:', error);
       return null;
