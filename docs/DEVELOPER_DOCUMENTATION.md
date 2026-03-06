@@ -2,30 +2,57 @@
 # Therapy Rehab System - Developer Documentation
 
 ## Overview
-This is a comprehensive therapy rehabilitation system built with React, TypeScript, Tailwind CSS, and Supabase. The system provides therapy session management, game-based rehabilitation, progress tracking, and data analytics.
+Sistema integral de rehabilitación robótica bilateral post-ACV construido con React, TypeScript, Tailwind CSS y Supabase. Proporciona monitoreo en tiempo real de manos mediante sensores IMU vía BLE, gestión de sesiones de terapia, rehabilitación gamificada e informes clínicos automatizados.
 
 ## Architecture
 
 ### Technology Stack
-- **Frontend**: React 18, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Auth, RLS)
-- **State Management**: React Context API
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, RLS, PostgREST)
+- **State Management**: React Context API (AppContext, SimulationContext, GameConfigContext, AuthContext, ConfigContext)
 - **Routing**: React Router v6
 - **UI Components**: shadcn/ui (Radix-based)
 - **Charts**: Recharts
 - **Icons**: Lucide React
+- **BLE Communication**: Web Bluetooth API
 
-### Database Schema (ERD)
+### System Architecture
+
+```
+ESP32_IMU_BLE (Hardware)
+    │
+    ├── DATA Characteristic (Notify) ──→ BLEService
+    ├── CONTROL Characteristic (Write) ←── BLEService
+    └── EMERGENCY Characteristic (R+N) ↔── BLEService
+                                              │
+                                              ▼
+                                    SimulationContext
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    ▼                         ▼                         ▼
+            HandMonitoring            TherapyOverlay              Games
+            (Real-time vis.)     (Timer + Rest system)    (Orange/Flappy/Neuro)
+                    │                         │                         │
+                    └─────────────────────────┼─────────────────────────┘
+                                              ▼
+                                    Supabase (sessions table)
+                                              │
+                              ┌───────────────┼───────────────┐
+                              ▼               ▼               ▼
+                          Rankings        Reports          History
+```
+
+### Database Schema
 
 ```sql
--- Core Tables
+-- Core Tables (actual schema)
 auth.users (Supabase managed)
-├── profiles (user_id FK)
-├── sessions (user_id FK)
-├── therapy_records (user_id FK, session_id FK)
-├── game_records (user_id FK, session_id FK)
-├── rankings (user_id FK)
-└── game_settings (user_id FK)
+├── profiles (user_id)         -- Display name, age, therapist, avatar
+├── sessions (user_id)         -- All therapy sessions with stats JSON
+├── game_settings (user_id)    -- Per-user game configuration
+├── rankings_orabge_squeeze    -- Top 10 Orange Squeeze leaderboard
+├── rankings_flappy_bird       -- Top 5 Flappy Bird leaderboard
+└── rankings_neurolink         -- Top 5 NeuroLink leaderboard
 ```
 
 ### Key Tables
@@ -34,143 +61,209 @@ auth.users (Supabase managed)
 ```sql
 CREATE TABLE public.sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  fecha_inicio timestamp with time zone DEFAULT now() NOT NULL,
-  duracion_minutos integer NOT NULL,
-  tipo_actividad text NOT NULL,
-  estado text DEFAULT 'completed' NOT NULL,
-  metrics jsonb DEFAULT '{}',
-  notes text,
-  created_at timestamp with time zone DEFAULT now() NOT NULL
+  user_id uuid NOT NULL,
+  therapy_type text NOT NULL,          -- 'terapia_guiada', 'orange-squeeze', 'flappy-bird', 'neurolink'
+  duration integer NOT NULL,           -- milliseconds
+  state text DEFAULT 'completed',      -- 'completed', 'cancelled'
+  score integer,                       -- game score (nullable)
+  start_time timestamp DEFAULT now(),
+  stats jsonb,                         -- hand_metrics, game_metrics
+  details jsonb,
+  extra_date jsonb,
+  orange_used integer,
+  juice_used integer
 );
 ```
 
-#### therapy_records
+#### profiles
 ```sql
-CREATE TABLE public.therapy_records (
+CREATE TABLE public.profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid REFERENCES sessions(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  best_open_time numeric,
-  best_close_time numeric,
-  avg_open_time numeric,
-  avg_close_time numeric,
-  open_times numeric[],
-  close_times numeric[],
-  attempts_count integer,
-  effort_data jsonb DEFAULT '[]',
-  created_at timestamp with time zone DEFAULT now() NOT NULL
+  user_id uuid NOT NULL,
+  display_name text,
+  patient_age integer,
+  therapist_name text,
+  avatar_url text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 ```
 
-#### game_records
+#### game_settings
 ```sql
-CREATE TABLE public.game_records (
+CREATE TABLE public.game_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid REFERENCES sessions(id) NOT NULL,
-  user_id uuid REFERENCES auth.users(id) NOT NULL,
-  game_type text NOT NULL,
-  total_oranges integer DEFAULT 0,
-  total_glasses integer DEFAULT 0,
-  average_oranges_per_minute numeric DEFAULT 0,
-  best_open_time numeric,
-  best_close_time numeric,
-  avg_open_time numeric,
-  avg_close_time numeric,
-  open_times numeric[],
-  close_times numeric[],
-  attempts_count integer,
-  created_at timestamp with time zone DEFAULT now() NOT NULL
+  user_id uuid NOT NULL,
+  enemy_speed integer DEFAULT 3,
+  numero_base_enemigos integer DEFAULT 6,
+  intervalo_disparo_ms integer DEFAULT 1000,
+  player_shot_speed integer DEFAULT 3,
+  espacio_pilares_flappy integer DEFAULT 120,
+  modo_oscuro boolean DEFAULT false,
+  configuracion_inicio jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
-```
-
-#### rankings
-```sql
-CREATE TABLE public.rankings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  game_type text NOT NULL,
-  user_id uuid REFERENCES auth.users(id) NOT NULL,
-  score numeric NOT NULL,
-  details jsonb DEFAULT '{}',
-  position integer,
-  calculated_at timestamp with time zone DEFAULT now() NOT NULL,
-  created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-```
-
-### Performance Indexes
-```sql
--- Key indexes for performance
-CREATE INDEX idx_game_records_user_game_created ON game_records(user_id, game_type, created_at DESC);
-CREATE INDEX idx_sessions_user_created ON sessions(user_id, created_at DESC);
-CREATE INDEX idx_therapy_records_user_session ON therapy_records(user_id, session_id, created_at DESC);
-CREATE INDEX idx_rankings_game_score ON rankings(game_type, score DESC, calculated_at DESC);
-CREATE INDEX idx_rankings_user_game ON rankings(user_id, game_type, score DESC);
 ```
 
 ### Row Level Security (RLS) Policies
 
-All tables implement user-scoped RLS policies:
-- Users can only access their own data (user_id = auth.uid())
-- Rankings table allows public reads for leaderboards
-- All other operations require authentication
+All tables implement user-scoped RLS:
+- Users can only SELECT/INSERT/UPDATE their own data (`auth.uid() = user_id`)
+- Rankings tables allow public reads for leaderboards
+- No DELETE policies on `sessions`, `profiles`, or `game_settings`
 
-Example policy:
-```sql
-CREATE POLICY "Users can view their own sessions" 
-ON sessions FOR SELECT 
-USING (auth.uid() = user_id);
-```
+### Database Functions
 
-## Data Access Layer
+| Function | Purpose |
+|---|---|
+| `rebuild_rankings_force_positions()` | Recalculates top 10 Orange Squeeze rankings |
+| `rebuild_rankings_flappy_bird()` | Recalculates top 5 Flappy Bird rankings |
+| `rebuild_rankings_neurolink()` | Recalculates top 5 NeuroLink rankings |
+| `handle_new_user()` | Auto-creates profile on user signup (SECURITY DEFINER) |
+| `update_updated_at_column()` | Trigger function for updated_at timestamps |
 
-### DataService (`src/services/dataService.ts`)
-Centralized service for all database operations:
+---
+
+## BLE Communication Layer
+
+### Service: `src/services/bleService.ts`
+
+Singleton class `BLEService` managing all BLE interactions:
 
 ```typescript
-// Session management
-DataService.createSession(tipo_actividad, duracion_minutos, metrics?)
-DataService.updateSession(sessionId, updates)
-DataService.getUserSessions(limit)
+import { bleService } from '@/services/bleService';
 
-// Therapy records
-DataService.createTherapyRecord(sessionId, effortData, metrics?)
+// Connect to device
+await bleService.connect();
 
-// Game records
-DataService.createGameRecord(sessionId, gameType, gameData)
-DataService.getGameRecords(gameType?, limit)
+// Subscribe to data
+bleService.onData((data: BLEMessage) => { /* process */ });
+bleService.onStatus((status: BLEStatus, msg?) => { /* UI update */ });
+bleService.onEmergency((isEmergency: boolean) => { /* handle */ });
 
-// Rankings
-DataService.updateRanking(gameType, score, details?)
-DataService.getRankings(gameType, limit)
+// Send commands
+await bleService.startTherapy();  // sends "start"
+await bleService.stopTherapy();   // sends "stop"
+await bleService.sendEmergency(); // sends "emergency"
 
-// Migration
-DataService.migrateLocalStorageData()
+// Disconnect
+bleService.disconnect();
 ```
 
-### Custom Hooks
+### BLE UUIDs
 
-#### useGameData (`src/hooks/useGameData.ts`)
-```typescript
-const { gameRecords, rankings, loading, createGameRecord, refreshData } = useGameData('game_type');
-```
+| Characteristic | UUID | Mode |
+|---|---|---|
+| Service | `12345678-1234-1234-1234-123456789abc` | — |
+| DATA | `12345678-1234-1234-1234-123456789ab1` | Notify |
+| CONTROL | `12345678-1234-1234-1234-123456789ab2` | Write |
+| EMERGENCY | `12345678-1234-1234-1234-123456789ab3` | Read + Notify |
+
+### Angular Processing
+
+Raw MCP angles are expanded client-side:
+- Thumb IP = `1.25 × MCP_thumb`
+- Finger PIP = `0.8 × MCP_finger`
+- Finger DIP = `0.66 × PIP`
+- Effort normalized: `min(100, max(0, raw × 100))`
+
+---
 
 ## Key Components
 
 ### Therapy System
-- `TherapyTimer`: Session management with Supabase integration
-- `HandMonitoring`: Real-time hand data visualization  
-- `EffortAnalysis`: Analytics and progress tracking
+- **`TherapyTimer`** — Session timer with BLE sync (start/stop commands)
+- **`TherapyOverlay`** — Full therapy UI with dual-hand tracking tables, automatic rest system, and session data persistence
+- **`HandMonitoring`** — Real-time hand angle visualization
+- **`BLEStatusButton`** — BLE connection status and control
+- **`BLEConfig`** — BLE configuration panel
+
+### Dashboard
+- **`HandVisualization`** — Visual hand model
+- **`EffortAnalysis`** — Effort charts and analytics
+- **`AchievementsProgress`** — Achievement tracking
+- **`TherapyTimer` (Dashboard)** — Dashboard timer variant
 
 ### Games
-- `OrangeSqueezeGame`: Hand strength training
-- `NeuroLinkGame`: Coordination and reaction training
-- `FlappyBirdGame`: Motor control training
+- **`OrangeSqueezeGame`** — Hand strength training (squeeze oranges)
+- **`FlappyBirdGame`** — Motor control (navigate pipes)
+- **`NeuroLinkGame`** — Coordination (shoot enemies)
 
-### Data Management
-- `GameRankings`: Leaderboards with both legacy and new data
-- `ProgressTracker`: Session history and analytics
-- `DataSimulator`: Development/testing data simulation
+### Reports
+- **`RehabReport`** — Clinical 7-section report component
+- **`WeeklyReport`** — Weekly period wrapper
+- **`MonthlyReport`** — Monthly period wrapper
+
+### Data & Configuration
+- **`GameRankings`** — Unified leaderboards for all games
+- **`ProgressTracker`** — Session history and daily progress
+- **`DataSimulator`** — Development/testing data simulation
+- **`ConfigAuth`** — Profile and authentication settings
+
+---
+
+## Context Providers
+
+### AppContext (`src/contexts/AppContext.tsx`)
+- Language/translation management
+- Global app state
+
+### SimulationContext (`src/contexts/SimulationContext.tsx`)
+- Hand data state (angles, effort, active status)
+- Therapy active state
+- BLE data integration
+
+### GameConfigContext (`src/contexts/GameConfigContext.tsx`)
+- Game parameters (enemy speed, shot intervals, pipe spacing)
+- Rest configuration (repetitions, levels, duration)
+- Supabase persistence of settings
+
+### AuthContext (`src/contexts/AuthContext.tsx`)
+- Supabase Auth integration
+- User session management
+
+### ConfigContext (`src/contexts/ConfigContext.tsx`)
+- Application configuration state
+
+---
+
+## Services
+
+### `src/services/bleService.ts`
+BLE device communication (see BLE section above).
+
+### `src/services/dataService.ts`
+Centralized database operations for sessions, rankings, and game data.
+
+### `src/services/sessionService.ts`
+Session-specific data operations.
+
+### `src/services/reportService.ts`
+Clinical report generation with 7-section model:
+1. **Resumen** — Period summary with mini-calendar adherence visualization
+2. **Tendencias** — Therapy type distribution (pie chart) + volume per hand
+3. **Indicadores** — Average opening/closing times with automated interpretation
+4. **Mejor Desempeño** — Best recorded times with dates
+5. **Cancelaciones** — Cancellation distribution analysis
+6. **Rendimiento** — Global performance index per hand
+7. **Conclusión** — Dynamically generated clinical summary
+
+---
+
+## Pages
+
+| Route | Page | Description |
+|---|---|---|
+| `/` | `Index` | Main monitoring page with hand visualization, timer, progress |
+| `/auth` | `Auth` | Login/signup |
+| `/dashboard` | `Dashboard` | Overview dashboard |
+| `/configuracion` | `Configuracion` | Settings (game params, rest config, profile) |
+| `/historial` | `Historial` | Session history |
+| `/reportes` | `Reportes` | Weekly/monthly clinical reports |
+| `*` | `NotFound` | 404 page |
+
+---
 
 ## Environment Variables
 
@@ -180,178 +273,48 @@ VITE_SUPABASE_PUBLISHABLE_KEY="eyJ..."
 VITE_SUPABASE_URL="https://raxkyfrhigkfaimrayzw.supabase.co"
 ```
 
-## Data Migration Strategy
+---
 
-### LocalStorage to Supabase Migration
-The system includes automatic migration on first run:
+## Hand Data Flow
 
-1. Check migration flag: `localStorage.getItem('supabase_migration_completed')`
-2. Migrate orange rankings to Supabase rankings table
-3. Set migration completed flag
-4. Preserve legacy data for backward compatibility
-
-### Data Shapes Preserved
-
-**Legacy Orange Rankings:**
-```typescript
-{
-  date: string,
-  glasses: number,
-  totalOranges: number,
-  timePerGlass: number,
-  timePerOrange: number,
-  totalTime: number
-}
+```
+1. ESP32 IMU sensors → BLE DATA characteristic (JSON)
+2. BLEService.handleDataNotification() → decode + parse
+3. BLEService.calculateAngles() → derive PIP, DIP, IP angles
+4. onDataCallback → SimulationContext state update
+5. React re-render → HandMonitoring, TherapyOverlay, Games
+6. Session end → stats JSON saved to Supabase sessions table
+7. Rankings auto-recalculated via PostgreSQL functions
 ```
 
-**New Ranking Format:**
-```typescript
-{
-  game_type: 'orange_squeeze',
-  score: totalOranges,
-  details: { glasses, timePerGlass, timePerOrange, totalTime, date }
-}
-```
+---
 
-## Hand Data Configuration
+## Automatic Rest System
 
-Hand data is configured in `src/contexts/SimulationContext.tsx`:
+The `TherapyOverlay` component implements automatic rest periods:
 
-```typescript
-interface HandData {
-  active: boolean;
-  angles: {
-    thumb1: number; thumb2: number; thumb3: number;
-    finger1: number; finger2: number; finger3: number;
-  };
-  effort: number;
-}
-```
+- **Trigger conditions**: Configured number of repetitions (open/close cycles) or game levels (rounds)
+- **Behavior**: Blocks UI with `pointer-events-none`, shows countdown overlay, pauses therapy timer
+- **Configuration**: Stored in `GameConfigContext` with localStorage + Supabase persistence
+- **Parameters**: `restRepetitions`, `restLevels`, `restDuration` (seconds)
 
-Data flows:
-1. **Input**: `DataSimulator` → `SimulationContext`
-2. **Processing**: `SimulationContext` → localStorage + state
-3. **Visualization**: `HandMonitoring` component
-4. **Games**: `OrangeSqueezeGame`, `FlappyBirdGame` consume data
-5. **Analytics**: `EffortAnalysis` processes for charts
+---
 
-## Local Development Setup
+## Local Development
 
-1. **Clone and install:**
 ```bash
-git clone <repository>
-cd therapy-rehab-system
+# Install dependencies
 npm install
-```
 
-2. **Environment setup:**
-```bash
-cp .env.example .env
-# Configure Supabase credentials
-```
-
-3. **Database setup:**
-- Run migrations in Supabase SQL editor
-- Verify RLS policies are active
-- Test with development user
-
-4. **Start development:**
-```bash
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-## Testing Strategy
+---
 
-### Unit Tests (Recommended)
-```typescript
-// Score computation tests
-describe('GameRankings', () => {
-  test('should calculate time per glass correctly', () => {
-    const result = calculateTimePerGlass(totalTime, glasses);
-    expect(result).toBe(expected);
-  });
-});
+## Related Documentation
 
-// History aggregation tests  
-describe('DataService', () => {
-  test('should aggregate user sessions correctly', () => {
-    // Test session aggregation logic
-  });
-});
-```
-
-### Integration Testing
-- Test localStorage → Supabase migration
-- Verify RLS policies prevent cross-user access
-- Test real-time data updates in games
-
-## API Examples
-
-### Create Session
-```typescript
-const session = await DataService.createSession('therapy', 15, {
-  difficulty: 'medium',
-  handPreference: 'right'
-});
-```
-
-### Save Game Score
-```typescript
-const gameRecord = await DataService.createGameRecord(
-  sessionId,
-  'orange_squeeze',
-  {
-    total_oranges: 24,
-    total_glasses: 6,
-    average_oranges_per_minute: 1.6
-  }
-);
-```
-
-### Query Rankings
-```typescript
-const rankings = await DataService.getRankings('neurolink', 10);
-// Returns top 10 NeuroLink scores with positions
-```
-
-## Changelog
-
-### Database Schema Updates
-- ✅ Added `therapy_records` table for therapy-specific data
-- ✅ Added `rankings` table for proper leaderboard management  
-- ✅ Added missing columns to `game_records` (open/close times, attempts)
-- ✅ Added performance indexes for common queries
-- ✅ Implemented comprehensive RLS policies
-
-### Code Refactoring
-- ✅ Created centralized `DataService` for all database operations
-- ✅ Added `useGameData` hook for game data management
-- ✅ Updated `GameRankings` component to use new data layer
-- ✅ Updated `TherapyTimer` to save therapy records properly
-- ✅ Preserved legacy localStorage data compatibility
-- ✅ Added automatic data migration on first run
-
-### Files Modified
-- `src/types/database.ts` - New comprehensive type definitions
-- `src/services/dataService.ts` - Centralized data access layer
-- `src/hooks/useGameData.ts` - Game data management hook
-- `src/components/GameRankings.tsx` - Updated to use new data service
-- `src/components/TherapyTimer.tsx` - Integrated with therapy records
-- `docs/DEVELOPER_DOCUMENTATION.md` - This comprehensive documentation
-
-### Preserved Functionality
-- ✅ All original localStorage keys still functional
-- ✅ Legacy orange rankings display maintained
-- ✅ Original score calculation formulas preserved
-- ✅ UI/UX flows unchanged
-- ✅ Hand data processing logic intact
-- ✅ Game mechanics and scoring unchanged
-
-## Future Improvements
-
-1. **Performance**: Add React Query for caching and optimistic updates
-2. **Testing**: Implement comprehensive unit and integration tests
-3. **Monitoring**: Add error tracking and performance monitoring
-4. **Offline**: Add service worker for offline functionality
-5. **Export**: Add data export functionality for therapists
-6. **Analytics**: Enhanced analytics dashboard with more metrics
+- **[Technical Report](./INFORME_TECNICO_SISTEMA.md)** — Complete technical report describing the system architecture, communication protocols, data processing, and user interactions (suitable for thesis/engineering documentation).
