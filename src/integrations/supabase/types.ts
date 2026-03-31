@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          best_closing_time_ms: number | null
+          best_opening_time_ms: number | null
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          sessions_completed: number
+          sessions_target: number
+          streak_days: number
+          total_duration_minutes: number
+          total_repetitions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_closing_time_ms?: number | null
+          best_opening_time_ms?: number | null
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          period_type: string
+          sessions_completed?: number
+          sessions_target?: number
+          streak_days?: number
+          total_duration_minutes?: number
+          total_repetitions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_closing_time_ms?: number | null
+          best_opening_time_ms?: number | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          sessions_completed?: number
+          sessions_target?: number
+          streak_days?: number
+          total_duration_minutes?: number
+          total_repetitions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       game_settings: {
         Row: {
           configuracion_inicio: Json | null
