@@ -400,7 +400,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
   // --- Registro de tiempos de mano IZQUIERDA (no parética) ---
   useEffect(() => {
-    if (!isTherapyActive || isResting) return;
+    if (!isTherapyActive || isResting || isPaused || isEmergency) return;
 
     const isOpen = leftHand.angles.finger2 < 20;
     const isClosed = leftHand.angles.finger2 > 70;
@@ -449,7 +449,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
       leftLastState.current = currentState;
     }
-  }, [leftHand, isTherapyActive, isResting]);
+  }, [leftHand, isTherapyActive, isResting, isPaused, isEmergency]);
 
   // --- Rest trigger: repeticiones ---
   useEffect(() => {
