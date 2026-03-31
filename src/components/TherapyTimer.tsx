@@ -142,6 +142,11 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
               type: 'success'
             });
             
+            // Refresh achievements from Supabase
+            if ((window as any).refreshAchievements) {
+              (window as any).refreshAchievements();
+            }
+            
             if (onSessionComplete) {
               onSessionComplete();
             }
