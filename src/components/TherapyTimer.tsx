@@ -157,7 +157,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 
   // Muestreo de esfuerzo - separado del timer principal
   useEffect(() => {
-    let sampleInterval: NodeJS.Timeout | null = null;
+    let sampleInterval: ReturnType<typeof setInterval> | null = null;
 
     if (isActive && !isPaused) {
       sampleInterval = setInterval(() => {
