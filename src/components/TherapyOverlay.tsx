@@ -45,7 +45,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [gameCompleted, setGameCompleted] = useState(false);
 
   const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap, restRepetitions, restLevels, restDuration } = useGameConfig();
-  const { leftHand, rightHand, isTherapyActive, getBleDataLog, clearBleDataLog } = useSimulation();
+  const { leftHand, rightHand, isTherapyActive, getBleDataLog, clearBleDataLog, isEmergency } = useSimulation();
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
