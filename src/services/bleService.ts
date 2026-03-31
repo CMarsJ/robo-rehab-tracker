@@ -256,8 +256,11 @@ export class BLEService {
   }
 
   async sendEmergency(): Promise<void> {
+    // Toggle emergency state locally and send appropriate command
+    this.emergencyState = !this.emergencyState;
     await this.sendCommand('emergency');
-    console.log('🚨 Emergency command sent to ESP32');
+    this.onEmergencyCallback?.(this.emergencyState);
+    console.log('🚨 Emergency toggled:', this.emergencyState ? 'ACTIVE' : 'CLEARED');
   }
 
   disconnect(): void {

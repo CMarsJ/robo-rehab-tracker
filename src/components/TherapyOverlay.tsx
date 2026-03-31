@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pause, Play, X, Gamepad2 } from 'lucide-react';
+import { Pause, Play, X, Gamepad2, AlertTriangle } from 'lucide-react';
 import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
 import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation, BLEDataRecord } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
+import { bleService } from '@/services/bleService';
 import { SessionService } from '@/services/sessionService';
 
 // Función helper para limitar decimales a 4 dígitos
@@ -44,7 +45,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [gameCompleted, setGameCompleted] = useState(false);
 
   const { calculateOrangeGoalForTime, enemySpeed, shotSpeed, baseEnemyCount, flappyPipeGap, restRepetitions, restLevels, restDuration } = useGameConfig();
-  const { leftHand, rightHand, isTherapyActive, getBleDataLog, clearBleDataLog } = useSimulation();
+  const { leftHand, rightHand, isTherapyActive, getBleDataLog, clearBleDataLog, isEmergency } = useSimulation();
   const t = useTranslation();
 
   const targetGlasses = calculateOrangeGoalForTime(duration);
@@ -323,9 +324,22 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }
   }, [timeLeft, isActive, currentSessionId]);
 
+  // --- Reset tracking refs on pause to prevent stale time deltas ---
+  useEffect(() => {
+    if (isPaused || isEmergency) {
+      // Nullify timestamps so resume starts fresh measurement
+      openTimestamp.current = null;
+      closedTimestamp.current = null;
+      lastState.current = null;
+      leftOpenTimestamp.current = null;
+      leftClosedTimestamp.current = null;
+      leftLastState.current = null;
+    }
+  }, [isPaused, isEmergency]);
+
   // --- Registro de tiempos de mano DERECHA (parética) ---
   useEffect(() => {
-    if (!isTherapyActive || isResting) return;
+    if (!isTherapyActive || isResting || isPaused || isEmergency) return;
 
     const isOpen = rightHand.angles.finger2 < 20;
     const isClosed = rightHand.angles.finger2 > 70;
@@ -382,11 +396,11 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
       lastState.current = currentState;
     }
-  }, [rightHand, isTherapyActive, isResting, isRepetitionMode]);
+  }, [rightHand, isTherapyActive, isResting, isPaused, isEmergency, isRepetitionMode]);
 
   // --- Registro de tiempos de mano IZQUIERDA (no parética) ---
   useEffect(() => {
-    if (!isTherapyActive || isResting) return;
+    if (!isTherapyActive || isResting || isPaused || isEmergency) return;
 
     const isOpen = leftHand.angles.finger2 < 20;
     const isClosed = leftHand.angles.finger2 > 70;
@@ -435,7 +449,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
       leftLastState.current = currentState;
     }
-  }, [leftHand, isTherapyActive, isResting]);
+  }, [leftHand, isTherapyActive, isResting, isPaused, isEmergency]);
 
   // --- Rest trigger: repeticiones ---
   useEffect(() => {
@@ -617,12 +631,24 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         {isActive ? formatTime(timeLeft) : formatTime(duration * 60)}
       </div>
       <div className="text-sm text-muted-foreground mb-4">
-        {isResting ? '⏸️ Descansando...' : isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
+        {isEmergency ? '🚨 EMERGENCIA' : isResting ? '⏸️ Descansando...' : isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
       </div>
 
       <div className="flex gap-4">
-        <Button onClick={onPause} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg" size="lg" disabled={!isActive || isResting}>
+        <Button onClick={onPause} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg" size="lg" disabled={!isActive || isResting || isEmergency}>
           {isPaused ? <><Play className="w-6 h-6 mr-2" /> Reanudar</> : <><Pause className="w-6 h-6 mr-2" /> Pausar</>}
+        </Button>
+        <Button
+          onClick={async () => {
+            await bleService.sendEmergency();
+          }}
+          variant={isEmergency ? 'outline' : 'destructive'}
+          className={`px-6 py-3 text-lg ${isEmergency ? 'border-destructive text-destructive animate-pulse' : ''}`}
+          size="lg"
+          disabled={!isActive || isResting}
+        >
+          <AlertTriangle className="w-6 h-6 mr-2" />
+          {isEmergency ? 'Reanudar' : 'Emergencia'}
         </Button>
         <Button onClick={handleCancelTherapy} variant="destructive" className="px-6 py-3 text-lg" size="lg" disabled={isResting}>
           <X className="w-6 h-6 mr-2" /> Cancelar
