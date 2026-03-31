@@ -618,12 +618,24 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         {isActive ? formatTime(timeLeft) : formatTime(duration * 60)}
       </div>
       <div className="text-sm text-muted-foreground mb-4">
-        {isResting ? '⏸️ Descansando...' : isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
+        {isEmergency ? '🚨 EMERGENCIA' : isResting ? '⏸️ Descansando...' : isPaused ? 'Pausado' : isActive ? 'Tiempo restante' : 'Listo para iniciar'}
       </div>
 
       <div className="flex gap-4">
-        <Button onClick={onPause} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg" size="lg" disabled={!isActive || isResting}>
+        <Button onClick={onPause} className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 text-lg" size="lg" disabled={!isActive || isResting || isEmergency}>
           {isPaused ? <><Play className="w-6 h-6 mr-2" /> Reanudar</> : <><Pause className="w-6 h-6 mr-2" /> Pausar</>}
+        </Button>
+        <Button
+          onClick={async () => {
+            await bleService.sendEmergency();
+          }}
+          variant={isEmergency ? 'outline' : 'destructive'}
+          className={`px-6 py-3 text-lg ${isEmergency ? 'border-destructive text-destructive animate-pulse' : ''}`}
+          size="lg"
+          disabled={!isActive || isResting}
+        >
+          <AlertTriangle className="w-6 h-6 mr-2" />
+          {isEmergency ? 'Reanudar' : 'Emergencia'}
         </Button>
         <Button onClick={handleCancelTherapy} variant="destructive" className="px-6 py-3 text-lg" size="lg" disabled={isResting}>
           <X className="w-6 h-6 mr-2" /> Cancelar
