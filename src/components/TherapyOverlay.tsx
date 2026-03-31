@@ -324,9 +324,22 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     }
   }, [timeLeft, isActive, currentSessionId]);
 
+  // --- Reset tracking refs on pause to prevent stale time deltas ---
+  useEffect(() => {
+    if (isPaused || isEmergency) {
+      // Nullify timestamps so resume starts fresh measurement
+      openTimestamp.current = null;
+      closedTimestamp.current = null;
+      lastState.current = null;
+      leftOpenTimestamp.current = null;
+      leftClosedTimestamp.current = null;
+      leftLastState.current = null;
+    }
+  }, [isPaused, isEmergency]);
+
   // --- Registro de tiempos de mano DERECHA (parética) ---
   useEffect(() => {
-    if (!isTherapyActive || isResting) return;
+    if (!isTherapyActive || isResting || isPaused || isEmergency) return;
 
     const isOpen = rightHand.angles.finger2 < 20;
     const isClosed = rightHand.angles.finger2 > 70;
@@ -383,7 +396,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
 
       lastState.current = currentState;
     }
-  }, [rightHand, isTherapyActive, isResting, isRepetitionMode]);
+  }, [rightHand, isTherapyActive, isResting, isPaused, isEmergency, isRepetitionMode]);
 
   // --- Registro de tiempos de mano IZQUIERDA (no parética) ---
   useEffect(() => {
