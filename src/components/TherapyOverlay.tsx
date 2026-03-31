@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pause, Play, X, Gamepad2 } from 'lucide-react';
+import { Pause, Play, X, Gamepad2, AlertTriangle } from 'lucide-react';
 import OrangeSqueezeGame from '@/components/OrangeSqueezeGame';
 import NeuroLinkGame from '@/components/NeuroLinkGame';
 import FlappyBirdGame from '@/components/FlappyBirdGame';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation, BLEDataRecord } from '@/contexts/SimulationContext';
 import { useTranslation } from '@/contexts/AppContext';
+import { bleService } from '@/services/bleService';
 import { SessionService } from '@/services/sessionService';
 
 // Función helper para limitar decimales a 4 dígitos
