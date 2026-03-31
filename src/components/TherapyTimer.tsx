@@ -105,7 +105,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 
   // Timer principal - sin dependencias de datos MQTT
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     if (isActive && !isPaused && startTime) {
       interval = setInterval(() => {
@@ -157,7 +157,7 @@ const TherapyTimer: React.FC<TherapyTimerProps> = ({ onSessionComplete }) => {
 
   // Muestreo de esfuerzo - separado del timer principal
   useEffect(() => {
-    let sampleInterval: NodeJS.Timeout | null = null;
+    let sampleInterval: ReturnType<typeof setInterval> | null = null;
 
     if (isActive && !isPaused) {
       sampleInterval = setInterval(() => {

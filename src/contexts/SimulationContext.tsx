@@ -213,7 +213,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Auto mode effect - solo si no hay datos reales y el simulador está habilitado
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (autoMode && enableSimulator && !isReceivingRealData) {
       interval = setInterval(() => {
         const randomLeftHand: HandData = roundHandData({
