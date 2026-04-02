@@ -43,6 +43,28 @@ export interface BLEMessage {
 
 export type BLEStatus = 'connected' | 'disconnected' | 'error';
 
+// --- Pure angle calculation functions ---
+
+/** Clamp MCP input to valid range 0°–90° */
+export const clampMCP = (value: number): number =>
+  Math.min(90, Math.max(0, value));
+
+/** θPIP = min(100°, 1.2 × θMCP) */
+export const calculatePIP = (mcpDeg: number): number =>
+  Math.min(100, 1.2 * clampMCP(mcpDeg));
+
+/** θDIP = (2/3) × θPIP */
+export const calculateDIP = (mcpDeg: number): number =>
+  (2 / 3) * calculatePIP(mcpDeg);
+
+/** Thumb IP = 1.25 × θMCP_thumb */
+export const calculateThumbIP = (mcpThumbDeg: number): number =>
+  1.25 * clampMCP(mcpThumbDeg);
+
+/** Normalize MCP (0–90) to 0.0–1.0 range for therapy mode logic */
+export const normalizeMCP = (mcpDeg: number): number =>
+  clampMCP(mcpDeg) / 90;
+
 // Usar any para tipos Web Bluetooth ya que no están en las libs estándar de TS
 export class BLEService {
   private device: any = null;
@@ -69,24 +91,18 @@ export class BLEService {
 
   // Calcula los ángulos derivados a partir de mcp_finger y mcp_thumb
   private calculateAngles(rawHand: BLERawHandData): BLEHandData {
-    const mcp_finger = rawHand.mcp_finger || 0;
-    const mcp_thumb = rawHand.mcp_thumb || 0;
-
-    // Fórmulas: PIP = 0.8 * MCP, DIP = 0.66 * PIP
-    const pip_finger = 0.8 * mcp_finger;
-    const dip_finger = 0.66 * pip_finger;
-    // Pulgar: IP = 1.25 * MCP
-    const ip_thumb = 1.25 * mcp_thumb;
+    const mcp_finger = clampMCP(rawHand.mcp_finger || 0);
+    const mcp_thumb = clampMCP(rawHand.mcp_thumb || 0);
 
     return {
       active: Boolean(rawHand.active),
       angles: {
         thumb1: mcp_thumb,
-        thumb2: ip_thumb,
+        thumb2: calculateThumbIP(mcp_thumb),
         thumb3: 0,
         finger1: mcp_finger,
-        finger2: pip_finger,
-        finger3: dip_finger,
+        finger2: calculatePIP(mcp_finger),
+        finger3: calculateDIP(mcp_finger),
       },
       effort: Math.min(100, Math.max(0, (rawHand.effort || 0) * 100)),
     };
@@ -256,11 +272,25 @@ export class BLEService {
   }
 
   async sendEmergency(): Promise<void> {
-    // Toggle emergency state locally and send appropriate command
-    this.emergencyState = !this.emergencyState;
-    await this.sendCommand('emergency');
-    this.onEmergencyCallback?.(this.emergencyState);
-    console.log('🚨 Emergency toggled:', this.emergencyState ? 'ACTIVE' : 'CLEARED');
+    // Toggle emergency state and send the appropriate command
+    const newState = !this.emergencyState;
+    try {
+      await this.sendCommand(newState ? 'emergency_on' : 'emergency_off');
+      this.emergencyState = newState;
+      this.onEmergencyCallback?.(this.emergencyState);
+      console.log('🚨 Emergency toggled:', this.emergencyState ? 'ACTIVE' : 'CLEARED');
+    } catch (error) {
+      console.error('❌ Error toggling emergency:', error);
+      // Fallback: toggle locally even if command fails so UI isn't stuck
+      this.emergencyState = newState;
+      this.onEmergencyCallback?.(this.emergencyState);
+    }
+  }
+
+  /** Explicitly set emergency state (used by BLE notifications) */
+  setEmergencyState(active: boolean): void {
+    this.emergencyState = active;
+    this.onEmergencyCallback?.(active);
   }
 
   disconnect(): void {
