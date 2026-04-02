@@ -69,24 +69,18 @@ export class BLEService {
 
   // Calcula los ángulos derivados a partir de mcp_finger y mcp_thumb
   private calculateAngles(rawHand: BLERawHandData): BLEHandData {
-    const mcp_finger = rawHand.mcp_finger || 0;
-    const mcp_thumb = rawHand.mcp_thumb || 0;
-
-    // Fórmulas: PIP = 0.8 * MCP, DIP = 0.66 * PIP
-    const pip_finger = 0.8 * mcp_finger;
-    const dip_finger = 0.66 * pip_finger;
-    // Pulgar: IP = 1.25 * MCP
-    const ip_thumb = 1.25 * mcp_thumb;
+    const mcp_finger = clampMCP(rawHand.mcp_finger || 0);
+    const mcp_thumb = clampMCP(rawHand.mcp_thumb || 0);
 
     return {
       active: Boolean(rawHand.active),
       angles: {
         thumb1: mcp_thumb,
-        thumb2: ip_thumb,
+        thumb2: calculateThumbIP(mcp_thumb),
         thumb3: 0,
         finger1: mcp_finger,
-        finger2: pip_finger,
-        finger3: dip_finger,
+        finger2: calculatePIP(mcp_finger),
+        finger3: calculateDIP(mcp_finger),
       },
       effort: Math.min(100, Math.max(0, (rawHand.effort || 0) * 100)),
     };
