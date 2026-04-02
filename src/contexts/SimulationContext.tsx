@@ -190,9 +190,12 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
 
     bleService.onEmergency((emergency) => {
+      console.log('🚨 Emergency callback received:', emergency);
       setIsEmergency(emergency);
       if (emergency) {
         console.warn('🚨 EMERGENCY STATE ACTIVE');
+      } else {
+        console.log('✅ Emergency state cleared');
       }
     });
 
