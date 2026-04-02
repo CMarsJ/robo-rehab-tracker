@@ -272,11 +272,25 @@ export class BLEService {
   }
 
   async sendEmergency(): Promise<void> {
-    // Toggle emergency state locally and send appropriate command
-    this.emergencyState = !this.emergencyState;
-    await this.sendCommand('emergency');
-    this.onEmergencyCallback?.(this.emergencyState);
-    console.log('🚨 Emergency toggled:', this.emergencyState ? 'ACTIVE' : 'CLEARED');
+    // Toggle emergency state and send the appropriate command
+    const newState = !this.emergencyState;
+    try {
+      await this.sendCommand(newState ? 'emergency_on' : 'emergency_off');
+      this.emergencyState = newState;
+      this.onEmergencyCallback?.(this.emergencyState);
+      console.log('🚨 Emergency toggled:', this.emergencyState ? 'ACTIVE' : 'CLEARED');
+    } catch (error) {
+      console.error('❌ Error toggling emergency:', error);
+      // Fallback: toggle locally even if command fails so UI isn't stuck
+      this.emergencyState = newState;
+      this.onEmergencyCallback?.(this.emergencyState);
+    }
+  }
+
+  /** Explicitly set emergency state (used by BLE notifications) */
+  setEmergencyState(active: boolean): void {
+    this.emergencyState = active;
+    this.onEmergencyCallback?.(active);
   }
 
   disconnect(): void {
