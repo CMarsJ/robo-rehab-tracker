@@ -43,6 +43,28 @@ export interface BLEMessage {
 
 export type BLEStatus = 'connected' | 'disconnected' | 'error';
 
+// --- Pure angle calculation functions ---
+
+/** Clamp MCP input to valid range 0°–90° */
+export const clampMCP = (value: number): number =>
+  Math.min(90, Math.max(0, value));
+
+/** θPIP = min(100°, 1.2 × θMCP) */
+export const calculatePIP = (mcpDeg: number): number =>
+  Math.min(100, 1.2 * clampMCP(mcpDeg));
+
+/** θDIP = (2/3) × θPIP */
+export const calculateDIP = (mcpDeg: number): number =>
+  (2 / 3) * calculatePIP(mcpDeg);
+
+/** Thumb IP = 1.25 × θMCP_thumb */
+export const calculateThumbIP = (mcpThumbDeg: number): number =>
+  1.25 * clampMCP(mcpThumbDeg);
+
+/** Normalize MCP (0–90) to 0.0–1.0 range for therapy mode logic */
+export const normalizeMCP = (mcpDeg: number): number =>
+  clampMCP(mcpDeg) / 90;
+
 // Usar any para tipos Web Bluetooth ya que no están en las libs estándar de TS
 export class BLEService {
   private device: any = null;
