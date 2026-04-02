@@ -282,6 +282,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       // extra_date: Vector JSON con registro de fecha/hora de datos BLE
       extra_date: bleLog.length > 0 ? bleLog : [{
         timestamp: new Date().toISOString(),
+        receivedAt: new Date().toISOString(),
         leftHand: leftHand,
         rightHand: rightHand,
         note: 'No hubo cambios de datos BLE durante la sesión'
