@@ -18,8 +18,11 @@ interface HandData {
 
 // Registro de cambios BLE con timestamp
 export interface BLEDataRecord {
-  timestamp: string;       // Momento de envío del dispositivo BLE
-  receivedAt: string;      // Momento en que la página recibió el paquete
+  timestamp: string;               // ISO string del momento de llegada (compatibilidad)
+  receivedAt: string;              // ISO string del momento de llegada
+  receivedAtMs: number;            // Epoch en milisegundos (Date.now())
+  receivedAtPerfMs: number;        // performance.now() con precisión de microsegundos
+  deviceRawTimestamp?: string | number; // Valor original del timestamp del ESP
   leftHand: HandData;
   rightHand: HandData;
 }
@@ -142,20 +145,25 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // Función para registrar datos BLE con timestamp
-  const addBleDataRecord = (left: HandData, right: HandData, deviceTimestamp?: string) => {
+  const addBleDataRecord = (left: HandData, right: HandData, deviceRawTimestamp?: string | number) => {
     const dataHash = JSON.stringify({ left, right });
     if (dataHash !== lastDataRef.current) {
       lastDataRef.current = dataHash;
-      const now = new Date().toISOString();
+      const nowMs = Date.now();
+      const nowPerf = performance.now();
+      const nowIso = new Date(nowMs).toISOString();
       const record: BLEDataRecord = {
-        timestamp: deviceTimestamp || now,  // Tiempo de envío del dispositivo
-        receivedAt: now,                     // Tiempo de llegada a la página
+        timestamp: nowIso,
+        receivedAt: nowIso,
+        receivedAtMs: nowMs,
+        receivedAtPerfMs: parseFloat(nowPerf.toFixed(3)),
+        deviceRawTimestamp: deviceRawTimestamp,
         leftHand: roundHandData(left),
         rightHand: roundHandData(right),
       };
       bleDataLogRef.current = [...bleDataLogRef.current, record];
       setBleDataLog([...bleDataLogRef.current]);
-      console.log('📝 BLE data logged:', record.timestamp, '| received:', record.receivedAt);
+      console.log('📝 BLE data logged | device:', deviceRawTimestamp, '| received:', nowMs);
     }
   };
 
@@ -180,7 +188,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (parsedLeft && parsedRight) {
         setIsReceivingRealData(true);
         updateSimulationData(parsedLeft, parsedRight);
-        addBleDataRecord(parsedLeft, parsedRight, data?.timestamp);
+        addBleDataRecord(parsedLeft, parsedRight, data?.deviceRawTimestamp);
       } else {
         console.warn('⚠️ Invalid BLE data format, ignoring:', data);
       }

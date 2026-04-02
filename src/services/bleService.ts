@@ -18,7 +18,7 @@ export interface BLERawHandData {
 export interface BLERawData {
   leftHand: BLERawHandData;
   rightHand: BLERawHandData;
-  timestamp: string;
+  timestamp?: string | number; // Timestamp del ESP (puede ser millis desde boot o ISO string)
 }
 
 // Datos procesados con todos los ángulos calculados
@@ -39,6 +39,7 @@ export interface BLEMessage {
   leftHand: BLEHandData;
   rightHand: BLEHandData;
   timestamp: string;
+  deviceRawTimestamp?: string | number; // Valor original del timestamp del ESP
 }
 
 export type BLEStatus = 'connected' | 'disconnected' | 'error';
@@ -217,6 +218,7 @@ export class BLEService {
         leftHand: processedLeft,
         rightHand: processedRight,
         timestamp: new Date().toISOString(),
+        deviceRawTimestamp: rawData.timestamp ?? undefined,
       };
 
       console.log('📊 Data procesada:', processedData);

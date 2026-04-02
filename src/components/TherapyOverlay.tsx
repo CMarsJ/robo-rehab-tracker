@@ -283,6 +283,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       extra_date: bleLog.length > 0 ? bleLog : [{
         timestamp: new Date().toISOString(),
         receivedAt: new Date().toISOString(),
+        receivedAtMs: Date.now(),
+        receivedAtPerfMs: parseFloat(performance.now().toFixed(3)),
+        deviceRawTimestamp: null,
         leftHand: leftHand,
         rightHand: rightHand,
         note: 'No hubo cambios de datos BLE durante la sesión'
