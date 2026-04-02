@@ -39,7 +39,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
         <div className="space-y-1">
           <div className="text-center font-medium">{t.fingers}</div>
           <div className="flex justify-between">
-            <span>DIP:</span>
+            <span>MCP:</span>
             <span>{angles.finger1}°</span>
           </div>
           <div className="flex justify-between">
@@ -47,7 +47,7 @@ const HandMonitoring: React.FC<HandMonitoringProps> = ({ isTherapyActive = false
             <span>{angles.finger2}°</span>
           </div>
           <div className="flex justify-between">
-            <span>MCP:</span>
+            <span>DIP:</span>
             <span>{angles.finger3}°</span>
           </div>
         </div>
