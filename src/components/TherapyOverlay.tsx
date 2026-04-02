@@ -341,8 +341,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   useEffect(() => {
     if (!isTherapyActive || isResting || isPaused || isEmergency) return;
 
-    const isOpen = rightHand.angles.finger2 < 20;
-    const isClosed = rightHand.angles.finger2 > 70;
+    // Use MCP angle (finger1) directly — 0° = open, 90° = closed
+    const mcpAngle = rightHand.angles.finger1;
+    const isOpen = mcpAngle < 15;
+    const isClosed = mcpAngle > 60;
     const now = performance.now();
     const currentState: 'open' | 'closed' | 'neutral' = isOpen ? 'open' : isClosed ? 'closed' : 'neutral';
 
