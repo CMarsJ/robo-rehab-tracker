@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { bleService } from '@/services/bleService';
 
 interface HandAngles {
@@ -83,6 +83,10 @@ const roundHandData = (hand: HandData): HandData => ({
 
 const SimulationContext = createContext<SimulationContextType | undefined>(undefined);
 
+// Throttle interval for UI updates (ms) — BLE data is still logged at full rate
+const UI_UPDATE_INTERVAL_MS = 50; // 20 FPS max for UI
+const LOCALSTORAGE_FLUSH_MS = 2000; // Flush to localStorage every 2s
+
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [leftHand, setLeftHand] = useState<HandData>({
     active: false,
@@ -105,10 +109,19 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [enableSimulator, setEnableSimulator] = useState(false);
   const [isEmergency, setIsEmergency] = useState(false);
   
-  // Registro de datos BLE con timestamps
+  // Registro de datos BLE — array mutado in-place, state snapshot throttled
   const bleDataLogRef = useRef<BLEDataRecord[]>([]);
   const [bleDataLog, setBleDataLog] = useState<BLEDataRecord[]>([]);
-  const lastDataRef = useRef<string>('');
+  const logFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Throttle refs for UI updates
+  const lastUiUpdateRef = useRef<number>(0);
+  const pendingUiDataRef = useRef<{ left: HandData; right: HandData } | null>(null);
+  const rafIdRef = useRef<number>(0);
+
+  // localStorage flush refs
+  const lastLsFlushRef = useRef<number>(0);
+  const pendingLsDataRef = useRef<{ left: HandData; right: HandData } | null>(null);
 
   // Cargar datos del localStorage al inicializar
   useEffect(() => {
@@ -144,86 +157,119 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
-  // Función para registrar datos BLE con timestamp
-  const addBleDataRecord = (left: HandData, right: HandData, deviceRawTimestamp?: string | number) => {
-    const dataHash = JSON.stringify({ left, right });
-    if (dataHash !== lastDataRef.current) {
-      lastDataRef.current = dataHash;
-      const nowMs = Date.now();
-      const nowPerf = performance.now();
-      const nowIso = new Date(nowMs).toISOString();
-      const record: BLEDataRecord = {
-        timestamp: nowIso,
-        receivedAt: nowIso,
-        receivedAtMs: nowMs,
-        receivedAtPerfMs: parseFloat(nowPerf.toFixed(3)),
-        deviceRawTimestamp: deviceRawTimestamp,
-        leftHand: roundHandData(left),
-        rightHand: roundHandData(right),
-      };
-      bleDataLogRef.current = [...bleDataLogRef.current, record];
-      setBleDataLog([...bleDataLogRef.current]);
-      console.log('📝 BLE data logged | device:', deviceRawTimestamp, '| received:', nowMs);
-    }
-  };
+  // Log BLE data record — ALL packets logged, no deduplication
+  const addBleDataRecord = useCallback((left: HandData, right: HandData, deviceRawTimestamp?: string | number, arrivalMs?: number, arrivalPerfMs?: number) => {
+    const nowMs = arrivalMs ?? Date.now();
+    const nowPerf = arrivalPerfMs ?? parseFloat(performance.now().toFixed(3));
+    const nowIso = new Date(nowMs).toISOString();
+    const record: BLEDataRecord = {
+      timestamp: nowIso,
+      receivedAt: nowIso,
+      receivedAtMs: nowMs,
+      receivedAtPerfMs: nowPerf,
+      deviceRawTimestamp,
+      leftHand: roundHandData(left),
+      rightHand: roundHandData(right),
+    };
+    // Mutate in place — no spread, O(1) push
+    bleDataLogRef.current.push(record);
 
-  const clearBleDataLog = () => {
+    // Throttle state snapshot for log consumers (every 500ms max)
+    if (!logFlushTimerRef.current) {
+      logFlushTimerRef.current = setTimeout(() => {
+        setBleDataLog([...bleDataLogRef.current]);
+        logFlushTimerRef.current = null;
+      }, 500);
+    }
+  }, []);
+
+  const clearBleDataLog = useCallback(() => {
     bleDataLogRef.current = [];
     setBleDataLog([]);
-    lastDataRef.current = '';
-    console.log('🗑️ BLE data log cleared');
-  };
+    if (logFlushTimerRef.current) {
+      clearTimeout(logFlushTimerRef.current);
+      logFlushTimerRef.current = null;
+    }
+  }, []);
 
-  const getBleDataLog = (): BLEDataRecord[] => {
+  const getBleDataLog = useCallback((): BLEDataRecord[] => {
     return bleDataLogRef.current;
-  };
+  }, []);
+
+  // Throttled UI update — called via rAF
+  const flushUiUpdate = useCallback(() => {
+    const pending = pendingUiDataRef.current;
+    if (pending) {
+      setLeftHand(pending.left);
+      setRightHand(pending.right);
+      pendingUiDataRef.current = null;
+    }
+  }, []);
+
+  // Throttled localStorage write
+  const flushLocalStorage = useCallback(() => {
+    const pending = pendingLsDataRef.current;
+    if (pending) {
+      localStorage.setItem('leftHandData', JSON.stringify(pending.left));
+      localStorage.setItem('rightHandData', JSON.stringify(pending.right));
+      pendingLsDataRef.current = null;
+    }
+  }, []);
 
   // BLE Connection Effect
   useEffect(() => {
     bleService.onData((data) => {
-      console.log('📊 Real data received from BLE:', data);
       const parsedLeft = parseHandData(data?.leftHand);
       const parsedRight = parseHandData(data?.rightHand);
       
-      if (parsedLeft && parsedRight) {
-        setIsReceivingRealData(true);
-        updateSimulationData(parsedLeft, parsedRight);
-        addBleDataRecord(parsedLeft, parsedRight, data?.deviceRawTimestamp);
-      } else {
-        console.warn('⚠️ Invalid BLE data format, ignoring:', data);
+      if (!parsedLeft || !parsedRight) return;
+
+      setIsReceivingRealData(true);
+
+      // 1. Always log the record at full rate (no dedup, no throttle)
+      addBleDataRecord(parsedLeft, parsedRight, data?.deviceRawTimestamp, data._arrivalMs, data._arrivalPerfMs);
+
+      // 2. Throttle UI state updates
+      const now = performance.now();
+      pendingUiDataRef.current = { left: parsedLeft, right: parsedRight };
+      if (now - lastUiUpdateRef.current >= UI_UPDATE_INTERVAL_MS) {
+        lastUiUpdateRef.current = now;
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = requestAnimationFrame(flushUiUpdate);
+      }
+
+      // 3. Throttle localStorage writes
+      pendingLsDataRef.current = { left: parsedLeft, right: parsedRight };
+      if (now - lastLsFlushRef.current >= LOCALSTORAGE_FLUSH_MS) {
+        lastLsFlushRef.current = now;
+        flushLocalStorage();
       }
     });
 
     bleService.onStatus((status, message) => {
-      console.log(`📡 BLE Status: ${status} - ${message}`);
       setBleStatus(status);
       setBleMessage(message || '');
     });
 
     bleService.onEmergency((emergency) => {
-      console.log('🚨 Emergency callback received:', emergency);
       setIsEmergency(emergency);
-      if (emergency) {
-        console.warn('🚨 EMERGENCY STATE ACTIVE');
-      } else {
-        console.log('✅ Emergency state cleared');
-      }
     });
 
     // Check de datos reales cada 10 segundos
     const checkInterval = setInterval(() => {
       const receiving = bleService.isReceivingData();
       setIsReceivingRealData(receiving);
-      if (!receiving && bleService.isConnected()) {
-        console.log('⚠️ Connected but not receiving data');
-      }
     }, 10000);
 
     return () => {
       clearInterval(checkInterval);
+      cancelAnimationFrame(rafIdRef.current);
+      if (logFlushTimerRef.current) clearTimeout(logFlushTimerRef.current);
       bleService.disconnect();
+      // Final flush of pending localStorage
+      flushLocalStorage();
     };
-  }, []);
+  }, [addBleDataRecord, flushUiUpdate, flushLocalStorage]);
 
   // Auto mode effect - solo si no hay datos reales y el simulador está habilitado
   useEffect(() => {
