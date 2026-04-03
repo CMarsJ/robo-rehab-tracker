@@ -21,7 +21,7 @@ interface Pipe {
 }
 
 const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, isResting = false }) => {
-  const { flappyPipeGap } = useGameConfig();
+  const { flappyPipeGap, gameHand, flappyMaxAngle, flappyPipeInterval } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
   const { user } = useAuth();
   const [gameStarted, setGameStarted] = useState(false);
@@ -60,22 +60,19 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
     setPipes([firstPipe]);
   }, [gameWidth, gameHeight, flappyPipeGap]);
 
-  // Control del ave basado en suma de ángulos A4 + A5 + A6 de la mano paretica
+  // Control del ave basado en ángulo mcp_finger de la mano seleccionada
   useEffect(() => {
     if (!gameStarted || gameOver || isResting) return;
 
     const updateBirdPosition = () => {
-      // Determinar cuál mano es la paretica (usar la mano izquierda por defecto)
-      const pareticHand = leftHand.active ? leftHand : rightHand;
+      const pareticHand = gameHand === 'left' ? leftHand : rightHand;
       
       if (pareticHand.active) {
-        // Suma de ángulos A4 + A5 + A6 (finger1 + finger2 + finger3)
-        const angleSum = pareticHand.angles.finger1 + pareticHand.angles.finger2 + pareticHand.angles.finger3;
-        
-        // Mapeo: suma=0 → nivel del piso (gameHeight-50), suma>=200 → límite superior (50)
-        const clampedSum = Math.max(0, Math.min(200, angleSum));
-        const normalizedPosition = clampedSum / 200; // [0, 1]
-        const newY = (gameHeight - 50) - (normalizedPosition * (gameHeight - 100)); // Invertir
+        // Usar finger1 (mcp_finger) mapeado a [0, flappyMaxAngle]
+        const angle = pareticHand.angles.finger1;
+        const clampedAngle = Math.max(0, Math.min(flappyMaxAngle, angle));
+        const normalizedPosition = clampedAngle / flappyMaxAngle; // [0, 1]
+        const newY = (gameHeight - 50) - (normalizedPosition * (gameHeight - 100));
         
         setBirdY(Math.max(25, Math.min(gameHeight - 25, newY)));
       }
@@ -83,7 +80,10 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
 
     const interval = setInterval(updateBirdPosition, 50);
     return () => clearInterval(interval);
-  }, [gameStarted, gameOver, gameHeight, leftHand, rightHand, isResting]);
+  }, [gameStarted, gameOver, gameHeight, leftHand, rightHand, isResting, gameHand, flappyMaxAngle]);
+
+  // Pipe speed: 3px per 50ms = 60px/s. Interval in seconds → pixels distance
+  const pipeSpacingPx = flappyPipeInterval * 60;
 
   // Movimiento de tubos
   useEffect(() => {
@@ -98,7 +98,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
         
         // Agregar nuevo tubo si es necesario
         const lastPipe = visiblePipes[visiblePipes.length - 1];
-        if (!lastPipe || lastPipe.x < gameWidth - 300) {
+        if (!lastPipe || lastPipe.x < gameWidth - pipeSpacingPx) {
           const newPipe: Pipe = {
             id: pipeIdRef.current++,
             x: gameWidth,
@@ -116,7 +116,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
 
     const interval = setInterval(movePipes, 50);
     return () => clearInterval(interval);
-  }, [gameStarted, gameOver, gameWidth, gameHeight, flappyPipeGap, isResting]);
+  }, [gameStarted, gameOver, gameWidth, gameHeight, flappyPipeGap, isResting, pipeSpacingPx]);
 
   // Detección de colisiones y puntuación
   useEffect(() => {
@@ -126,7 +126,6 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
       const birdRadius = 20;
       const birdX = 100;
 
-      // Verificar colisión con tubos y puntuación
       setPipes(prev => prev.map(pipe => {
         // Verificar si el ave pasó el tubo
         if (!pipe.passed && pipe.x + 60 < birdX) {
@@ -144,19 +143,17 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
         const pipeRight = pipe.x + 60;
         
         if (birdX + birdRadius > pipeLeft && birdX - birdRadius < pipeRight) {
-          // Verificar colisión con tubo superior o inferior
           if (birdY - birdRadius < pipe.topHeight || birdY + birdRadius > gameHeight - pipe.bottomHeight) {
-            // Si no estaba colisionando con este tubo, restar punto
             if (!collidingPipesRef.current.has(pipe.id)) {
               collidingPipesRef.current.add(pipe.id);
-              setScore(s => Math.max(0, s - 1)); // No bajar de 0
+              setScore(s => Math.max(0, s - 1));
+              // Push pipe past the bird so player can recover
+              return { ...pipe, x: birdX - birdRadius - 61 };
             }
           } else {
-            // Ya no está colisionando con este tubo
             collidingPipesRef.current.delete(pipe.id);
           }
         } else {
-          // Fuera del rango del tubo
           collidingPipesRef.current.delete(pipe.id);
         }
 

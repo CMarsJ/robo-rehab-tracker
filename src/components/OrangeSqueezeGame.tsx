@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useSimulation } from '@/contexts/SimulationContext';
+import { useGameConfig } from '@/contexts/GameConfigContext';
 
 interface OrangeSqueezeGameProps {
   targetGlasses: number;
@@ -24,7 +25,9 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
   const [canSqueeze, setCanSqueeze] = useState(true);
   const [showOrangeMessage, setShowOrangeMessage] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const { rightHand } = useSimulation();
+  const { leftHand, rightHand } = useSimulation();
+  const { gameHand, orangeMaxAngle } = useGameConfig();
+  const activeHand = gameHand === 'left' ? leftHand : rightHand;
 
   // Sonidos simplificados (sin DataService)
   const playSqueezeSound = () => { /* ...igual que antes... */ };
@@ -40,17 +43,18 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
     onStatsUpdate?.({ orangesUsed: orangesSqueezed, juiceUsed: glassesCompleted });
   }, [orangesSqueezed, glassesCompleted, onStatsUpdate]);
 
-  // Lógica de exprimir naranja
+  // Lógica de exprimir naranja usando mano seleccionada y ángulo máximo configurable
   useEffect(() => {
-    const fingerSum = rightHand.angles.finger1 + rightHand.angles.finger2 + rightHand.angles.finger3;
-    const percentage = Math.min((fingerSum / 150) * 100, 100);
+    const fingerSum = activeHand.angles.finger1 + activeHand.angles.finger2 + activeHand.angles.finger3;
+    const maxSum = orangeMaxAngle * 3; // suma máxima basada en el ángulo máximo configurado
+    const percentage = Math.min((fingerSum / maxSum) * 100, 100);
     setSqueezePercentage(percentage);
 
     const currentTime = Date.now();
 
     if (percentage < 30 && !canSqueeze) setCanSqueeze(true);
 
-    if (percentage >= 100 && rightHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
+    if (percentage >= 100 && activeHand.active && canSqueeze && currentTime - lastSqueezeTime > 1000) {
       setLastSqueezeTime(currentTime);
       setCanSqueeze(false);
 
@@ -85,7 +89,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
         }
       }
     }
-  }, [rightHand.angles, rightHand.active, lastSqueezeTime, glassesCompleted, orangesSqueezed, targetGlasses, canSqueeze, startTime, onComplete]);
+  }, [activeHand.angles, activeHand.active, lastSqueezeTime, glassesCompleted, orangesSqueezed, targetGlasses, canSqueeze, startTime, onComplete, orangeMaxAngle]);
 
   const currentOrangesInGlass = orangesSqueezed % 4;
   const progressPercent = (currentOrangesInGlass / 4) * 100;
@@ -135,7 +139,7 @@ const OrangeSqueezeGame: React.FC<OrangeSqueezeGameProps> = ({ targetGlasses, on
           </div>
         </div>
         <div className={`w-32 h-32 rounded-full flex items-center justify-center text-6xl transition-all duration-300 ${
-          rightHand.active ? 'animate-pulse scale-110' : 'scale-100'
+          activeHand.active ? 'animate-pulse scale-110' : 'scale-100'
         } ${!canSqueeze ? 'opacity-50' : 'opacity-100'}`}>
           🍊
         </div>

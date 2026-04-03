@@ -38,7 +38,7 @@ interface Explosion extends Position {
 }
 
 const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComplete, isResting = false }) => {
-  const { enemySpeed, shotSpeed, baseEnemyCount } = useGameConfig();
+  const { enemySpeed, shotSpeed, baseEnemyCount, gameHand, neuroLinkMaxAngle } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
   const { user } = useAuth();
 
@@ -67,6 +67,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComple
   const enemyIdRef = useRef(0);
   const explosionIdRef = useRef(0);
   const waveTransitionInProgress = useRef(false);
+  const waveTransitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const enemyImages = [enemigo1, enemigo2, enemigo3, enemigo4];
 
@@ -142,10 +143,24 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComple
     setEnemyMoveDown(false);
     setGameOver(false);
     setGameLost(false);
+    waveTransitionInProgress.current = false;
+    if (waveTransitionTimeout.current) {
+      clearTimeout(waveTransitionTimeout.current);
+      waveTransitionTimeout.current = null;
+    }
     setEnemies(createEnemies(1));
     setGameStarted(true);
     setGameStartTime(new Date());
   }, [createEnemies]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (waveTransitionTimeout.current) {
+        clearTimeout(waveTransitionTimeout.current);
+      }
+    };
+  }, []);
 
   // Disparo
   useEffect(() => {
@@ -162,21 +177,21 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComple
     return () => clearInterval(interval);
   }, [gameStarted, gameOver, playerPosition, gameHeight, shootInterval, isResting]);
 
-  // Movimiento jugador
+  // Movimiento jugador basado en mcp_finger de la mano seleccionada
   useEffect(() => {
     if (!gameStarted || isResting) return;
     const interval = setInterval(() => {
-      const pareticHand = leftHand.active ? leftHand : rightHand;
+      const pareticHand = gameHand === 'left' ? leftHand : rightHand;
       if (pareticHand.active) {
-        const sum = pareticHand.angles.finger1 + pareticHand.angles.finger2 + pareticHand.angles.finger3;
-        const clamped = Math.max(0, Math.min(200, sum));
-        const normalized = clamped / 200;
+        const angle = pareticHand.angles.finger1;
+        const clamped = Math.max(0, Math.min(neuroLinkMaxAngle, angle));
+        const normalized = clamped / neuroLinkMaxAngle;
         const newX = (gameWidth - 50) - (normalized * (gameWidth - 100));
         setPlayerPosition(Math.max(50, Math.min(gameWidth - 50, newX)));
       }
     }, 100);
     return () => clearInterval(interval);
-  }, [gameStarted, leftHand, rightHand, gameWidth, isResting]);
+  }, [gameStarted, leftHand, rightHand, gameWidth, isResting, gameHand, neuroLinkMaxAngle]);
 
   // Movimiento enemigos
   useEffect(() => {
@@ -312,7 +327,7 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComple
       const remainingEnemies = active.length;
       const possiblePoints = remainingEnemies * 0.001;
       const penalty = Math.floor(possiblePoints / 2);
-      setScore(prev =>  Math.max(0,prev - penalty));
+      setScore(prev => Math.max(0, prev - penalty));
       setGameLost(true);
 
       setTimeout(() => {
@@ -326,7 +341,10 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComple
       if (waveTransitionInProgress.current) return;
       waveTransitionInProgress.current = true;
 
-      const timeout = setTimeout(() => {
+      // Use ref-based timeout so effect cleanup doesn't cancel it
+      if (waveTransitionTimeout.current) clearTimeout(waveTransitionTimeout.current);
+      waveTransitionTimeout.current = setTimeout(() => {
+        waveTransitionTimeout.current = null;
         onRoundComplete?.();
 
         if (wave < 3) {
@@ -343,8 +361,6 @@ const NeuroLinkGame: React.FC<NeuroLinkGameProps> = ({ onComplete, onRoundComple
 
         waveTransitionInProgress.current = false;
       }, 1000);
-
-      return () => clearTimeout(timeout);
     }
   }, [enemies, wave, extraWaves, gameStarted, gameOver, gameHeight, createEnemies, isResting, onRoundComplete]);
 

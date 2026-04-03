@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from '@/contexts/AppContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useGameConfig } from '@/contexts/GameConfigContext';
@@ -17,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 const Configuration = () => {
   const t = useTranslation();
   const { isAuthenticated, authenticate, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
-  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed, baseEnemyCount, setBaseEnemyCount, restRepetitions, setRestRepetitions, restLevels, setRestLevels, restDuration, setRestDuration } = useGameConfig();
+  const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed, baseEnemyCount, setBaseEnemyCount, restRepetitions, setRestRepetitions, restLevels, setRestLevels, restDuration, setRestDuration, gameHand, setGameHand, orangeMaxAngle, setOrangeMaxAngle, flappyMaxAngle, setFlappyMaxAngle, neuroLinkMaxAngle, setNeuroLinkMaxAngle, flappyPipeInterval, setFlappyPipeInterval } = useGameConfig();
   const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
   const [localPatientName, setLocalPatientName] = useState(patientName);
   const [localTherapistName, setLocalTherapistName] = useState(therapistName);
@@ -27,6 +28,10 @@ const Configuration = () => {
   const [localRestRepetitions, setLocalRestRepetitions] = useState(restRepetitions);
   const [localRestLevels, setLocalRestLevels] = useState(restLevels);
   const [localRestDuration, setLocalRestDuration] = useState(restDuration);
+  const [localOrangeMaxAngle, setLocalOrangeMaxAngle] = useState(orangeMaxAngle);
+  const [localFlappyMaxAngle, setLocalFlappyMaxAngle] = useState(flappyMaxAngle);
+  const [localNeuroLinkMaxAngle, setLocalNeuroLinkMaxAngle] = useState(neuroLinkMaxAngle);
+  const [localFlappyPipeInterval, setLocalFlappyPipeInterval] = useState(flappyPipeInterval);
   const [authError, setAuthError] = useState<string>('');
   const { user } = useAuth();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -365,6 +370,30 @@ const Configuration = () => {
         </CardContent>
       </Card>
 
+      {/* Selección de Mano para Juegos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">🤚 Selección de Mano</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Mano a utilizar en los juegos (mcp_finger)</Label>
+            <Select value={gameHand} onValueChange={(val) => setGameHand(val as 'left' | 'right')}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="right">🦾 Mano Derecha</SelectItem>
+                <SelectItem value="left">✋ Mano Izquierda</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Esta mano se usará como entrada en todos los modos de juego (Orange Squeeze, Flappy Bird, NeuroLink)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Configuración de Juegos */}
       <Card>
         <CardHeader>
@@ -408,8 +437,26 @@ const Configuration = () => {
                 <li>• Se debe bajar a menos de 80% para poder exprimir otra naranja</li>
               </ul>
             </div>
-            <Button onClick={handleSaveGameConfig}>
-              Guardar Configuración de Juegos
+            <div className="space-y-2">
+              <Label>Ángulo máximo mcp_finger: {localOrangeMaxAngle}°</Label>
+              <Slider
+                min={30}
+                max={180}
+                step={5}
+                value={[localOrangeMaxAngle]}
+                onValueChange={(v) => setLocalOrangeMaxAngle(v[0])}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Ángulo máximo de flexión considerado para el 100% de fuerza (30°-180°)
+              </p>
+            </div>
+            <Button onClick={() => {
+              handleSaveGameConfig();
+              setOrangeMaxAngle(localOrangeMaxAngle);
+              localStorage.setItem('orangeMaxAngle', localOrangeMaxAngle.toString());
+            }}>
+              Guardar Configuración de Naranjas
             </Button>
           </div>
 
@@ -466,12 +513,80 @@ const Configuration = () => {
                 </div>
               </div>
               
-                <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
-                <strong>Instrucciones:</strong> Tu mano se mueve automáticamente en 3 ángulos. Los disparos son automáticos. ¡Completa 3 oleadas principales y sigue con rondas extra infinitas!
+              <div className="space-y-2">
+                <Label>Ángulo máximo mcp_finger: {localNeuroLinkMaxAngle}°</Label>
+                <Slider
+                  min={30}
+                  max={180}
+                  step={5}
+                  value={[localNeuroLinkMaxAngle]}
+                  onValueChange={(v) => setLocalNeuroLinkMaxAngle(v[0])}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Ángulo máximo del dedo para el rango completo de movimiento del jugador (30°-180°)
+                </div>
+              </div>
+
+              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                <strong>Instrucciones:</strong> Tu mano se mueve automáticamente según el ángulo mcp_finger. Los disparos son automáticos. ¡Completa 3 oleadas principales y sigue con rondas extra infinitas!
               </div>
             </div>
-            <Button onClick={handleSaveNeuroLinkConfig}>
+            <Button onClick={() => {
+              handleSaveNeuroLinkConfig();
+              setNeuroLinkMaxAngle(localNeuroLinkMaxAngle);
+              localStorage.setItem('neuroLinkMaxAngle', localNeuroLinkMaxAngle.toString());
+            }}>
               Guardar Configuración NeuroLink
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">🐦 Flappy Bird</h3>
+            <div className="space-y-2">
+              <Label>Ángulo máximo mcp_finger: {localFlappyMaxAngle}°</Label>
+              <Slider
+                min={30}
+                max={180}
+                step={5}
+                value={[localFlappyMaxAngle]}
+                onValueChange={(v) => setLocalFlappyMaxAngle(v[0])}
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground">
+                Ángulo máximo del dedo para el rango completo de altura del ave (30°-180°)
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Distancia entre obstáculos: {localFlappyPipeInterval}s</Label>
+              <Slider
+                min={2}
+                max={15}
+                step={1}
+                value={[localFlappyPipeInterval]}
+                onValueChange={(v) => setLocalFlappyPipeInterval(v[0])}
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground">
+                Tiempo en segundos entre cada obstáculo (2s-15s)
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <strong>Instrucciones:</strong> Controla la altura del ave con el ángulo mcp_finger de tu mano. Evita los tubos para sumar puntos. Si chocas, pierdes un punto y el tubo se aleja para que puedas recuperarte.
+            </div>
+            <Button onClick={() => {
+              setFlappyMaxAngle(localFlappyMaxAngle);
+              setFlappyPipeInterval(localFlappyPipeInterval);
+              localStorage.setItem('flappyMaxAngle', localFlappyMaxAngle.toString());
+              localStorage.setItem('flappyPipeInterval', localFlappyPipeInterval.toString());
+              toast({
+                title: '✅ Configuración guardada',
+                description: 'La configuración de Flappy Bird se guardó correctamente',
+              });
+            }}>
+              Guardar Configuración Flappy Bird
             </Button>
           </div>
         </CardContent>
