@@ -49,6 +49,8 @@ export interface BLEMessage {
   rightHand: BLEHandData;
   timestamp: string;
   correctedTime?: number; // Jitter-corrected wall-clock time
+  correctedTimePerfMs?: number;
+  correctedTimeEpochMs?: number;
   deviceRawTimestamp?: string | number;
 }
 
@@ -56,8 +58,13 @@ export type BLEStatus = 'connected' | 'disconnected' | 'error';
 
 // Queued packet from Stage A (intake)
 interface QueuedPacket {
-  deviceTime: number;
   webTime: number; // performance.now()
+  rawValue: ArrayBuffer;
+  sequence: number;
+}
+
+interface ParsedPacket extends QueuedPacket {
+  deviceTime: number;
   rawData: BLERawData;
 }
 
@@ -134,7 +141,9 @@ export class BLEService {
   private drainIntervalId: ReturnType<typeof setInterval> | null = null;
   private lastDeviceTime: number = 0;
   private lastWebTime: number = 0;
+  private nextPacketSequence = 0;
   private clockSync = new ClockSync();
+  private readonly textDecoder = new TextDecoder();
 
   // --- Reconnection state ---
   private isReconnecting = false;
@@ -144,6 +153,19 @@ export class BLEService {
   private onStatusCallback?: (status: BLEStatus, message?: string) => void;
   private onEmergencyCallback?: (isEmergency: boolean) => void;
   private onPacketLossCallback?: (detail: PacketLossDetail) => void;
+  private readonly handleGattServerDisconnected = () => {
+    console.log('🔌 Dispositivo BLE desconectado');
+    this.handleDisconnection();
+    if (!this.manualDisconnect && this.device) {
+      void this.attemptReconnection();
+    }
+  };
+  private readonly handleDataCharacteristicChanged = (event: Event) => {
+    this.handleDataIntake(event);
+  };
+  private readonly handleEmergencyCharacteristicChanged = (event: Event) => {
+    this.handleEmergencyNotification(event);
+  };
 
   constructor() {
     console.log('🔵 BLE Service initialized (queued pipeline v2)');
@@ -178,6 +200,97 @@ export class BLEService {
     return this.clockSync.getCorrectedTime(deviceTime);
   }
 
+  private resetPipelineState(): void {
+    this.packetQueue = [];
+    this.lastDeviceTime = 0;
+    this.lastWebTime = 0;
+    this.nextPacketSequence = 0;
+    this.clockSync.reset();
+  }
+
+  private cleanupCharacteristicSubscriptions(): void {
+    if (this.dataCharacteristic) {
+      this.dataCharacteristic.removeEventListener('characteristicvaluechanged', this.handleDataCharacteristicChanged);
+      if (typeof this.dataCharacteristic.stopNotifications === 'function') {
+        void this.dataCharacteristic.stopNotifications().catch(() => undefined);
+      }
+    }
+
+    if (this.emergencyCharacteristic) {
+      this.emergencyCharacteristic.removeEventListener('characteristicvaluechanged', this.handleEmergencyCharacteristicChanged);
+      if (typeof this.emergencyCharacteristic.stopNotifications === 'function') {
+        void this.emergencyCharacteristic.stopNotifications().catch(() => undefined);
+      }
+    }
+  }
+
+  private parseRawData(rawValue: ArrayBuffer): BLERawData | null {
+    const bytes = new Uint8Array(rawValue);
+    const payloadAttempts: Uint8Array[] = [bytes];
+
+    if (bytes.byteLength > 4) {
+      payloadAttempts.push(bytes.subarray(4));
+    }
+
+    for (const payload of payloadAttempts) {
+      const text = this.textDecoder.decode(payload).replace(/\0+$/g, '').trim();
+      if (!text) continue;
+
+      try {
+        const parsed = JSON.parse(text) as BLERawData;
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch {
+        // Intentar siguiente variante del payload sin bloquear el intake
+      }
+    }
+
+    return null;
+  }
+
+  private extractBinaryDeviceTime(rawValue: ArrayBuffer): number {
+    const bytes = new Uint8Array(rawValue);
+    if (bytes.byteLength < 4) return 0;
+
+    let firstSignificantByte = -1;
+    for (const byte of bytes) {
+      if (byte === 0 || byte === 9 || byte === 10 || byte === 13 || byte === 32) continue;
+      firstSignificantByte = byte;
+      break;
+    }
+
+    const looksLikeJson = firstSignificantByte === 123 || firstSignificantByte === 91 || firstSignificantByte === 34;
+    if (looksLikeJson || firstSignificantByte === -1) {
+      return 0;
+    }
+
+    return new DataView(rawValue).getUint32(0, true);
+  }
+
+  private parseQueuedPacket(packet: QueuedPacket): ParsedPacket | null {
+    const rawData = this.parseRawData(packet.rawValue);
+    if (!rawData) {
+      console.warn('⚠️ Paquete BLE descartado: payload no válido');
+      return null;
+    }
+
+    let deviceTime = 0;
+    if (typeof rawData.deviceTime === 'number' && Number.isFinite(rawData.deviceTime)) {
+      deviceTime = rawData.deviceTime;
+    } else if (typeof rawData.timestamp === 'number' && Number.isFinite(rawData.timestamp)) {
+      deviceTime = rawData.timestamp;
+    } else {
+      deviceTime = this.extractBinaryDeviceTime(packet.rawValue);
+    }
+
+    return {
+      ...packet,
+      deviceTime,
+      rawData,
+    };
+  }
+
   // Solicita conexión BLE al usuario
   async connect(): Promise<void> {
     if (!BLEService.isSupported()) {
@@ -199,14 +312,8 @@ export class BLEService {
       console.log('📱 Dispositivo seleccionado:', this.device.name);
 
       // Manejar desconexión automática con reconexión
-      this.device.addEventListener('gattserverdisconnected', () => {
-        console.log('🔌 Dispositivo BLE desconectado');
-        this.handleDisconnection();
-        // Auto-reconnect if not manually disconnected
-        if (!this.manualDisconnect && this.device) {
-          this.attemptReconnection();
-        }
-      });
+      this.device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+      this.device.addEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
 
       // Conectar al GATT Server
       await this.connectGatt();
@@ -226,7 +333,9 @@ export class BLEService {
   /** Connect to GATT, request high priority, setup chars & pipeline */
   private async connectGatt(): Promise<void> {
     console.log('🔄 Conectando al GATT Server...');
-    this.server = await this.device.gatt.connect();
+    this.server = this.device?.gatt?.connected
+      ? this.device.gatt
+      : await this.device.gatt.connect();
     console.log('✅ Conectado al GATT Server');
 
     // Request high connection priority if supported
@@ -246,10 +355,8 @@ export class BLEService {
     console.log('📡 Servicio BLE obtenido');
 
     // Reset pipeline state on (re)connect
-    this.packetQueue = [];
-    this.lastDeviceTime = 0;
-    this.lastWebTime = 0;
-    this.clockSync.reset();
+    this.cleanupCharacteristicSubscriptions();
+    this.resetPipelineState();
 
     // Obtener las características
     await this.setupCharacteristics(service);
@@ -302,9 +409,7 @@ export class BLEService {
     try {
       this.dataCharacteristic = await service.getCharacteristic(BLE_DATA_CHAR_UUID);
       await this.dataCharacteristic.startNotifications();
-      this.dataCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
-        this.handleDataIntake(event);
-      });
+      this.dataCharacteristic.addEventListener('characteristicvaluechanged', this.handleDataCharacteristicChanged);
       console.log('📊 Suscrito a notificaciones de DATA (queued pipeline)');
     } catch (e) {
       console.error('❌ Error configurando DATA characteristic:', e);
@@ -322,9 +427,7 @@ export class BLEService {
     try {
       this.emergencyCharacteristic = await service.getCharacteristic(BLE_EMERGENCY_CHAR_UUID);
       await this.emergencyCharacteristic.startNotifications();
-      this.emergencyCharacteristic.addEventListener('characteristicvaluechanged', (event: any) => {
-        this.handleEmergencyNotification(event);
-      });
+      this.emergencyCharacteristic.addEventListener('characteristicvaluechanged', this.handleEmergencyCharacteristicChanged);
       const value = await this.emergencyCharacteristic.readValue();
       const emergencyText = new TextDecoder().decode(value);
       this.emergencyState = emergencyText === '1';
@@ -340,24 +443,12 @@ export class BLEService {
     const value = event.target?.value;
     if (!value) return;
 
-    const webTime = performance.now();
-
-    try {
-      const text = new TextDecoder().decode(value);
-      const rawData: BLERawData = JSON.parse(text);
-
-      // Extract deviceTime: prefer explicit field, fallback to timestamp, then 0
-      let deviceTime = 0;
-      if (typeof rawData.deviceTime === 'number') {
-        deviceTime = rawData.deviceTime;
-      } else if (typeof rawData.timestamp === 'number') {
-        deviceTime = rawData.timestamp;
-      }
-
-      this.packetQueue.push({ deviceTime, webTime, rawData });
-    } catch (error) {
-      console.error('❌ Error parsing BLE packet in intake:', error);
-    }
+    const rawValue = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+    this.packetQueue.push({
+      webTime: performance.now(),
+      rawValue,
+      sequence: this.nextPacketSequence++,
+    });
   }
 
   // ========== Stage B: Drain loop — sort, detect gaps, process ==========
@@ -379,10 +470,24 @@ export class BLEService {
     if (this.packetQueue.length === 0) return;
 
     // Take all queued packets and clear the queue
-    const batch = this.packetQueue.splice(0);
+    const batch = this.packetQueue
+      .splice(0)
+      .map((packet) => this.parseQueuedPacket(packet))
+      .filter((packet): packet is ParsedPacket => packet !== null);
+
+    if (batch.length === 0) return;
 
     // Sort by deviceTime ascending for ordering guarantee
-    batch.sort((a, b) => a.deviceTime - b.deviceTime);
+    batch.sort((a, b) => {
+      if (a.deviceTime > 0 && b.deviceTime > 0) {
+        return a.deviceTime - b.deviceTime || a.sequence - b.sequence;
+      }
+
+      if (a.deviceTime > 0) return -1;
+      if (b.deviceTime > 0) return 1;
+
+      return a.sequence - b.sequence;
+    });
 
     for (const packet of batch) {
       // Feed clock sync
@@ -421,22 +526,27 @@ export class BLEService {
     }
   }
 
-  private processPacket(packet: QueuedPacket): void {
+  private processPacket(packet: ParsedPacket): void {
     const { rawData } = packet;
 
     const processedLeft = this.calculateAngles(rawData.leftHand);
     const processedRight = this.calculateAngles(rawData.rightHand);
 
-    const correctedTime = packet.deviceTime > 0
+    const correctedTimePerfMs = packet.deviceTime > 0
       ? this.clockSync.getCorrectedTime(packet.deviceTime)
+      : undefined;
+    const correctedTimeEpochMs = typeof correctedTimePerfMs === 'number'
+      ? performance.timeOrigin + correctedTimePerfMs
       : undefined;
 
     const processedData: BLEMessage = {
       leftHand: processedLeft,
       rightHand: processedRight,
-      timestamp: new Date().toISOString(),
-      correctedTime,
-      deviceRawTimestamp: rawData.deviceTime ?? rawData.timestamp ?? undefined,
+      timestamp: new Date(correctedTimeEpochMs ?? Date.now()).toISOString(),
+      correctedTime: correctedTimePerfMs,
+      correctedTimePerfMs,
+      correctedTimeEpochMs,
+      deviceRawTimestamp: packet.deviceTime || rawData.deviceTime ?? rawData.timestamp ?? undefined,
     };
 
     this.onDataCallback?.(processedData);
@@ -454,6 +564,8 @@ export class BLEService {
 
   private handleDisconnection(): void {
     this.stopDrainLoop();
+    this.cleanupCharacteristicSubscriptions();
+    this.resetPipelineState();
     this.dataCharacteristic = null;
     this.controlCharacteristic = null;
     this.emergencyCharacteristic = null;
@@ -510,20 +622,19 @@ export class BLEService {
   disconnect(): void {
     this.manualDisconnect = true;
     this.stopDrainLoop();
+    this.cleanupCharacteristicSubscriptions();
     if (this.device?.gatt?.connected) {
       console.log('🔌 Desconectando BLE...');
       this.device.gatt.disconnect();
     }
+    this.device?.removeEventListener?.('gattserverdisconnected', this.handleGattServerDisconnected);
     this.device = null;
     this.server = null;
     this.dataCharacteristic = null;
     this.controlCharacteristic = null;
     this.emergencyCharacteristic = null;
     this.lastDataTimestamp = 0;
-    this.lastDeviceTime = 0;
-    this.lastWebTime = 0;
-    this.packetQueue = [];
-    this.clockSync.reset();
+    this.resetPipelineState();
     this.emergencyState = false;
     this.onStatusCallback?.('disconnected', 'Desconectado manualmente');
   }
