@@ -121,7 +121,7 @@ const AppSidebar = () => {
       </SidebarContent>
 
       {/* Mini perfil + Logout (reemplaza al toggle de modo) */}
-      <SidebarFooter className="p-4 border-t border-border flex flex-col items-center justify-center gap-2">
+      <SidebarFooter className="flex-col gap-2 p-4 border-t border-border flex items-center justify-center">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={avatarUrl} alt={patientName} />
