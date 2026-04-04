@@ -136,7 +136,7 @@ const AppSidebar = () => {
         </Button>
         
         {/* Logos institucionales */}
-        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center justify-items-center items-center gap-3">
+        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center justify-items-center items-center gap-3 gap-x-1">
           <a 
             href="https://uis.edu.co/es/" 
             target="_blank" 
