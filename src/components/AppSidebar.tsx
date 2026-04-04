@@ -136,19 +136,7 @@ const AppSidebar = () => {
         </Button>
         
         {/* Logos institucionales */}
-        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center justify-items-center items-center gap-3 gap-x-1">
-          <a 
-            href="https://uis.edu.co/es/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:scale-105 transition-transform"
-          >
-            <img 
-              src="/logoUIS.png" 
-              alt="UIS Logo" 
-              className="h-8 w-auto"
-            />
-          </a>
+        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center justify-items-center items-center gap-y-3 gap-x-1">
           <a 
             href="https://e3t.uis.edu.co/eisi/" 
             target="_blank" 
@@ -170,6 +158,18 @@ const AppSidebar = () => {
             <img 
               src="/LogoCEMOS.png" 
               alt="CEMOS Logo" 
+              className="h-8 w-auto"
+            />
+          </a>
+          <a 
+            href="https://uis.edu.co/es/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:scale-105 transition-transform"
+          >
+            <img 
+              src="/logoUIS.png" 
+              alt="UIS Logo" 
               className="h-8 w-auto"
             />
           </a>
