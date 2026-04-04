@@ -27,9 +27,9 @@ const SectionHeader: React.FC<{ icon: React.ReactNode; number: string; title: st
 );
 
 const MetricRow: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
-  <div className="flex justify-between py-1.5">
+  <div className="flex justify-between items-center py-2 px-1">
     <span className="text-sm text-muted-foreground">{label}</span>
-    <span className="text-sm font-semibold">{value}</span>
+    <span className="text-sm font-semibold text-foreground text-right ml-4">{value}</span>
   </div>
 );
 
@@ -47,39 +47,43 @@ const MiniCalendar: React.FC<{ dailyAdherence: RehabReportData['dailyAdherence']
   }
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground">Adherencia diaria</p>
-      <div className="space-y-1">
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-muted-foreground">Adherencia diaria</p>
+      <div className="space-y-2 w-full">
         {weeks.map((week, wi) => (
-          <div key={wi} className="flex gap-1 flex-wrap">
+          <div key={wi} className="grid grid-cols-7 gap-2 w-full">
             {week.map((day, di) => (
               <div
                 key={di}
-                className="flex flex-col items-center"
+                className="flex flex-col items-center p-1.5 rounded-lg border border-border/50"
                 title={`${day.dateLabel} - ${day.completed ? 'Completado' : 'No realizado'}`}
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all ${
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${
                     day.completed
-                      ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                      ? 'bg-accent/20 text-accent'
                       : 'bg-destructive/10 text-destructive'
                   }`}
                 >
                   {day.completed ? (
-                    <CheckCircle className="w-3.5 h-3.5" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </div>
-                <span className="text-[10px] text-muted-foreground">{day.dateLabel}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground mt-1">{day.dateLabel}</span>
               </div>
+            ))}
+            {/* Fill remaining cells if last week is incomplete */}
+            {week.length < 7 && Array.from({ length: 7 - week.length }, (_, i) => (
+              <div key={`empty-${i}`} className="flex flex-col items-center p-1.5" />
             ))}
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-4 text-[10px] text-muted-foreground mt-1">
-        <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-500" /> Realizado</span>
-        <span className="flex items-center gap-1"><X className="w-3 h-3 text-destructive" /> No realizado</span>
+      <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+        <span className="flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-accent" /> Realizado</span>
+        <span className="flex items-center gap-1"><X className="w-3.5 h-3.5 text-destructive" /> No realizado</span>
       </div>
     </div>
   );

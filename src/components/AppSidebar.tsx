@@ -136,7 +136,7 @@ const AppSidebar = () => {
         </Button>
         
         {/* Logos institucionales */}
-        <div className="mt-4 pt-3 border-t border-border/50 flex justify-center items-center gap-3">
+        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center items-center gap-3">
           <a 
             href="https://uis.edu.co/es/" 
             target="_blank" 
@@ -161,6 +161,30 @@ const AppSidebar = () => {
               className="h-8 w-auto"
             />
           </a>
+          <a 
+            href="https://uis.edu.co/ffm-gruinv-cemos-es/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:scale-105 transition-transform"
+          >
+            <img 
+              src="/LogoCEMOS.png" 
+              alt="CEMOS Logo" 
+              className="h-8 w-auto"
+            />
+          </a>
+          <a 
+            href="https://www.linkedin.com/company/cemos-acuapon%C3%ADa-uis/about/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:scale-105 transition-transform"
+          >
+            <img 
+              src="/LogoCemosacuaponia.jpg" 
+              alt="SEMILLEROCEMOS Logo" 
+              className="h-8 w-auto"
+            />
+          </a>
         </div>
       </SidebarFooter>
     </Sidebar>
@@ -168,4 +192,3 @@ const AppSidebar = () => {
 };
 
 export default AppSidebar;
-

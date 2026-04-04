@@ -150,7 +150,20 @@ export const translations = {
     dateTo: 'Hasta',
     selectDate: 'Seleccionar fecha',
     applyFilters: 'Aplicar filtros',
-    clearFilters: 'Limpiar filtros'
+    clearFilters: 'Limpiar filtros',
+    // Main page
+    greeting: '¡Hola,',
+    greetingJoy: 'Qué alegría verte hoy.',
+    dailyGoalText: 'Tu meta de hoy:',
+    minutesToKeepProgress: 'minutos para mantener tu progreso.',
+    therapyHub: 'Centro de Terapia',
+    therapyHubHint: 'Coloca el guante y el exoesqueleto antes de empezar.',
+    startSessionBtn: 'COMENZAR SESIÓN',
+    suggestedDuration: 'Duración sugerida',
+    paused: 'Pausado',
+    yourAchievements: 'Tus Avances y Logros',
+    realTimeVisualization: 'Visualización en Tiempo Real del Sistema',
+    recommended: '(recomendado)'
   },
   en: {
     dashboard: 'Bilateral Therapy',
@@ -278,7 +291,20 @@ export const translations = {
     dateTo: 'To',
     selectDate: 'Select date',
     applyFilters: 'Apply filters',
-    clearFilters: 'Clear filters'
+    clearFilters: 'Clear filters',
+    // Main page
+    greeting: 'Hello,',
+    greetingJoy: 'Great to see you today.',
+    dailyGoalText: 'Your goal today:',
+    minutesToKeepProgress: 'minutes to keep your progress.',
+    therapyHub: 'Therapy Hub',
+    therapyHubHint: 'Put on the glove and exoskeleton before starting.',
+    startSessionBtn: 'START SESSION',
+    suggestedDuration: 'Suggested duration',
+    paused: 'Paused',
+    yourAchievements: 'Your Achievements',
+    realTimeVisualization: 'Real-Time System Visualization',
+    recommended: '(recommended)'
   },
   pt: {
     dashboard: 'Terapia Bilateral',
@@ -406,7 +432,20 @@ export const translations = {
     dateTo: 'Até',
     selectDate: 'Selecionar data',
     applyFilters: 'Aplicar filtros',
-    clearFilters: 'Limpar filtros'
+    clearFilters: 'Limpar filtros',
+    // Main page
+    greeting: 'Olá,',
+    greetingJoy: 'Que alegria ver você hoje.',
+    dailyGoalText: 'Sua meta de hoje:',
+    minutesToKeepProgress: 'minutos para manter seu progresso.',
+    therapyHub: 'Centro de Terapia',
+    therapyHubHint: 'Coloque a luva e o exoesqueleto antes de começar.',
+    startSessionBtn: 'INICIAR SESSÃO',
+    suggestedDuration: 'Duração sugerida',
+    paused: 'Pausado',
+    yourAchievements: 'Seus Avanços e Conquistas',
+    realTimeVisualization: 'Visualização em Tempo Real do Sistema',
+    recommended: '(recomendado)'
   },
   ru: {
     dashboard: 'Двусторонняя терапия',
@@ -534,7 +573,20 @@ export const translations = {
     dateTo: 'До',
     selectDate: 'Выбрать дату',
     applyFilters: 'Применить фильтры',
-    clearFilters: 'Сбросить фильтры'
+    clearFilters: 'Сбросить фильтры',
+    // Main page
+    greeting: 'Привет,',
+    greetingJoy: 'Рады видеть вас сегодня.',
+    dailyGoalText: 'Ваша цель на сегодня:',
+    minutesToKeepProgress: 'минут для поддержания прогресса.',
+    therapyHub: 'Центр Терапии',
+    therapyHubHint: 'Наденьте перчатку и экзоскелет перед началом.',
+    startSessionBtn: 'НАЧАТЬ СЕССИЮ',
+    suggestedDuration: 'Рекомендуемая продолжительность',
+    paused: 'Пауза',
+    yourAchievements: 'Ваши Достижения',
+    realTimeVisualization: 'Визуализация системы в реальном времени',
+    recommended: '(рекомендовано)'
   }
 };
 

@@ -17,11 +17,12 @@ import { useToast } from '@/hooks/use-toast';
 
 const Configuration = () => {
   const t = useTranslation();
-  const { isAuthenticated, authenticate, patientName, therapistName, setPatientName, setTherapistName } = useConfig();
+  const { isAuthenticated, authenticate, patientName, therapistName, dailyGoal, setPatientName, setTherapistName, setDailyGoal } = useConfig();
   const { orangeJuiceGoal, setOrangeJuiceGoal, enemySpeed, shotSpeed, setEnemySpeed, setShotSpeed, baseEnemyCount, setBaseEnemyCount, restRepetitions, setRestRepetitions, restLevels, setRestLevels, restDuration, setRestDuration, gameHand, setGameHand, orangeMaxAngle, setOrangeMaxAngle, flappyMaxAngle, setFlappyMaxAngle, neuroLinkMaxAngle, setNeuroLinkMaxAngle, flappyPipeInterval, setFlappyPipeInterval } = useGameConfig();
   const [localOrangeGoal, setLocalOrangeGoal] = useState(orangeJuiceGoal.toString());
   const [localPatientName, setLocalPatientName] = useState(patientName);
   const [localTherapistName, setLocalTherapistName] = useState(therapistName);
+  const [localDailyGoal, setLocalDailyGoal] = useState(dailyGoal);
   const [localEnemySpeed, setLocalEnemySpeed] = useState(enemySpeed);
   const [localShotSpeed, setLocalShotSpeed] = useState(shotSpeed);
   const [localBaseEnemyCount, setLocalBaseEnemyCount] = useState(baseEnemyCount);
@@ -364,7 +365,27 @@ const Configuration = () => {
               placeholder="Nombre del terapeuta"
             />
           </div>
-          <Button onClick={handleSaveProfile}>
+          <Separator />
+          <div className="space-y-4">
+            <Label>🎯 Meta Diaria de Terapia (minutos)</Label>
+            <Slider
+              value={[localDailyGoal]}
+              onValueChange={([v]) => setLocalDailyGoal(v)}
+              min={5}
+              max={60}
+              step={5}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>5 min</span>
+              <span className="font-semibold text-primary">{localDailyGoal} min</span>
+              <span>60 min</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Este valor se muestra como meta diaria en la pantalla principal del paciente
+            </p>
+          </div>
+          <Button onClick={() => { handleSaveProfile(); setDailyGoal(localDailyGoal); }}>
             Guardar Perfil
           </Button>
         </CardContent>

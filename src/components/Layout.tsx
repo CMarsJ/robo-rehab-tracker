@@ -29,6 +29,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <SidebarTrigger />
               </div>
               <div className="flex items-center gap-2">
+                <BLEStatusButton />
                 <Button
                   variant="ghost"
                   size="sm"
@@ -41,9 +42,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Moon className="h-4 w-4" />
                   )}
                 </Button>
-                <NotificationDropdown />
                 <LanguageSelector />
-                <BLEStatusButton />
+                <NotificationDropdown />
               </div>
             </div>
           </header>
