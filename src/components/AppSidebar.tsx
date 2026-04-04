@@ -136,7 +136,7 @@ const AppSidebar = () => {
         </Button>
         
         {/* Logos institucionales */}
-        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center justify-items-center items-center gap-y-3 gap-x-1">
+        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 grid-rows-2 justify-center justify-items-center items-center gap-y-1 gap-x-2">
           <a 
             href="https://e3t.uis.edu.co/eisi/" 
             target="_blank" 
