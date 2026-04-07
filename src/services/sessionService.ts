@@ -158,8 +158,42 @@ export class SessionService {
     }
   }
 
+  /**
+   * Downsample an array keeping every Nth element plus first/last.
+   * Keeps the array under maxSize to avoid payload-too-large errors.
+   */
+  private static downsampleArray<T>(arr: T[], maxSize: number): T[] {
+    if (!Array.isArray(arr) || arr.length <= maxSize) return arr;
+    const step = Math.ceil(arr.length / maxSize);
+    const result: T[] = [];
+    for (let i = 0; i < arr.length; i += step) {
+      result.push(arr[i]);
+    }
+    // Always include last element
+    if (result[result.length - 1] !== arr[arr.length - 1]) {
+      result.push(arr[arr.length - 1]);
+    }
+    return result;
+  }
+
+  /**
+   * Max BLE records to store per session.
+   * 5 000 records ≈ 500 KB JSON – safely under Supabase's 2 MB row limit.
+   */
+  private static readonly MAX_EXTRA_DATE_RECORDS = 5000;
+
   static async updateSessionWithTherapyData(sessionId: string, therapyData: any): Promise<boolean> {
     try {
+      // Down-sample extra_date if it exceeds the safe limit
+      let extraDate = therapyData.extra_date || [];
+      const originalLength = Array.isArray(extraDate) ? extraDate.length : 0;
+      if (Array.isArray(extraDate) && extraDate.length > this.MAX_EXTRA_DATE_RECORDS) {
+        extraDate = this.downsampleArray(extraDate, this.MAX_EXTRA_DATE_RECORDS);
+        console.warn(
+          `⚠️ extra_date downsampled: ${originalLength} → ${extraDate.length} registros`
+        );
+      }
+
       console.log('📤 Actualizando sesión con datos:', {
         sessionId,
         state: therapyData.state,
@@ -167,25 +201,60 @@ export class SessionService {
         hasStats: !!therapyData.stats,
         hasDetails: !!therapyData.details,
         hasExtraDate: !!therapyData.extra_date,
-        extraDateLength: Array.isArray(therapyData.extra_date) ? therapyData.extra_date.length : 0
+        extraDateOriginal: originalLength,
+        extraDateFinal: Array.isArray(extraDate) ? extraDate.length : 0
       });
 
-      const { error } = await supabase
+      const updatePayload = {
+        state: therapyData.state,
+        score: therapyData.score || 0,
+        orange_used: therapyData.orange_used || 0,
+        juice_used: therapyData.juice_used || 0,
+        stats: therapyData.stats || {},
+        details: therapyData.details || {},
+        extra_date: extraDate
+      };
+
+      // First attempt
+      let { error } = await supabase
         .from('sessions')
-        .update({
-          state: therapyData.state,
-          score: therapyData.score || 0,
-          orange_used: therapyData.orange_used || 0,
-          juice_used: therapyData.juice_used || 0,
-          stats: therapyData.stats || {},
-          details: therapyData.details || {},
-          extra_date: therapyData.extra_date || []
-        })
+        .update(updatePayload)
         .eq('id', sessionId);
+
+      // Retry once on network failure (common with large payloads)
+      if (error && (error.message?.includes('Failed to fetch') || error.code === 'PGRST000')) {
+        console.warn('⚠️ Primer intento fallido, reintentando en 2s...');
+        await new Promise(r => setTimeout(r, 2000));
+        const retry = await supabase
+          .from('sessions')
+          .update(updatePayload)
+          .eq('id', sessionId);
+        error = retry.error;
+      }
 
       if (error) {
         console.error('Error al actualizar datos de terapia:', error);
-        return false;
+        // Last resort: save without extra_date so we don't lose the session metadata
+        console.warn('⚠️ Guardando sesión sin extra_date como fallback...');
+        const { error: fallbackError } = await supabase
+          .from('sessions')
+          .update({
+            state: therapyData.state,
+            score: therapyData.score || 0,
+            orange_used: therapyData.orange_used || 0,
+            juice_used: therapyData.juice_used || 0,
+            stats: therapyData.stats || {},
+            details: therapyData.details || {},
+            extra_date: []
+          })
+          .eq('id', sessionId);
+
+        if (fallbackError) {
+          console.error('❌ Fallback también falló:', fallbackError);
+          return false;
+        }
+        console.log('✅ Sesión guardada sin extra_date (fallback)');
+        return true;
       }
 
       console.log('✅ Datos de terapia actualizados correctamente');
