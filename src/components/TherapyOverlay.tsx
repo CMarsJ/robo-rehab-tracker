@@ -77,6 +77,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [orangesUsed, setOrangesUsed] = useState(0);
   const [juiceUsed, setJuiceUsed] = useState(0);
+  const [gameScore, setGameScore] = useState(0);
 
   // Rest countdown state
   const [isResting, setIsResting] = useState(false);
@@ -191,7 +192,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     const therapyData = {
       state: state,
       duration: duration,
-      score: attempts.length,
+      score: (gameMode === 'flappy-bird' || gameMode === 'neurolink') ? gameScore : attempts.length,
       orange_used: orangesUsed,
       juice_used: juiceUsed,
       stats: {
@@ -236,7 +237,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           total_glasses: juiceUsed,
           completion_rate: gameMode === 'orange-squeeze' && targetGlasses > 0 
             ? roundTo4Decimals((juiceUsed / targetGlasses) * 100) 
-            : 0
+            : 0,
+          score: gameScore,
+          game_type: gameMode
         },
         current_hand_state: {
           left_hand: {
@@ -538,6 +541,10 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     if (gameData && gameMode === 'orange-squeeze') {
       setOrangesUsed(gameData.orange_used || 0);
       setJuiceUsed(gameData.juice_used || 0);
+    }
+
+    if (gameData && (gameMode === 'flappy-bird' || gameMode === 'neurolink')) {
+      setGameScore(gameData.score || 0);
     }
   };
 
