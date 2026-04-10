@@ -224,6 +224,14 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
     }
   }, [gameOver, onComplete]);
 
+  // Report score to parent whenever it changes so TherapyOverlay can save it
+  const reportedScoreRef = useRef(-1);
+  useEffect(() => {
+    if (score !== reportedScoreRef.current) {
+      reportedScoreRef.current = score;
+    }
+  }, [score]);
+
   return (
     <Card>
       <CardContent className="p-4">
