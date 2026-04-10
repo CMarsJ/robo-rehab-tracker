@@ -3,8 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation } from '@/contexts/SimulationContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface FlappyBirdGameProps {
   onComplete: (data?: any) => void;
