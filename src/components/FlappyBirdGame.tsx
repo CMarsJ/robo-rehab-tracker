@@ -7,6 +7,7 @@ import { useSimulation } from '@/contexts/SimulationContext';
 interface FlappyBirdGameProps {
   onComplete: (data?: any) => void;
   onRoundComplete?: () => void;
+  onScoreChange?: (score: number) => void;
   isResting?: boolean;
 }
 
