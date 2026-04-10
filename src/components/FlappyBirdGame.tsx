@@ -214,16 +214,6 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
     }
   }, [initGame, gameStarted]);
 
-  // Auto-finalizar después de game over
-  useEffect(() => {
-    if (gameOver) {
-      const timer = setTimeout(() => {
-        onComplete();
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [gameOver, onComplete]);
-
   // Report score to parent whenever it changes so TherapyOverlay can save it
   const reportedScoreRef = useRef(-1);
   useEffect(() => {
@@ -231,6 +221,16 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
       reportedScoreRef.current = score;
     }
   }, [score]);
+
+  // Auto-finalizar después de game over
+  useEffect(() => {
+    if (gameOver) {
+      const timer = setTimeout(() => {
+        onComplete({ score, gameTime: gameStartTime ? (Date.now() - gameStartTime.getTime()) / 1000 : 0 });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameOver, onComplete, score, gameStartTime]);
 
   return (
     <Card>
