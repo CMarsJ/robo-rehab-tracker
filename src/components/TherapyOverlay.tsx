@@ -237,7 +237,9 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           total_glasses: juiceUsed,
           completion_rate: gameMode === 'orange-squeeze' && targetGlasses > 0 
             ? roundTo4Decimals((juiceUsed / targetGlasses) * 100) 
-            : 0
+            : 0,
+          score: gameScore,
+          game_type: gameMode
         },
         current_hand_state: {
           left_hand: {
