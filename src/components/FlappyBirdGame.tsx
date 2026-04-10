@@ -19,7 +19,7 @@ interface Pipe {
   passed: boolean;
 }
 
-const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, isResting = false }) => {
+const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, onScoreChange, isResting = false }) => {
   const { flappyPipeGap, gameHand, flappyMaxAngle, flappyPipeInterval } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
   
@@ -178,8 +178,9 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
   useEffect(() => {
     if (score !== reportedScoreRef.current) {
       reportedScoreRef.current = score;
+      onScoreChange?.(score);
     }
-  }, [score]);
+  }, [score, onScoreChange]);
 
   // Auto-finalizar después de game over
   useEffect(() => {
