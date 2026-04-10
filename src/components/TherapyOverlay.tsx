@@ -726,7 +726,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         />
       );
       case 'neurolink': return <NeuroLinkGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} isResting={isResting} />;
-      case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} isResting={isResting} />;
+      case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} onScoreChange={(s) => setGameScore(s)} isResting={isResting} />;
       default: return null;
     }
   };
