@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface FlappyBirdGameProps {
-  onComplete: () => void;
+  onComplete: (data?: any) => void;
   onRoundComplete?: () => void;
   isResting?: boolean;
 }
