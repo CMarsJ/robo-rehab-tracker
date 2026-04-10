@@ -21,7 +21,7 @@ interface Pipe {
 const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, isResting = false }) => {
   const { flappyPipeGap, gameHand, flappyMaxAngle, flappyPipeInterval } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
-  const { user } = useAuth();
+  
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
   const [birdY, setBirdY] = useState(250); // Posición Y del ave
