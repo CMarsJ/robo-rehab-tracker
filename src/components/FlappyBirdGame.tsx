@@ -3,11 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useGameConfig } from '@/contexts/GameConfigContext';
 import { useSimulation } from '@/contexts/SimulationContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FlappyBirdGameProps {
-  onComplete: (data?: any) => void;
+  onComplete: () => void;
   onRoundComplete?: () => void;
-  onScoreChange?: (score: number) => void;
   isResting?: boolean;
 }
 
@@ -19,10 +20,10 @@ interface Pipe {
   passed: boolean;
 }
 
-const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, onScoreChange, isResting = false }) => {
+const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComplete, isResting = false }) => {
   const { flappyPipeGap, gameHand, flappyMaxAngle, flappyPipeInterval } = useGameConfig();
   const { leftHand, rightHand } = useSimulation();
-  
+  const { user } = useAuth();
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
   const [birdY, setBirdY] = useState(250); // Posición Y del ave
@@ -164,7 +165,47 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
     return () => clearInterval(interval);
   }, [gameStarted, gameOver, birdY, gameHeight, isResting, onRoundComplete]);
 
-  // Score is now saved by TherapyOverlay via onComplete callback
+  // Guardar datos del juego en Supabase
+  const saveGameData = useCallback(async () => {
+    if (!user || !gameStartTime) return;
+    
+    const gameEndTime = new Date();
+    const gameDurationSeconds = (gameEndTime.getTime() - gameStartTime.getTime()) / 1000;
+    const pointsPerSecond = gameDurationSeconds > 0 ? score / gameDurationSeconds : 0;
+    
+    try {
+      // Crear sesión
+      const { data: session, error: sessionError } = await supabase
+        .from('sessions')
+        .insert({
+          user_id: user.id,
+          duration: Math.round(gameDurationSeconds / 60),
+          therapy_type: 'flappy_bird',
+          state: 'completed'
+        })
+        .select()
+        .single();
+        
+      if (sessionError) throw sessionError;
+      
+      // Update session with game stats  
+      const { error: gameRecordError } = await supabase
+        .from('sessions')
+        .update({
+          stats: {
+            score: score,
+            gameTime: gameDurationSeconds,
+            attempts: 1
+          }
+        })
+        .eq('id', session.id);
+        
+      if (gameRecordError) throw gameRecordError;
+      
+    } catch (error) {
+      console.error('Error saving game data:', error);
+    }
+  }, [user, gameStartTime, score]);
 
   // Auto-iniciar el juego
   useEffect(() => {
@@ -173,24 +214,15 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
     }
   }, [initGame, gameStarted]);
 
-  // Report score to parent whenever it changes so TherapyOverlay can save it
-  const reportedScoreRef = useRef(-1);
-  useEffect(() => {
-    if (score !== reportedScoreRef.current) {
-      reportedScoreRef.current = score;
-      onScoreChange?.(score);
-    }
-  }, [score, onScoreChange]);
-
   // Auto-finalizar después de game over
   useEffect(() => {
     if (gameOver) {
       const timer = setTimeout(() => {
-        onComplete({ score, gameTime: gameStartTime ? (Date.now() - gameStartTime.getTime()) / 1000 : 0 });
+        onComplete();
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [gameOver, onComplete, score, gameStartTime]);
+  }, [gameOver, onComplete]);
 
   return (
     <Card>

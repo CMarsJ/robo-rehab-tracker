@@ -77,7 +77,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [orangesUsed, setOrangesUsed] = useState(0);
   const [juiceUsed, setJuiceUsed] = useState(0);
-  const [gameScore, setGameScore] = useState(0);
 
   // Rest countdown state
   const [isResting, setIsResting] = useState(false);
@@ -192,7 +191,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
     const therapyData = {
       state: state,
       duration: duration,
-      score: (gameMode === 'flappy-bird' || gameMode === 'neurolink') ? gameScore : attempts.length,
+      score: attempts.length,
       orange_used: orangesUsed,
       juice_used: juiceUsed,
       stats: {
@@ -237,9 +236,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
           total_glasses: juiceUsed,
           completion_rate: gameMode === 'orange-squeeze' && targetGlasses > 0 
             ? roundTo4Decimals((juiceUsed / targetGlasses) * 100) 
-            : 0,
-          score: gameScore,
-          game_type: gameMode
+            : 0
         },
         current_hand_state: {
           left_hand: {
@@ -542,10 +539,6 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
       setOrangesUsed(gameData.orange_used || 0);
       setJuiceUsed(gameData.juice_used || 0);
     }
-
-    if (gameData && (gameMode === 'flappy-bird' || gameMode === 'neurolink')) {
-      setGameScore(gameData.score || 0);
-    }
   };
 
   const formatMs = (ms: number | null) => (ms === null ? '-' : (ms / 1000).toFixed(2) + 's');
@@ -726,7 +719,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         />
       );
       case 'neurolink': return <NeuroLinkGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} isResting={isResting} />;
-      case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} onScoreChange={(s) => setGameScore(s)} isResting={isResting} />;
+      case 'flappy-bird': return <FlappyBirdGame onComplete={handleGameComplete} onRoundComplete={handleGameRoundProgress} isResting={isResting} />;
       default: return null;
     }
   };
