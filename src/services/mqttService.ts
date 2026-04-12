@@ -1,4 +1,6 @@
-import mqtt, { MqttClient } from 'mqtt';
+// @ts-ignore — mqtt is loaded at runtime via CDN or optional dependency
+import mqtt from 'mqtt';
+type MqttClient = ReturnType<typeof mqtt.connect>;
 
 // Datos crudos del ESP32 (solo 2 ángulos por mano)
 export interface MQTTRawHandData {

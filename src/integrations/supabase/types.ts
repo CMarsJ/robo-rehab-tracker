@@ -230,6 +230,38 @@ export type Database = {
         }
         Relationships: []
       }
+      session_ble_chunks: {
+        Row: {
+          chunk_index: number
+          created_at: string
+          data: Json
+          id: string
+          session_id: string
+        }
+        Insert: {
+          chunk_index: number
+          created_at?: string
+          data?: Json
+          id?: string
+          session_id: string
+        }
+        Update: {
+          chunk_index?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_ble_chunks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           details: Json | null

@@ -159,40 +159,30 @@ export class SessionService {
   }
 
   /**
-   * Downsample an array keeping every Nth element plus first/last.
-   * Keeps the array under maxSize to avoid payload-too-large errors.
+   * Max BLE records per chunk / per extra_date column.
    */
-  private static downsampleArray<T>(arr: T[], maxSize: number): T[] {
-    if (!Array.isArray(arr) || arr.length <= maxSize) return arr;
-    const step = Math.ceil(arr.length / maxSize);
-    const result: T[] = [];
-    for (let i = 0; i < arr.length; i += step) {
-      result.push(arr[i]);
-    }
-    // Always include last element
-    if (result[result.length - 1] !== arr[arr.length - 1]) {
-      result.push(arr[arr.length - 1]);
-    }
-    return result;
-  }
+  private static readonly CHUNK_SIZE = 5000;
 
   /**
-   * Max BLE records to store per session.
-   * 5 000 records ≈ 500 KB JSON – safely under Supabase's 2 MB row limit.
+   * Split an array into chunks of `size`.
    */
-  private static readonly MAX_EXTRA_DATE_RECORDS = 5000;
+  private static splitIntoChunks<T>(arr: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
+  }
 
   static async updateSessionWithTherapyData(sessionId: string, therapyData: any): Promise<boolean> {
     try {
-      // Down-sample extra_date if it exceeds the safe limit
-      let extraDate = therapyData.extra_date || [];
-      const originalLength = Array.isArray(extraDate) ? extraDate.length : 0;
-      if (Array.isArray(extraDate) && extraDate.length > this.MAX_EXTRA_DATE_RECORDS) {
-        extraDate = this.downsampleArray(extraDate, this.MAX_EXTRA_DATE_RECORDS);
-        console.warn(
-          `⚠️ extra_date downsampled: ${originalLength} → ${extraDate.length} registros`
-        );
-      }
+      const extraDate: any[] = therapyData.extra_date || [];
+      const totalRecords = Array.isArray(extraDate) ? extraDate.length : 0;
+
+      // Split into chunks of CHUNK_SIZE
+      const chunks = Array.isArray(extraDate) && extraDate.length > 0
+        ? this.splitIntoChunks(extraDate, this.CHUNK_SIZE)
+        : [[]];
 
       console.log('📤 Actualizando sesión con datos:', {
         sessionId,
@@ -200,11 +190,11 @@ export class SessionService {
         score: therapyData.score,
         hasStats: !!therapyData.stats,
         hasDetails: !!therapyData.details,
-        hasExtraDate: !!therapyData.extra_date,
-        extraDateOriginal: originalLength,
-        extraDateFinal: Array.isArray(extraDate) ? extraDate.length : 0
+        totalBleRecords: totalRecords,
+        totalChunks: chunks.length,
       });
 
+      // First chunk goes into sessions.extra_date (backward compatible)
       const updatePayload = {
         state: therapyData.state,
         score: therapyData.score || 0,
@@ -212,16 +202,16 @@ export class SessionService {
         juice_used: therapyData.juice_used || 0,
         stats: therapyData.stats || {},
         details: therapyData.details || {},
-        extra_date: extraDate
+        extra_date: chunks[0] || []
       };
 
-      // First attempt
+      // Save main session row
       let { error } = await supabase
         .from('sessions')
         .update(updatePayload)
         .eq('id', sessionId);
 
-      // Retry once on network failure (common with large payloads)
+      // Retry once on network failure
       if (error && (error.message?.includes('Failed to fetch') || error.code === 'PGRST000')) {
         console.warn('⚠️ Primer intento fallido, reintentando en 2s...');
         await new Promise(r => setTimeout(r, 2000));
@@ -234,7 +224,7 @@ export class SessionService {
 
       if (error) {
         console.error('Error al actualizar datos de terapia:', error);
-        // Last resort: save without extra_date so we don't lose the session metadata
+        // Fallback: save without extra_date
         console.warn('⚠️ Guardando sesión sin extra_date como fallback...');
         const { error: fallbackError } = await supabase
           .from('sessions')
@@ -257,11 +247,86 @@ export class SessionService {
         return true;
       }
 
+      // Save overflow chunks (index 1..N) into session_ble_chunks
+      if (chunks.length > 1) {
+        const overflowRows = chunks.slice(1).map((chunk, i) => ({
+          session_id: sessionId,
+          chunk_index: i + 1,
+          data: chunk,
+        }));
+
+        console.log(`📦 Guardando ${overflowRows.length} chunks adicionales en session_ble_chunks...`);
+
+        const { error: chunkError } = await (supabase as any)
+          .from('session_ble_chunks')
+          .insert(overflowRows);
+
+        if (chunkError) {
+          console.error('❌ Error guardando chunks BLE:', chunkError);
+          // Session metadata is saved, only overflow chunks failed
+          console.warn('⚠️ Datos principales guardados, pero chunks adicionales fallaron');
+        } else {
+          console.log(`✅ ${overflowRows.length} chunks BLE guardados correctamente`);
+        }
+      }
+
       console.log('✅ Datos de terapia actualizados correctamente');
       return true;
     } catch (error) {
       console.error('Error en updateSessionWithTherapyData:', error);
       return false;
+    }
+  }
+
+  /**
+   * Retrieves the full extra_date array for a session by concatenating
+   * the main sessions.extra_date with any overflow chunks.
+   */
+  static async getFullExtraDate(sessionId: string): Promise<any[]> {
+    try {
+      // Get main session extra_date
+      const { data: session, error: sessionError } = await supabase
+        .from('sessions')
+        .select('extra_date')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        console.error('Error al obtener extra_date de sesión:', sessionError);
+        return [];
+      }
+
+      const mainData: any[] = Array.isArray(session.extra_date) ? session.extra_date : [];
+
+      // Get overflow chunks
+      const { data: chunks, error: chunkError } = await (supabase as any)
+        .from('session_ble_chunks')
+        .select('chunk_index, data')
+        .eq('session_id', sessionId)
+        .order('chunk_index', { ascending: true });
+
+      if (chunkError) {
+        console.error('Error al obtener chunks BLE:', chunkError);
+        return mainData;
+      }
+
+      if (!chunks || chunks.length === 0) {
+        return mainData;
+      }
+
+      // Concatenate all chunks in order
+      let fullData = [...mainData];
+      for (const chunk of chunks) {
+        if (Array.isArray(chunk.data)) {
+          fullData = fullData.concat(chunk.data);
+        }
+      }
+
+      console.log(`📊 Extra_date completo: ${fullData.length} registros (${1 + chunks.length} chunks)`);
+      return fullData;
+    } catch (error) {
+      console.error('Error en getFullExtraDate:', error);
+      return [];
     }
   }
 
