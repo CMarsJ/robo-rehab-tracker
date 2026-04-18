@@ -79,7 +79,7 @@ export const translations = {
     loginToViewRankings: 'Inicia sesión para ver rankings',
     rankingOrangeSqueeze: 'Ranking - Exprimiendo Naranjas',
     rankingNeuroLink: 'Ranking - NeuroLink',
-    rankingFlappyBird: 'Ranking - Flappy Bird',
+    rankingFlappyBird: 'Ranking - RehabBird',
     // Hand Monitoring
     articulationAngles: 'Ángulos de Articulación',
     thumb: 'Pulgar',
@@ -220,7 +220,7 @@ export const translations = {
     loginToViewRankings: 'Login to view rankings',
     rankingOrangeSqueeze: 'Ranking - Orange Squeeze',
     rankingNeuroLink: 'Ranking - NeuroLink',
-    rankingFlappyBird: 'Ranking - Flappy Bird',
+    rankingFlappyBird: 'Ranking - RehabBird',
     // Hand Monitoring
     articulationAngles: 'Joint Angles',
     thumb: 'Thumb',
@@ -361,7 +361,7 @@ export const translations = {
     loginToViewRankings: 'Faça login para ver os rankings',
     rankingOrangeSqueeze: 'Ranking - Espremer Laranjas',
     rankingNeuroLink: 'Ranking - NeuroLink',
-    rankingFlappyBird: 'Ranking - Flappy Bird',
+    rankingFlappyBird: 'Ranking - RehabBird',
     // Hand Monitoring
     articulationAngles: 'Ângulos de Articulação',
     thumb: 'Polegar',
@@ -502,7 +502,7 @@ export const translations = {
     loginToViewRankings: 'Войдите, чтобы увидеть рейтинг',
     rankingOrangeSqueeze: 'Рейтинг - Выжимание апельсинов',
     rankingNeuroLink: 'Рейтинг - NeuroLink',
-    rankingFlappyBird: 'Рейтинг - Flappy Bird',
+    rankingFlappyBird: 'Рейтинг - RehabBird',
     // Hand Monitoring
     articulationAngles: 'Углы суставов',
     thumb: 'Большой палец',

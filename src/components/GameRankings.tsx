@@ -125,7 +125,7 @@ const GameRankings = () => {
         </CardContent>
       </Card>
 
-      {/* Ranking Flappy Bird */}
+      {/* Ranking RehabBird */}
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">

@@ -198,7 +198,7 @@ const FlappyBirdGame: React.FC<FlappyBirdGameProps> = ({ onComplete, onRoundComp
         {/* Header del juego */}
         <div className="flex justify-between items-center mb-4">
           <div className="text-lg font-bold">Puntaje: {score}</div>
-          <div className="text-lg font-bold">Flappy Bird Terapéutico</div>
+          <div className="text-lg font-bold">RehabBird Terapéutico</div>
           <div className="text-lg font-bold">Altura: {Math.round(birdY)}</div>
         </div>
 

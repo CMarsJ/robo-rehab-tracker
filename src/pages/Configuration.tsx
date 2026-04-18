@@ -409,7 +409,7 @@ const Configuration = () => {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Esta mano se usará como entrada en todos los modos de juego (Orange Squeeze, Flappy Bird, NeuroLink)
+              Esta mano se usará como entrada en todos los modos de juego (Orange Squeeze, RehabBird, NeuroLink)
             </p>
           </div>
         </CardContent>
@@ -565,7 +565,7 @@ const Configuration = () => {
           <Separator />
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">🐦 Flappy Bird</h3>
+            <h3 className="text-lg font-semibold">🐦 RehabBird</h3>
             <div className="space-y-2">
               <Label>Ángulo máximo mcp_finger: {localFlappyMaxAngle}°</Label>
               <Slider
@@ -604,10 +604,10 @@ const Configuration = () => {
               localStorage.setItem('flappyPipeInterval', localFlappyPipeInterval.toString());
               toast({
                 title: '✅ Configuración guardada',
-                description: 'La configuración de Flappy Bird se guardó correctamente',
+                description: 'La configuración de RehabBird se guardó correctamente',
               });
             }}>
-              Guardar Configuración Flappy Bird
+              Guardar Configuración RehabBird
             </Button>
           </div>
         </CardContent>
