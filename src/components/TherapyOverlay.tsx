@@ -706,7 +706,7 @@ const TherapyOverlay: React.FC<TherapyOverlayProps> = ({
         </Button>
 
         <Button onClick={() => startGame('neurolink')} className="w-full h-14 text-base bg-purple-500 hover:bg-purple-600">
-          🎯 NeuroLink
+          🎯 NeuroDefense
         </Button>
 
         <Button onClick={() => startGame('flappy-bird')} variant="outline" className="w-full h-14 text-base">

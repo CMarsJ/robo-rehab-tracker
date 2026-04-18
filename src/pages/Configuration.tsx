@@ -558,7 +558,7 @@ const Configuration = () => {
               setNeuroLinkMaxAngle(localNeuroLinkMaxAngle);
               localStorage.setItem('neuroLinkMaxAngle', localNeuroLinkMaxAngle.toString());
             }}>
-              Guardar Configuración NeuroLink
+              Guardar Configuración NeuroDefense
             </Button>
           </div>
 
