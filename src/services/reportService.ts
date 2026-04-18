@@ -94,7 +94,7 @@ const THERAPY_LABELS: Record<string, string> = {
   'terapia_guiada': 'Terapia Guiada',
   'orange-squeeze': 'Orange Squeeze',
   'flappy_bird': 'RehabBird',
-  'neurolink': 'NeuroLink',
+  'neurolink': 'NeuroDefense',
   'therapy': 'Terapia',
 };
 

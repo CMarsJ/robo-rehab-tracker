@@ -84,7 +84,7 @@ const GameRankings = () => {
         </CardContent>
       </Card>
 
-      {/* Ranking NeuroLink */}
+      {/* Ranking NeuroDefense */}
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">

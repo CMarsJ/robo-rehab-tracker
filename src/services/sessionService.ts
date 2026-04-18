@@ -383,7 +383,7 @@ export class SessionService {
         .limit(5);
 
       if (error) {
-        console.error('Error al obtener rankings de NeuroLink:', error);
+        console.error('Error al obtener rankings de NeuroDefense:', error);
         return [];
       }
 
