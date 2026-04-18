@@ -93,8 +93,8 @@ export interface MonthlyReportData extends RehabReportData {}
 const THERAPY_LABELS: Record<string, string> = {
   'terapia_guiada': 'Terapia Guiada',
   'orange-squeeze': 'Orange Squeeze',
-  'flappy_bird': 'Flappy Bird',
-  'neurolink': 'NeuroLink',
+  'flappy_bird': 'RehabBird',
+  'neurolink': 'NeuroDefense',
   'therapy': 'Terapia',
 };
 

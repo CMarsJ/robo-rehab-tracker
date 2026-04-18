@@ -199,7 +199,7 @@ const History = () => {
       case 'terapia_guiada':
         return t.guidedTherapyTitle;
       case 'flappy-bird':
-        return 'Flappy Bird';
+        return 'RehabBird';
       default:
         return t.therapySession;
     }
@@ -505,7 +505,7 @@ const History = () => {
         <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg space-y-4">
           <h4 className="font-semibold text-green-800 dark:text-green-300 flex items-center gap-2">
             <Gamepad2 className="w-5 h-5" />
-            Flappy Bird — Resumen
+            RehabBird — Resumen
           </h4>
           
           <div className="grid grid-cols-3 gap-4 text-sm">
@@ -624,7 +624,7 @@ const History = () => {
                     />
                     <label htmlFor="filter-flappy" className="text-sm flex items-center gap-2 cursor-pointer">
                       <Gamepad2 className="w-4 h-4 text-green-500" />
-                      Flappy Bird
+                      RehabBird
                     </label>
                   </div>
                 </div>
