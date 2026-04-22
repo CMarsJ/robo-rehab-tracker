@@ -84,8 +84,8 @@ const AppSidebar = () => {
     <Sidebar className="border-r border-border">
       <SidebarHeader className="p-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">TR</span>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+            <img src="/TRB.png" alt="TRB Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h2 className="font-semibold text-sm leading-tight">{t.systemTitle}</h2>
